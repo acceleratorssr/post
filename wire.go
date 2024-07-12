@@ -13,8 +13,11 @@ import (
 
 func InitApp() *web.ArticleHandler {
 	wire.Build(
-		ioc.InitDB,
-		dao.NewGORMArticleDao,
+		//ioc.InitDB,
+		ioc.InitMongoDB,
+		//dao.NewGORMArticleDao,
+		dao.NewMongoDB,
+		dao.NewSnowflakeNode,
 		repository.NewArticleAuthorRepository,
 		repository.NewArticleReaderRepository,
 		service.NewArticleService,

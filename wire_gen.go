@@ -17,8 +17,9 @@ import (
 // Injectors from wire.go:
 
 func InitApp() *web.ArticleHandler {
-	db := ioc.InitDB()
-	articleDao := dao.NewGORMArticleDao(db)
+	database := ioc.InitMongoDB()
+	node := dao.NewSnowflakeNode()
+	articleDao := dao.NewMongoDB(database, node)
 	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao)
 	articleReaderRepository := repository.NewArticleReaderRepository(articleDao)
 	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository)
