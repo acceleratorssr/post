@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
@@ -20,6 +21,7 @@ import (
 	"post/user"
 	"post/web"
 	"testing"
+	"time"
 )
 
 // TODO 有空修改测试
@@ -86,13 +88,15 @@ func (s *ArticleTestSuite) SetupTest() {
 
 func (s *ArticleTestSuite) TestArticle() {
 	t := s.T()
+	snowID := s.node.Generate().Int64()
 	testCases := []struct {
 		name string
 
 		before func(t *testing.T)
 		after  func(t *testing.T)
 
-		article  Article // 期望输入
+		article Article // 期望输入
+
 		wantCode int
 		wantData Result[int64] // 期望http响应带上帖子的id
 	}{
@@ -103,7 +107,7 @@ func (s *ArticleTestSuite) TestArticle() {
 			},
 			after: func(t *testing.T) {
 				var art dao.ArticleAuthor
-				ctx, cancel := context.WithTimeout(context.Background(), 3)
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 				defer cancel()
 				err := s.coll.FindOne(ctx, bson.M{"title": "测试标题"}).Decode(&art)
 
@@ -127,6 +131,18 @@ func (s *ArticleTestSuite) TestArticle() {
 					Utime:    0,
 					Status:   domain.TypeSaved.ToUint8(),
 				}, art)
+
+				// 清空所有数据
+				fmt.Println("Drop all data")
+				err = s.coll.Drop(ctx)
+				if err != nil {
+					log.Fatalf("Failed to drop collection 'article_authors': %v\n", err)
+				}
+
+				err = s.readerColl.Drop(ctx)
+				if err != nil {
+					log.Fatalf("Failed to drop collection 'article_readers': %v\n", err)
+				}
 			},
 			article: Article{
 				Title:   "测试标题",
@@ -139,91 +155,119 @@ func (s *ArticleTestSuite) TestArticle() {
 				Msg:  "success",
 			},
 		},
-		//{
-		//	name: "T2_修改草稿保存成功",
-		//	before: func(t *testing.T) {
-		//		err := s.db.Create(&dao.ArticleAuthor{
-		//			Id:       2,
-		//			Title:    "测试标题2",
-		//			Content:  "测试内容2",
-		//			Authorid: userId,
-		//			Ctime:    timeNow, //时间可以自己手写一个固定的，不用now
-		//			Utime:    timeNow,
-		//			Status:   domain.TypeSaved.ToUint8(),
-		//		}).Error
-		//		s.Require().NoError(err)
-		//	},
-		//	after: func(t *testing.T) {
-		//		var art dao.ArticleAuthor
-		//		err := s.db.Where("id = ?", 2).First(&art).Error //预期获取id1
-		//		s.Require().NoError(err)
-		//		s.Require().True(art.Utime > 0)
-		//		art.Utime = 0
-		//
-		//		s.Require().Equal(dao.ArticleAuthor{
-		//			Id:       2,
-		//			Title:    "测试标题",
-		//			Content:  "测试内容",
-		//			Authorid: userId,
-		//			Ctime:    timeNow,
-		//			Utime:    0,
-		//			Status:   domain.TypeSaved.ToUint8(),
-		//		}, art)
-		//	},
-		//	article: Article{
-		//		ID:      2,
-		//		Title:   "测试标题",
-		//		Content: "测试内容",
-		//	},
-		//	wantCode: http.StatusOK,
-		//	wantData: Result[int64]{
-		//		Code: 200,
-		//		Data: 2,
-		//		Msg:  "success",
-		//	},
-		//},
-		//{
-		//	// 更新时带上author_id，更新失败即不是作者
-		//	name: "T2_修改其他用户的草稿",
-		//	before: func(t *testing.T) {
-		//		err := s.db.Create(&dao.ArticleAuthor{
-		//			Id:       3,
-		//			Title:    "测试标题3",
-		//			Content:  "测试内容3",
-		//			Authorid: 965,
-		//			Ctime:    timeNow,
-		//			Utime:    timeNow,
-		//			Status:   domain.TypeSaved.ToUint8(),
-		//		}).Error
-		//		s.Require().NoError(err)
-		//	},
-		//	after: func(t *testing.T) {
-		//		var art dao.ArticleAuthor
-		//		err := s.db.Where("id = ?", 3).First(&art).Error //预期获取id1
-		//		s.Require().NoError(err)
-		//
-		//		s.Require().Equal(dao.ArticleAuthor{
-		//			Id:       3,
-		//			Title:    "测试标题3",
-		//			Content:  "测试内容3",
-		//			Authorid: 965,
-		//			Ctime:    timeNow,
-		//			Utime:    timeNow,
-		//			Status:   domain.TypeSaved.ToUint8(),
-		//		}, art)
-		//	},
-		//	article: Article{
-		//		ID:      3,
-		//		Title:   "测试标题",
-		//		Content: "测试内容",
-		//	},
-		//	wantCode: http.StatusOK,
-		//	wantData: Result[int64]{
-		//		Code: 555,
-		//		Data: 0,
-		//		Msg:  "系统错误",
-		//	},
-		//},
+		{
+			name: "T2_修改草稿保存成功",
+			before: func(t *testing.T) {
+				_, err := s.coll.InsertOne(context.Background(), &dao.ArticleAuthor{
+					Id:       snowID,
+					Title:    "测试标题2",
+					Content:  "测试内容2",
+					Authorid: userId,
+					Ctime:    timeNow,
+					Utime:    timeNow,
+					Status:   domain.TypeSaved.ToUint8(),
+				})
+				s.Require().NoError(err)
+			},
+			after: func(t *testing.T) {
+				var art dao.ArticleAuthor
+				err := s.coll.FindOne(context.Background(), bson.M{"id": snowID}).Decode(&art)
+				s.Require().NoError(err)
+				s.Require().True(art.Utime > 0)
+				art.Utime = 0
+
+				s.Require().Equal(dao.ArticleAuthor{
+					Id:       snowID,
+					Title:    "测试标题",
+					Content:  "测试内容",
+					Authorid: userId,
+					Ctime:    timeNow,
+					Utime:    0,
+					Status:   domain.TypeSaved.ToUint8(),
+				}, art)
+
+				ctx := context.TODO()
+
+				// 清空所有数据
+				fmt.Println("Drop all data")
+				err = s.coll.Drop(ctx)
+				if err != nil {
+					log.Fatalf("Failed to drop collection 'article_authors': %v\n", err)
+				}
+
+				err = s.readerColl.Drop(ctx)
+				if err != nil {
+					log.Fatalf("Failed to drop collection 'article_readers': %v\n", err)
+				}
+			},
+			article: Article{
+				ID:      snowID,
+				Title:   "测试标题",
+				Content: "测试内容",
+			},
+			wantCode: http.StatusOK,
+			wantData: Result[int64]{
+				Code: 200,
+				Data: 0,
+				Msg:  "success",
+			},
+		},
+		{
+			// 更新时带上author_id，更新失败即不是作者
+			name: "T3_修改其他用户的草稿",
+			before: func(t *testing.T) {
+				_, err := s.coll.InsertOne(context.Background(), &dao.ArticleAuthor{
+					Id:       snowID,
+					Title:    "测试标题3",
+					Content:  "测试内容3",
+					Authorid: 965,
+					Ctime:    timeNow,
+					Utime:    timeNow,
+					Status:   domain.TypeSaved.ToUint8(),
+				})
+				s.Require().NoError(err)
+			},
+			after: func(t *testing.T) {
+				var art dao.ArticleAuthor
+				err := s.coll.FindOne(context.Background(), bson.M{"id": snowID}).Decode(&art)
+				s.Require().NoError(err)
+
+				s.Require().Equal(dao.ArticleAuthor{
+					Id:       snowID,
+					Title:    "测试标题3",
+					Content:  "测试内容3",
+					Authorid: 965,
+					Ctime:    timeNow,
+					Utime:    timeNow,
+					Status:   domain.TypeSaved.ToUint8(),
+				}, art)
+
+				ctx := context.TODO()
+
+				// 清空所有数据
+				fmt.Println("Drop all data")
+				err = s.coll.Drop(ctx)
+				if err != nil {
+					log.Fatalf("Failed to drop collection 'article_authors': %v\n", err)
+				}
+
+				err = s.readerColl.Drop(ctx)
+				if err != nil {
+					log.Fatalf("Failed to drop collection 'article_readers': %v\n", err)
+				}
+			},
+			article: Article{
+				ID:      snowID,
+				Title:   "测试标题",
+				Content: "测试内容",
+			},
+			wantCode: http.StatusOK,
+			wantData: Result[int64]{
+				Code: 555,
+				Data: 0,
+				Msg:  "系统错误",
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -248,10 +292,11 @@ func (s *ArticleTestSuite) TestArticle() {
 			err = json.NewDecoder(resp.Body).Decode(&data)
 			if data.Data > 1 {
 				data.Data = 0
-			} else {
-				s.T().Error("雪花id不正常")
 			}
+
 			s.Require().NoError(err)
+
+			fmt.Println(data)
 			s.Require().Equal(tc.wantData, data)
 
 			tc.after(t)
@@ -260,21 +305,21 @@ func (s *ArticleTestSuite) TestArticle() {
 }
 
 // 钩子函数
-func (s *ArticleTestSuite) TearDownTest() {
-	// 清空所有数据，主键重置回0
-	ctx := context.TODO()
-
-	// 清空所有数据
-	err := s.db.Collection("post").Drop(ctx)
-	if err != nil {
-		log.Fatalf("Failed to drop collection 'article_authors': %v", err)
-	}
-
-	err = s.db.Collection("reader").Drop(ctx)
-	if err != nil {
-		log.Fatalf("Failed to drop collection 'article_readers': %v", err)
-	}
-}
+//func (s *ArticleTestSuite) TearDownTest() {
+//	// 清空所有数据，主键重置回0
+//	ctx := context.TODO()
+//
+//	// 清空所有数据
+//	err := s.coll.Drop(ctx)
+//	if err != nil {
+//		log.Fatalf("Failed to drop collection 'article_authors': %v\n", err)
+//	}
+//
+//	err = s.readerColl.Drop(ctx)
+//	if err != nil {
+//		log.Fatalf("Failed to drop collection 'article_readers': %v\n", err)
+//	}
+//}
 
 func TestArticle(t *testing.T) {
 	suite.Run(t, new(ArticleTestSuite))
