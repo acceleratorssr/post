@@ -6,7 +6,7 @@ import (
 	"github.com/bwmarrin/snowflake"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -48,18 +48,6 @@ func (m *MongoDB) UpdateByID(ctx context.Context, art ArticleAuthor) error {
 		"utime":   time.Now().UnixMilli(),
 	}}}
 
-	var existing ArticleAuthor
-	err := m.coll.FindOne(ctx, filter).Decode(&existing)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			fmt.Println("No matching documents found")
-		} else {
-			log.Fatal(err)
-		}
-	} else {
-		fmt.Printf("Found matching document: %+v\n", existing)
-	}
-
 	one, err := m.coll.UpdateOne(ctx, filter, u)
 
 	if err != nil {
@@ -74,5 +62,30 @@ func (m *MongoDB) UpdateByID(ctx context.Context, art ArticleAuthor) error {
 }
 
 func (m *MongoDB) SyncStatus(ctx context.Context, art ArticleAuthor) error {
-	return nil
+	var err error
+	var id int64
+
+	if art.Id > 0 {
+		err = m.UpdateByID(ctx, art)
+	} else {
+		id, err = m.Insert(ctx, art) //new
+	}
+
+	if err != nil {
+		return err
+	}
+
+	art.Id = id
+	now := time.Now().UnixMilli()
+	art.Utime = now
+
+	filter := bson.M{"id": art.Id}
+	update := bson.E{Key: "$set", Value: art}
+	upsert := bson.E{Key: "$setOnInsert", Value: bson.D{
+		bson.E{Key: "ctime", Value: now}}}
+	_, err = m.readerColl.UpdateOne(ctx, filter,
+		bson.D{update, upsert},
+		options.Update().SetUpsert(true))
+
+	return err
 }
