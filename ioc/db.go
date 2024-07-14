@@ -13,15 +13,18 @@ import (
 	"time"
 )
 
-//go:embed conf.yaml
-var content string
+//go:embed mysql.yaml
+var mysqlDSN string
+
+//go:embed mongoDB.yaml
+var MongoDBDSN string
 
 func InitDB() *gorm.DB {
 	type Config struct {
 		DSN string `yaml:"dsn"`
 	}
 	c := Config{
-		DSN: content,
+		DSN: mysqlDSN,
 	}
 
 	db, err := gorm.Open(mysql.Open(c.DSN), &gorm.Config{})
@@ -53,7 +56,7 @@ func InitMongoDB() *mongo.Database {
 
 		},
 	}
-	opts := options.Client().ApplyURI("mongodb://root:root@localhost:27017").SetMonitor(monitor)
+	opts := options.Client().ApplyURI(MongoDBDSN).SetMonitor(monitor)
 
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

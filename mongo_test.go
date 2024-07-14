@@ -24,8 +24,6 @@ import (
 	"time"
 )
 
-// TODO 有空修改测试
-
 type Article struct {
 	ID      int64  `json:"id"`
 	Title   string `json:"title"`
@@ -305,31 +303,6 @@ func (s *ArticleTestSuite) TestArticle() {
 }
 
 // 钩子函数
-//func (s *ArticleTestSuite) TearDownTest() {
-//	// 清空所有数据，主键重置回0
-//	ctx := context.TODO()
-//
-//	// 清空所有数据
-//	err := s.coll.Drop(ctx)
-//	if err != nil {
-//		log.Fatalf("Failed to drop collection 'article_authors': %v\n", err)
-//	}
-//
-//	err = s.readerColl.Drop(ctx)
-//	if err != nil {
-//		log.Fatalf("Failed to drop collection 'article_readers': %v\n", err)
-//	}
-//}
-
 func TestArticle(t *testing.T) {
 	suite.Run(t, new(ArticleTestSuite))
 }
-
-//func dbInit() *gorm.DB {
-//	dsn := "root:20031214pzw!@tcp(127.0.0.1:3306)/demo?charset=utf8mb4&parseTime=True&loc=Local"
-//	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-//	if err != nil {
-//		panic(err)
-//	}
-//	return db
-//}
