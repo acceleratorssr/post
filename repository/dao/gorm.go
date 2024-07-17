@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"time"
 )
 
@@ -16,6 +17,35 @@ func NewGORMArticleDao(db *gorm.DB) ArticleDao {
 	return &GORMArticleDao{
 		db: db,
 	}
+}
+
+func (gad *GORMArticleDao) GetPublishedByID(ctx context.Context, id int64) (ArticleReader, error) {
+	var art ArticleReader
+	err := gad.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	return art, err
+}
+
+func (gad *GORMArticleDao) GetByID(ctx context.Context, id int64) (ArticleAuthor, error) {
+	var art ArticleAuthor
+	err := gad.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	return art, err
+}
+
+// GetListByAuthor 经典order加索引，此处authorid和utime可建立联合索引
+// TODO sql性能优化
+func (gad *GORMArticleDao) GetListByAuthor(ctx context.Context, uid int64, limit int, offset int) ([]ArticleAuthor, error) {
+	var arts []ArticleAuthor
+	err := gad.db.WithContext(ctx).
+		Where("authorid = ?", uid).
+		Limit(limit).
+		Offset(offset).
+		//Order("utime DESC").
+		Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+			{Column: clause.Column{Name: "utime"}, Desc: true},
+		}}).
+		Find(&arts).Error
+
+	return arts, err
 }
 
 func (gad *GORMArticleDao) Insert(ctx context.Context, art ArticleAuthor) (int64, error) {

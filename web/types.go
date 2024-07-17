@@ -19,6 +19,22 @@ type ReqOnlyWithID struct {
 	ID int64 `json:"id"`
 }
 
+type ReqList struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+type ArticleVO struct {
+	ID         int64
+	Title      string
+	Content    string
+	AuthorID   int64
+	AuthorName string
+	Status     uint8
+	Ctime      string
+	Utime      string
+}
+
 // Req 转换为 domain.Article
 func (r Req) toDomain(id int64, name string) domain.Article {
 	return domain.Article{

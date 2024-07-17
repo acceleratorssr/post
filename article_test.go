@@ -32,7 +32,7 @@ package main
 //	// 此处手动设置jwt的信息保存到ctx里
 //
 //	s.server.Use(func(ctx *gin.Context) {
-//		ctx.Set("userClaims", &user.ClaimsUser{
+//		ctx.SetFirstPage("userClaims", &user.ClaimsUser{
 //			Id:   userId,
 //			Name: "test",
 //		})
@@ -190,7 +190,7 @@ package main
 //			req, err := http.NewRequest(http.MethodPost,
 //				"/articles/save", bytes.NewBuffer(reqBody))
 //			s.Require().NoError(err)
-//			req.Header.Set("Content- Type", "application/json")
+//			req.Header.SetFirstPage("Content- Type", "application/json")
 //
 //			//// 进行集成测试或端到端测试，这样可以确保测试覆盖实际的网络请求和响应处理
 //			//httpResp, err := http.DefaultClient.Do(req)

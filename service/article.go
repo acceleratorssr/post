@@ -12,9 +12,11 @@ type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
 	Withdraw(ctx context.Context, art domain.Article) error
+	List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error)
+	GetAuthorModelsByID(ctx context.Context, id int64) (domain.Article, error)
+	GetPublishedByID(ctx context.Context, id int64) (domain.Article, error)
 }
 
-// todo 换成双repo
 type articleService struct {
 	author repository.ArticleAuthorRepository
 	reader repository.ArticleReaderRepository
@@ -26,6 +28,18 @@ func NewArticleService(author repository.ArticleAuthorRepository,
 		author: author,
 		reader: reader,
 	}
+}
+
+func (a *articleService) GetPublishedByID(ctx context.Context, id int64) (domain.Article, error) {
+	return a.reader.GetPublishedByID(ctx, id)
+}
+
+func (a *articleService) GetAuthorModelsByID(ctx context.Context, id int64) (domain.Article, error) {
+	return a.author.GetByID(ctx, id)
+}
+
+func (a *articleService) List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error) {
+	return a.author.List(ctx, uid, limit, offset)
 }
 
 // Save Author表保存
