@@ -24,6 +24,11 @@ type ReqList struct {
 	Offset int `json:"offset"`
 }
 
+type LikeReq struct {
+	ID    int64 `json:"obj_id"`
+	Liked bool  `json:"liked"`
+}
+
 type ArticleVO struct {
 	ID         int64
 	Title      string

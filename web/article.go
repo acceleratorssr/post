@@ -42,6 +42,29 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
 
 	reader := articles.Group("/reader")
 	reader.GET("/:id", a.Detail)
+
+	reader.POST("/like",
+		WrapClaimsAndReq[LikeReq](a.Like))
+}
+
+func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq, claims user.ClaimsUser) (utils.Response, error) {
+	var err error
+	if req.Liked {
+		err = a.like.Like(ctx, a.ObjType, req.ID, claims.Id)
+	} else {
+		err = a.like.UnLike(ctx, a.ObjType, req.ID, claims.Id)
+	}
+
+	if err != nil {
+		return utils.Response{
+			Code: domain.ErrSystem.ToInt(),
+			Msg:  "系统错误",
+			Data: nil,
+		}, err
+	}
+	return utils.Response{
+		Msg: "successful",
+	}, nil
 }
 
 func (a *ArticleHandler) Detail(ctx *gin.Context) {

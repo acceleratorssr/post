@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
 	"post/domain"
@@ -21,6 +22,9 @@ type PageCache struct {
 	Utime  time.Time
 }
 
+//go:embed cnt.lua
+var luaIncrCnt string
+
 type ArticleCache interface {
 	GetFirstPage(ctx context.Context, id int64) ([]domain.Article, error)
 	SetFirstPage(ctx context.Context, id int64, arts []domain.Article) error
@@ -30,6 +34,8 @@ type ArticleCache interface {
 	SetArticleDetail(ctx context.Context, id int64, art domain.Article) error
 
 	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
+	IncrLikeCount(ctx context.Context, ObjType string, ObjID int64) error
+	DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error
 }
 
 func NewRedisArticleCache(client redis.Cmdable) ArticleCache {
@@ -38,8 +44,23 @@ func NewRedisArticleCache(client redis.Cmdable) ArticleCache {
 	}
 }
 
+func (r *RedisArticleCache) DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {
+	return r.client.Eval(ctx, luaIncrCnt,
+		[]string{r.keyIncrReadCount(ObjType, ObjID)}, "like_cnt", -1).Err()
+}
+
+func (r *RedisArticleCache) IncrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {
+	return r.client.Eval(ctx, luaIncrCnt,
+		[]string{r.keyIncrReadCount(ObjType, ObjID)}, "like_cnt", 1).Err()
+}
+
 func (r *RedisArticleCache) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
-	// TODO IncrReadCount
+	return r.client.Eval(ctx, luaIncrCnt,
+		[]string{r.keyIncrReadCount(ObjType, ObjID)}, "read_cnt", 1).Err()
+}
+
+func (r *RedisArticleCache) keyIncrReadCount(ObjType string, ObjID int64) string {
+	return "article_incr_read_count:" + ObjType + ":" + strconv.FormatInt(ObjID, 10)
 }
 
 func (r *RedisArticleCache) GetArticleDetail(ctx context.Context, id int64) (domain.Article, error) {
