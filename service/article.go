@@ -7,7 +7,7 @@ import (
 	"post/repository"
 )
 
-// mockgen -source=D:\桌面\pkg\post\service\Producer.go -package=svcmocks -destination=D:\桌面\pkg\post\service\mock\article_mock.go
+// mockgen -source=D:\桌面\pkg\post\service\producer.go -package=svcmocks -destination=D:\桌面\pkg\post\service\mock\article_mock.go
 
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)

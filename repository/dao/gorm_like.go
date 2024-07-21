@@ -17,6 +17,41 @@ func NewGORMArticleLikeDao(db *gorm.DB) ArticleLikeDao {
 	}
 }
 
+// IncrReadCountMany todo 考虑到可以提前合并ObjIDs，在计数时可以直接+n
+func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error {
+	now := time.Now().UnixMilli()
+	likes := make([]Like, 0, len(ObjIDs))
+	for i := 0; i < len(ObjIDs); i++ {
+		likes = append(likes, Like{
+			ObjID:     ObjIDs[i],
+			ObjType:   ObjType,
+			ViewCount: 1,
+			Ctime:     now,
+			Utime:     now,
+		})
+	}
+
+	////此处只有一个事务，即事务提交仅触发一次刷入磁盘，批量只消耗一次磁盘IO
+	//return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	//	txDAO := NewGORMArticleLikeDao(tx)
+	//	for i := 0; i < len(ObjIDs); i++ {
+	//		err := txDAO.IncrReadCount(ctx, ObjType, ObjIDs[i])
+	//		if err != nil {
+	//			return err
+	//		}
+	//	}
+	//	return nil
+	//})
+
+	return gad.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}}, // 指定冲突列
+		DoUpdates: clause.Assignments(map[string]any{
+			"view_count": gorm.Expr("view_count + ?", 1),
+			"utime":      time.Now().UnixMilli(),
+		}),
+	}).CreateInBatches(likes, len(ObjIDs)).Error // len(ObjIDs)是每批次插入的记录数
+}
+
 func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType string, ObjID, uid int64) error {
 	now := time.Now().UnixMilli()
 
@@ -126,7 +161,7 @@ func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string
 			"view_count": gorm.Expr("view_count + ?", 1),
 			"utime":      time.Now().UnixMilli(),
 		}),
-		//Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}},
+		Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}},
 	}).Create(&Like{
 		ObjID:     ObjID,
 		ObjType:   ObjType,

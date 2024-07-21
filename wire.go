@@ -24,7 +24,8 @@ func InitApp() *App {
 		ioc.NewKafkaConsumer,
 		ioc.InitWebServer,
 
-		events.NewKafkaConsumer,
+		//events.NewKafkaConsumer,
+		events.NewBatchKafkaConsumer,
 		events.NewKafkaProducer,
 
 		dao.NewGORMArticleDao,

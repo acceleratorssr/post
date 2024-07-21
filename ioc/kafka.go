@@ -31,6 +31,10 @@ func NewKafkaSyncProducer(client sarama.Client) sarama.SyncProducer {
 	return producer
 }
 
-func NewKafkaConsumer(consumer *events.KafkaConsumer) []events.Consumer {
+//func NewKafkaConsumer(consumer *events.KafkaConsumer) []events.Consumer {
+//	return []events.Consumer{consumer}
+//}
+
+func NewKafkaConsumer(consumer *events.BatchKafkaConsumer) []events.Consumer {
 	return []events.Consumer{consumer}
 }

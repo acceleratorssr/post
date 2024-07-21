@@ -34,8 +34,8 @@ func InitApp() *App {
 	likeService := service.NewLikeService(likeRepository)
 	articleHandler := web.NewArticleHandler(articleService, likeService)
 	engine := ioc.InitWebServer(articleHandler)
-	kafkaConsumer := events.NewKafkaConsumer(client, likeRepository)
-	v := ioc.NewKafkaConsumer(kafkaConsumer)
+	batchKafkaConsumer := events.NewBatchKafkaConsumer(client, likeRepository)
+	v := ioc.NewKafkaConsumer(batchKafkaConsumer)
 	app := &App{
 		server:    engine,
 		consumers: v,

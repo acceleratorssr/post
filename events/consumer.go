@@ -19,7 +19,7 @@ type KafkaConsumer struct {
 }
 
 func NewKafkaConsumer(client sarama.Client,
-	repo repository.LikeRepository) *KafkaConsumer {
+	repo repository.LikeRepository) *KafkaConsumer { // todo 为什么不返回接口
 	return &KafkaConsumer{
 		client: client,
 		repo:   repo,
@@ -34,7 +34,8 @@ func (k *KafkaConsumer) Start(topic string) error {
 	}
 	go func() {
 		err := cg.Consume(context.Background(),
-			[]string{topic},
+			//[]string{topic},
+			[]string{"article_read"},
 			sarama_ex.NewHandler[ReadEvent](k.Consume))
 		if err != nil {
 			panic(err)

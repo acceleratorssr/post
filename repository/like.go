@@ -8,6 +8,8 @@ import (
 
 type LikeRepository interface {
 	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
+	IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error
+
 	IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
 	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid int64) error
@@ -24,6 +26,11 @@ func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.ArticleCache) LikeRep
 		cache: cache,
 	}
 }
+
+func (l *likeRepository) IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error {
+	return l.dao.IncrReadCountMany(ctx, ObjType, ObjIDs)
+}
+
 func (l *likeRepository) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
 	go l.cache.IncrReadCount(ctx, ObjType, ObjID)
 	return l.dao.IncrReadCount(ctx, ObjType, ObjID)
