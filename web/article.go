@@ -45,6 +45,25 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
 
 	reader.POST("/like",
 		WrapClaimsAndReq[LikeReq](a.Like))
+	reader.POST("/collect",
+		WrapClaimsAndReq[CollectReq](a.Collect))
+}
+
+func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq, claims user.ClaimsUser) (utils.Response, error) {
+	var err error
+
+	err = a.like.Collect(ctx, a.ObjType, req.ObjID, claims.Id)
+
+	if err != nil {
+		return utils.Response{
+			Code: domain.ErrSystem.ToInt(),
+			Msg:  "系统错误",
+			Data: nil,
+		}, err
+	}
+	return utils.Response{
+		Msg: "collect successful",
+	}, nil
 }
 
 func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq, claims user.ClaimsUser) (utils.Response, error) {
@@ -63,7 +82,7 @@ func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq, claims user.ClaimsU
 		}, err
 	}
 	return utils.Response{
-		Msg: "successful",
+		Msg: "like successful",
 	}, nil
 }
 
@@ -75,8 +94,19 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 		//log
 		return
 	}
+	claim, ok := ctx.Get("userClaims")
+	if !ok {
+		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		return
+	}
 
-	art, err := a.svc.GetPublishedByID(ctx, artId)
+	claims, ok := claim.(user.ClaimsUser)
+	if !ok {
+		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		return
+	}
+
+	art, err := a.svc.GetPublishedByID(ctx, artId, claims.Id)
 	if err != nil {
 		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
 		return

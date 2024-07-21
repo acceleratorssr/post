@@ -17,6 +17,41 @@ func NewGORMArticleLikeDao(db *gorm.DB) ArticleLikeDao {
 	}
 }
 
+func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType string, ObjID, uid int64) error {
+	now := time.Now().UnixMilli()
+
+	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]any{ // 防止重复插入
+				"status": 0,
+				"utime":  time.Now().UnixMilli(),
+			}),
+		}).Create(&UserGiveCollect{
+			ObjID:   ObjID,
+			ObjType: ObjType,
+			Uid:     uid,
+			Ctime:   now,
+			Utime:   now,
+		}).Error
+		if err != nil {
+			return err
+		}
+
+		return tx.WithContext(ctx).Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]any{
+				"collect_count": gorm.Expr("collect_count + ?", 1),
+				"utime":         time.Now().UnixMilli(),
+			}),
+		}).Create(&Like{
+			ObjID:        ObjID,
+			ObjType:      ObjType,
+			CollectCount: 1,
+			Ctime:        now,
+			Utime:        now,
+		}).Error
+	})
+}
+
 func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, id int64, uid int64) error {
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

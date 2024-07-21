@@ -58,7 +58,7 @@ func (s *ArticleTestSuite) SetupTest() {
 	//d := dao.NewGORMArticleDao(s.db)
 	artHandler := InitApp()
 
-	artHandler.RegisterRoutes(s.server)
+	artHandler.server.RegisterRoutes(s.server)
 
 	//web.NewArticleHandler(service.NewArticleService(repository.NewArticleRepository(dao.NewGORMArticleDao(dbInit())))).RegisterRoutes(s.server)
 }

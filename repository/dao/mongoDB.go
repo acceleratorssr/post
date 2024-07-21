@@ -17,6 +17,21 @@ type MongoDB struct {
 	node       *snowflake.Node
 }
 
+func (m *MongoDB) GetListByAuthor(ctx context.Context, uid int64, limit int, offset int) ([]ArticleAuthor, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MongoDB) GetByID(ctx context.Context, id int64) (ArticleAuthor, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MongoDB) GetPublishedByID(ctx context.Context, id int64) (ArticleReader, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewMongoDB(db *mongo.Database, node *snowflake.Node) ArticleDao {
 	return &MongoDB{
 		coll:       db.Collection("post"),

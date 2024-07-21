@@ -7,8 +7,10 @@
 package main
 
 import (
+	"post/events"
 	"post/ioc"
 	"post/repository"
+	"post/repository/cache"
 	"post/repository/dao"
 	"post/service"
 	"post/web"
@@ -16,13 +18,27 @@ import (
 
 // Injectors from wire.go:
 
-func InitApp() *web.ArticleHandler {
-	database := ioc.InitMongoDB()
-	node := dao.NewSnowflakeNode()
-	articleDao := dao.NewMongoDB(database, node)
+func InitApp() *App {
+	db := ioc.InitDB()
+	articleDao := dao.NewGORMArticleDao(db)
 	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao)
 	articleReaderRepository := repository.NewArticleReaderRepository(articleDao)
-	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository)
-	articleHandler := web.NewArticleHandler(articleService)
-	return articleHandler
+	client := ioc.InitKafka()
+	syncProducer := ioc.NewKafkaSyncProducer(client)
+	producer := events.NewKafkaProducer(syncProducer)
+	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, producer)
+	articleLikeDao := dao.NewGORMArticleLikeDao(db)
+	cmdable := ioc.InitRedis()
+	articleCache := cache.NewRedisArticleCache(cmdable)
+	likeRepository := repository.NewLikeRepository(articleLikeDao, articleCache)
+	likeService := service.NewLikeService(likeRepository)
+	articleHandler := web.NewArticleHandler(articleService, likeService)
+	engine := ioc.InitWebServer(articleHandler)
+	kafkaConsumer := events.NewKafkaConsumer(client, likeRepository)
+	v := ioc.NewKafkaConsumer(kafkaConsumer)
+	app := &App{
+		server:    engine,
+		consumers: v,
+	}
+	return app
 }

@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"post/domain"
+	"post/events"
 	"post/repository"
 )
 
-// mockgen -source=D:\桌面\pkg\post\service\article.go -package=svcmocks -destination=D:\桌面\pkg\post\service\mock\article_mock.go
+// mockgen -source=D:\桌面\pkg\post\service\Producer.go -package=svcmocks -destination=D:\桌面\pkg\post\service\mock\article_mock.go
 
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
@@ -14,24 +15,36 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, art domain.Article) error
 	List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error)
 	GetAuthorModelsByID(ctx context.Context, id int64) (domain.Article, error)
-	GetPublishedByID(ctx context.Context, id int64) (domain.Article, error)
+	GetPublishedByID(ctx context.Context, id, uid int64) (domain.Article, error)
 }
 
 type articleService struct {
-	author repository.ArticleAuthorRepository
-	reader repository.ArticleReaderRepository
+	author   repository.ArticleAuthorRepository
+	reader   repository.ArticleReaderRepository
+	producer events.Producer
 }
 
 func NewArticleService(author repository.ArticleAuthorRepository,
-	reader repository.ArticleReaderRepository) ArticleService {
+	reader repository.ArticleReaderRepository,
+	producer events.Producer) ArticleService {
 	return &articleService{
-		author: author,
-		reader: reader,
+		author:   author,
+		reader:   reader,
+		producer: producer,
 	}
 }
 
-func (a *articleService) GetPublishedByID(ctx context.Context, id int64) (domain.Article, error) {
-	return a.reader.GetPublishedByID(ctx, id)
+func (a *articleService) GetPublishedByID(ctx context.Context, id, uid int64) (domain.Article, error) {
+	art, err := a.reader.GetPublishedByID(ctx, id)
+	if err == nil {
+		go func() {
+			a.producer.ProduceReadEvent(ctx, &events.ReadEvent{
+				Uid: uid,
+				Aid: id,
+			}, "article_read") // TODO 取出topic
+		}()
+	}
+	return art, err
 }
 
 func (a *articleService) GetAuthorModelsByID(ctx context.Context, id int64) (domain.Article, error) {

@@ -10,14 +10,15 @@ type LikeRepository interface {
 	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
 	IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
+	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid int64) error
 }
 
 type likeRepository struct {
 	dao   dao.ArticleLikeDao
-	cache cache.RedisArticleCache
+	cache cache.ArticleCache
 }
 
-func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.RedisArticleCache) LikeRepository {
+func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.ArticleCache) LikeRepository {
 	return &likeRepository{
 		dao:   dao,
 		cache: cache,
@@ -26,6 +27,11 @@ func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.RedisArticleCache) Li
 func (l *likeRepository) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
 	go l.cache.IncrReadCount(ctx, ObjType, ObjID)
 	return l.dao.IncrReadCount(ctx, ObjType, ObjID)
+}
+
+func (l *likeRepository) AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid int64) error {
+	// 收藏夹访问次数比较低频，不加缓存
+	return l.dao.InsertCollection(ctx, ObjType, ObjID, uid)
 }
 
 func (l *likeRepository) IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error {

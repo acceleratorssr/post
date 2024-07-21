@@ -7,5 +7,8 @@ func InitTables(db *gorm.DB) error {
 		&ArticleAuthor{},
 		&ArticleReader{},
 		&Like{},
+		&UserGiveCollect{},
+		&UserGiveLike{},
+		&UserGiveRead{},
 	)
 }

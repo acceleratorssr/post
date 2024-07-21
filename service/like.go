@@ -9,7 +9,7 @@ type LikeService interface {
 	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
 	Like(ctx context.Context, ObjType string, ObjID, uid int64) error
 	UnLike(ctx context.Context, ObjType string, ObjID, uid int64) error
-	Collect(ctx context.Context, ObjType string, ObjID, aid, uid int64) error
+	Collect(ctx context.Context, ObjType string, ObjID, uid int64) error
 }
 
 type likeService struct {
@@ -33,7 +33,6 @@ func (l *likeService) UnLike(ctx context.Context, ObjType string, ObjID, uid int
 	return l.repo.DecrLikeCount(ctx, ObjType, ObjID, uid)
 }
 
-func (l *likeService) Collect(ctx context.Context, ObjType string, ObjID, aid, uid int64) error {
-	//TODO implement me
-	panic("implement me")
+func (l *likeService) Collect(ctx context.Context, ObjType string, ObjID, uid int64) error {
+	return l.repo.AddCollectionItem(ctx, ObjType, ObjID, uid)
 }
