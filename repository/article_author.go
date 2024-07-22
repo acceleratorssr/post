@@ -17,11 +17,14 @@ type ArticleAuthorRepository interface {
 
 type articleAuthorRepository struct {
 	dao   dao.ArticleDao
-	cache cache.RedisArticleCache
+	cache cache.ArticleCache
 }
 
-func NewArticleAuthorRepository(dao dao.ArticleDao) ArticleAuthorRepository {
-	return &articleAuthorRepository{dao: dao}
+func NewArticleAuthorRepository(dao dao.ArticleDao, cache cache.ArticleCache) ArticleAuthorRepository {
+	return &articleAuthorRepository{
+		dao:   dao,
+		cache: cache,
+	}
 }
 
 func (a *articleAuthorRepository) GetByID(ctx context.Context, id int64) (domain.Article, error) {

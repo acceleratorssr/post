@@ -103,3 +103,24 @@ type UserGiveRead struct {
 	Ctime int64
 	Utime int64
 }
+
+// 使用callback代替hook
+// https://gorm.io/zh_CN/docs/write_plugins.html
+//func (aa *ArticleAuthor) BeforeCreate(tx *gorm.DB) (err error) {
+//	start := time.Now()
+//	tx.Set("start", start)
+//	return
+//}
+//
+//func (aa *ArticleAuthor) AfterCreate(tx *gorm.DB) (err error) {
+//	start, ok := tx.Statement.Get("start")
+//	if !ok {
+//		return
+//	}
+//	t, ok := start.(time.Time)
+//	if !ok {
+//		return
+//	}
+//	fmt.Println(time.Since(t))
+//	return
+//}

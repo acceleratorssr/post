@@ -43,13 +43,22 @@ func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, ObjType st
 	//	return nil
 	//})
 
-	return gad.db.WithContext(ctx).Clauses(clause.OnConflict{
+	//return gad.db.WithContext(ctx).Clauses(clause.OnConflict{
+	//	Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}}, // 指定冲突列
+	//	DoUpdates: clause.Assignments(map[string]any{
+	//		"view_count": gorm.Expr("view_count + ?", 1),
+	//		"utime":      time.Now().UnixMilli(),
+	//	}),
+	//}).CreateInBatches(likes, len(ObjIDs)).Error // len(ObjIDs)是每批次插入的记录数
+	tx := gad.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}}, // 指定冲突列
 		DoUpdates: clause.Assignments(map[string]any{
 			"view_count": gorm.Expr("view_count + ?", 1),
 			"utime":      time.Now().UnixMilli(),
 		}),
-	}).CreateInBatches(likes, len(ObjIDs)).Error // len(ObjIDs)是每批次插入的记录数
+	}).CreateInBatches(likes, len(ObjIDs))
+	// todo 怎么更新缓存？
+	return tx.Error
 }
 
 func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType string, ObjID, uid int64) error {

@@ -6,11 +6,11 @@ import (
 )
 
 //go:embed redis.yaml
-var addr_redis string
+var addrRedis string
 
 func InitRedis() redis.Cmdable {
 	cmd := redis.NewClient(&redis.Options{
-		Addr: addr_redis,
+		Addr: "localhost:6379",
 	})
 	return cmd
 }

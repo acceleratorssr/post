@@ -30,7 +30,18 @@ func NewArticleHandler(svc service.ArticleService, like service.LikeService) *Ar
 	}
 }
 
+func (a *ArticleHandler) Test(ctx *gin.Context) {
+	a.svc.Save(ctx, domain.Article{
+		Title:   "test",
+		Content: "test",
+	})
+	ctx.JSON(200, gin.H{
+		"message": "ok",
+	})
+}
+
 func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
+	s.POST("/test", a.Test)
 	articles := s.Group("/articles")
 	articles.POST("/save", a.Save)
 	articles.POST("/publish", a.Publish)
@@ -113,12 +124,12 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 	}
 
 	// 增加阅读计数，也可以放middleware里
-	go func() {
-		AsyErr := a.like.IncrReadCount(ctx, a.ObjType, artId)
-		if AsyErr != nil {
-			// log
-		}
-	}()
+	//go func() {
+	//	AsyErr := a.like.IncrReadCount(ctx, a.ObjType, artId)
+	//	if AsyErr != nil {
+	//		// log
+	//	}
+	//}()
 
 	utils.OK(ArticleVO{
 		Content: art.Content,

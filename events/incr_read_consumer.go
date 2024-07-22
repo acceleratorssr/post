@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Consumer 有其他需求时，记得实现该接口即可，wire会填充进去的
 type Consumer interface {
 	Start(topic string) error
 }
