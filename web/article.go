@@ -1,10 +1,12 @@
 package web
 
 import (
-	"fmt"
+	"context"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	"go.opentelemetry.io/otel/trace"
+	"math/rand"
 	"post/domain"
+	"post/pkg/gin_ex"
 	"post/service"
 	"post/user"
 	"post/utils"
@@ -30,24 +32,38 @@ func NewArticleHandler(svc service.ArticleService, like service.LikeService) *Ar
 	}
 }
 
-func (a *ArticleHandler) Test(ctx *gin.Context) {
+func (a *ArticleHandler) Test(ctx context.Context) (utils.Response, error) {
+	// 注意此处传入的是context.context，而不是gin.Context
 	a.svc.Save(ctx, domain.Article{
 		Title:   "test",
 		Content: "test",
 	})
-	ctx.JSON(200, gin.H{
-		"message": "ok",
-	})
+	// 复用
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent("---50%---")
+
+	if rand.Int31n(100)%2 == 0 {
+
+		return utils.Response{
+			Code: utils.UserInvalidInput,
+			Msg:  "fail",
+		}, nil
+	}
+	return utils.Response{
+		Code: 200,
+		Msg:  "ok",
+	}, nil
 }
 
 func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
-	s.POST("/test", a.Test)
+	s.POST("/test",
+		gin_ex.WrapNilReq(a.Test))
 	articles := s.Group("/articles")
 	articles.POST("/save", a.Save)
 	articles.POST("/publish", a.Publish)
 	articles.POST("/withdraw", a.Withdraw)
 	articles.POST("/list",
-		WrapClaimsAndReq[ReqList](a.List))
+		gin_ex.WrapClaimsAndReq[ReqList](a.List))
 	articles.GET("/detail/:id",
 		a.DetailSelf)
 
@@ -55,12 +71,12 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
 	reader.GET("/:id", a.Detail)
 
 	reader.POST("/like",
-		WrapClaimsAndReq[LikeReq](a.Like))
+		gin_ex.WrapClaimsAndReq[LikeReq](a.Like))
 	reader.POST("/collect",
-		WrapClaimsAndReq[CollectReq](a.Collect))
+		gin_ex.WrapClaimsAndReq[CollectReq](a.Collect))
 }
 
-func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq, claims user.ClaimsUser) (utils.Response, error) {
+func (a *ArticleHandler) Collect(ctx context.Context, req CollectReq, claims user.ClaimsUser) (utils.Response, error) {
 	var err error
 
 	err = a.like.Collect(ctx, a.ObjType, req.ObjID, claims.Id)
@@ -77,7 +93,7 @@ func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq, claims user.C
 	}, nil
 }
 
-func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq, claims user.ClaimsUser) (utils.Response, error) {
+func (a *ArticleHandler) Like(ctx context.Context, req LikeReq, claims user.ClaimsUser) (utils.Response, error) {
 	var err error
 	if req.Liked {
 		err = a.like.Like(ctx, a.ObjType, req.ID, claims.Id)
@@ -117,7 +133,7 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 		return
 	}
 
-	art, err := a.svc.GetPublishedByID(ctx, artId, claims.Id)
+	art, err := a.svc.GetPublishedByID(ctx.Request.Context(), artId, claims.Id)
 	if err != nil {
 		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
 		return
@@ -125,7 +141,7 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 
 	// 增加阅读计数，也可以放middleware里
 	//go func() {
-	//	AsyErr := a.like.IncrReadCount(ctx, a.ObjType, artId)
+	//	AsyErr := a.like.IncrReadCount(ctx.Request.Context(), a.ObjType, artId)
 	//	if AsyErr != nil {
 	//		// log
 	//	}
@@ -162,7 +178,7 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 		return
 	}
 
-	art, err := a.svc.GetAuthorModelsByID(ctx, artId)
+	art, err := a.svc.GetAuthorModelsByID(ctx.Request.Context(), artId)
 	if err != nil {
 		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
 		return
@@ -185,7 +201,7 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 	}, "success", ctx)
 }
 
-func (a *ArticleHandler) List(ctx *gin.Context, req ReqList, claims user.ClaimsUser) (utils.Response, error) {
+func (a *ArticleHandler) List(ctx context.Context, req ReqList, claims user.ClaimsUser) (utils.Response, error) {
 	res, err := a.svc.List(ctx, claims.Id, req.Limit, req.Offset)
 	if err != nil {
 		return utils.Response{
@@ -262,42 +278,4 @@ func (a *ArticleHandler) getUserInfo(c *gin.Context) *user.ClaimsUser {
 		return nil
 	}
 	return claims
-}
-
-// WrapClaimsAndReq
-// TODO 除此之外还可以考虑单独解析claims或者req，解决全部post
-func WrapClaimsAndReq[Req any](fn func(*gin.Context, Req, user.ClaimsUser) (utils.Response, error)) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var req Req
-		if err := ctx.Bind(&req); err != nil {
-			err = fmt.Errorf("解析请求失败%w", err)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
-			return
-		}
-
-		claim, ok := ctx.Get("userClaims")
-		if !ok {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
-			return
-		}
-
-		claims, ok := claim.(user.ClaimsUser)
-		if !ok {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
-			return
-		}
-
-		res, err := fn(ctx, req, claims)
-
-		if err != nil {
-			err = fmt.Errorf("业务失败:%w", err)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
-		}
-
-		utils.OK(res.Data, res.Msg, ctx)
-	}
 }

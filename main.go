@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	"post/ioc"
+	"time"
 )
 
 func main() {
 	initPrometheus()
+	fn := ioc.InitOTEL()
+
 	app := InitApp()
 	if app == nil {
 		return
@@ -24,6 +29,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	fn(ctx)
 }
 
 func initPrometheus() {

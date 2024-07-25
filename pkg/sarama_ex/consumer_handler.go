@@ -5,6 +5,8 @@ import (
 	"github.com/IBM/sarama"
 )
 
+// todo 添加prometheus监控
+
 // Handler 实现consumerGroupHandler接口
 type Handler[T any] struct {
 	fn func(msg *sarama.ConsumerMessage, t T) error

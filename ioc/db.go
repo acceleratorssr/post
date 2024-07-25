@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/plugin/opentelemetry/tracing"
 	prom "gorm.io/plugin/prometheus"
 	"post/repository/dao"
 	"time"
@@ -89,6 +90,15 @@ func InitDB() *gorm.DB {
 		panic(err)
 	}
 
+	// https://github.com/go-gorm/opentelemetry
+	// tracing.NewPlugin(tracing.WithDBName("post")这个插件的实现同样使用底层的callback
+	err = db.Use(tracing.NewPlugin(tracing.WithDBName("post")))
+	//tracing.WithoutQueryVariables(), // 不记录查询参数
+
+	if err != nil {
+		return nil
+	}
+
 	return db
 }
 
@@ -164,6 +174,7 @@ func (c *Callbacks) after(typ string) func(db *gorm.DB) {
 		if !ok {
 			return
 		}
+
 		table := db.Statement.Table
 		if table == "" {
 			table = "unknown"
