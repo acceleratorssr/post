@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"post/domain"
 	"post/repository/cache"
 	"post/repository/dao"
 )
@@ -13,6 +14,8 @@ type LikeRepository interface {
 	IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
 	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid int64) error
+
+	GetListAllOfLikes(ctx context.Context, ObjType string, offset, limit int, now int64) ([]domain.Like, error)
 }
 
 type likeRepository struct {
@@ -25,6 +28,16 @@ func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.ArticleCache) LikeRep
 		dao:   dao,
 		cache: cache,
 	}
+}
+
+func (l *likeRepository) GetListAllOfLikes(ctx context.Context, ObjType string, offset, limit int, now int64) ([]domain.Like, error) {
+
+	likes, err := l.dao.GetPublishedByBatch(ctx, ObjType, offset, limit, now)
+	if err != nil {
+		// log
+		return nil, err
+	}
+	return l.toDomain(likes...)
 }
 
 func (l *likeRepository) IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error {
@@ -57,4 +70,16 @@ func (l *likeRepository) DecrLikeCount(ctx context.Context, ObjType string, ObjI
 	}
 
 	return l.cache.DecrLikeCount(ctx, ObjType, ObjID)
+}
+
+func (l *likeRepository) toDomain(art ...dao.Like) ([]domain.Like, error) {
+	domainL := make([]domain.Like, 0, len(art))
+	for i, _ := range art {
+		domainL = append(domainL, domain.Like{
+			ID:        art[i].ID,
+			LikeCount: art[i].LikeCount,
+			Ctime:     art[i].Ctime,
+		})
+	}
+	return domainL, nil
 }

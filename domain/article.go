@@ -12,6 +12,12 @@ type Article struct {
 	Utime   time.Time
 }
 
+type Like struct {
+	ID        int64
+	LikeCount int64
+	Ctime     int64
+}
+
 type Author struct {
 	Id   int64
 	Name string

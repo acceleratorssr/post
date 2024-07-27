@@ -20,6 +20,8 @@ type ArticleLikeDao interface {
 	InSertLike(ctx context.Context, objType string, id int64, uid int64) error
 	DeleteLike(ctx context.Context, objType string, id int64, uid int64) error
 	InsertCollection(ctx context.Context, ObjType string, ObjID, uid int64) error
+
+	GetPublishedByBatch(ctx context.Context, ObjType string, offset, limit int, now int64) ([]Like, error)
 }
 
 // ArticleAuthor 为ing库，或者说草稿库，制作库
@@ -58,7 +60,7 @@ type Like struct {
 	CollectCount int64 `gorm:"column:collect_count"`
 	ViewCount    int64 `gorm:"column:view_count"`
 
-	Ctime int64
+	Ctime int64 `gorm:"index:idx_ctime"`
 	Utime int64
 }
 

@@ -184,3 +184,9 @@ func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string
 	//    ON DUPLICATE KEY UPDATE view_count = view_count + 1`
 	//return gad.db.WithContext(ctx).Exec(sql, ObjID, ObjType, 1).Error
 }
+
+func (gad *GORMArticleLikeDao) GetPublishedByBatch(ctx context.Context, ObjType string, offset, limit int, now int64) ([]Like, error) {
+	var res []Like
+	return res, gad.db.WithContext(ctx).Where("obj_type = ? and status = ? and ctime < ?", ObjType, 0, now).
+		Offset(offset).Limit(limit).Find(&res).Error
+}

@@ -7,15 +7,17 @@ import (
 	"post/repository"
 )
 
-// mockgen -source=D:\桌面\pkg\post\service\incr_read_producer.go -package=svcmocks -destination=D:\桌面\pkg\post\service\mock\article_mock.go
-
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
 	Withdraw(ctx context.Context, art domain.Article) error
+
 	List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error)
+
 	GetAuthorModelsByID(ctx context.Context, id int64) (domain.Article, error)
+
 	GetPublishedByID(ctx context.Context, id, uid int64) (domain.Article, error)
+	GetPublishedByIDS(ctx context.Context, ids []int64) ([]domain.Article, error)
 }
 
 type articleService struct {
@@ -63,6 +65,10 @@ func NewArticleService(author repository.ArticleAuthorRepository,
 		producer: producer,
 		//ch:       ch,
 	}
+}
+
+func (svc *articleService) GetPublishedByIDS(ctx context.Context, ids []int64) ([]domain.Article, error) {
+	panic("implement me")
 }
 
 func (svc *articleService) GetPublishedByID(ctx context.Context, id, uid int64) (domain.Article, error) {

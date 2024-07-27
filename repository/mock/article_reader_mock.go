@@ -40,6 +40,21 @@ func (m *MockArticleReaderRepository) EXPECT() *MockArticleReaderRepositoryMockR
 	return m.recorder
 }
 
+// GetPublishedByID mocks base method.
+func (m *MockArticleReaderRepository) GetPublishedByID(ctx context.Context, id int64) (domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPublishedByID", ctx, id)
+	ret0, _ := ret[0].(domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPublishedByID indicates an expected call of GetPublishedByID.
+func (mr *MockArticleReaderRepositoryMockRecorder) GetPublishedByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPublishedByID", reflect.TypeOf((*MockArticleReaderRepository)(nil).GetPublishedByID), ctx, id)
+}
+
 // Save mocks base method.
 func (m *MockArticleReaderRepository) Save(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()

@@ -78,6 +78,8 @@ func (gad *GORMArticleDao) UpdateByID(ctx context.Context, art ArticleAuthor) er
 	return res.Error
 }
 
+// SyncStatus
+// todo 此处没有对like进行更新
 func (gad *GORMArticleDao) SyncStatus(ctx context.Context, art ArticleAuthor) error {
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

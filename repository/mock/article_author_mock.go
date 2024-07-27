@@ -55,6 +55,36 @@ func (mr *MockArticleAuthorRepositoryMockRecorder) Create(ctx, art any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockArticleAuthorRepository)(nil).Create), ctx, art)
 }
 
+// GetByID mocks base method.
+func (m *MockArticleAuthorRepository) GetByID(ctx context.Context, id int64) (domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret0, _ := ret[0].(domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockArticleAuthorRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockArticleAuthorRepository)(nil).GetByID), ctx, id)
+}
+
+// List mocks base method.
+func (m *MockArticleAuthorRepository) List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, uid, limit, offset)
+	ret0, _ := ret[0].([]domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockArticleAuthorRepositoryMockRecorder) List(ctx, uid, limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockArticleAuthorRepository)(nil).List), ctx, uid, limit, offset)
+}
+
 // Update mocks base method.
 func (m *MockArticleAuthorRepository) Update(ctx context.Context, art domain.Article) error {
 	m.ctrl.T.Helper()

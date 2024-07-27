@@ -31,10 +31,10 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id int64
 	if err != nil {
 		return domain.Article{}, err
 	}
-	temp := a.toDomain(byID)
-	temp.Author.Id = byID.Authorid
+	temp, err := a.toDomain(byID)
+	temp[0].Author.Id = byID.Authorid
 	//temp.Author.Name, err = a.userRepo.FindByID(ctx,temp.Author.Id)
-	return temp, err
+	return temp[0], err
 }
 
 func (a *articleReaderRepository) Save(ctx context.Context, art domain.Article) (int64, error) {
@@ -43,6 +43,7 @@ func (a *articleReaderRepository) Save(ctx context.Context, art domain.Article) 
 
 func (a *articleReaderRepository) Sync(ctx context.Context, art domain.Article) error {
 	err := a.dao.SyncStatus(ctx, ToEntity(art))
+	// todo 同步删除likeRepo内的数据
 	if err != nil { // 防止发布出现错误
 		a.cache.DeleteFirstPage(ctx, art.ID)
 		a.cache.SetArticleDetail(ctx, art.ID, art)
@@ -51,13 +52,17 @@ func (a *articleReaderRepository) Sync(ctx context.Context, art domain.Article) 
 	return err
 }
 
-func (a *articleReaderRepository) toDomain(art dao.ArticleReader) domain.Article {
-	return domain.Article{
-		ID:      art.Id,
-		Title:   art.Title,
-		Content: art.Content,
-		Status:  domain.StatusType(art.Status),
-		Ctime:   time.UnixMilli(art.Ctime),
-		Utime:   time.UnixMilli(art.Utime),
+func (a *articleReaderRepository) toDomain(art ...dao.ArticleReader) ([]domain.Article, error) {
+	domainA := make([]domain.Article, 0, len(art))
+	for i, _ := range art {
+		domainA = append(domainA, domain.Article{
+			ID:      art[i].Id,
+			Title:   art[i].Title,
+			Content: art[i].Content,
+			Status:  domain.StatusType(art[i].Status),
+			Ctime:   time.UnixMilli(art[i].Ctime),
+			Utime:   time.UnixMilli(art[i].Utime),
+		})
 	}
+	return domainA, nil
 }

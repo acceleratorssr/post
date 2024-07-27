@@ -32,7 +32,12 @@ func (a *articleAuthorRepository) GetByID(ctx context.Context, id int64) (domain
 	if err != nil {
 		return domain.Article{}, err
 	}
-	return a.toDomain(res), nil
+
+	art, err := a.toDomain(res)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	return art[0], err
 }
 func (a *articleAuthorRepository) List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error) {
 	if offset == 0 && limit <= 100 {
@@ -46,7 +51,7 @@ func (a *articleAuthorRepository) List(ctx context.Context, uid int64, limit, of
 	if err != nil {
 		return nil, err
 	}
-	data, err := a.toDomainMany(res)
+	data, err := a.toDomain(res...)
 
 	// 回源
 	go func() {
@@ -69,23 +74,17 @@ func (a *articleAuthorRepository) Update(ctx context.Context, art domain.Article
 	return a.dao.UpdateByID(ctx, ToEntity(art))
 }
 
-// TODO 有没有更方便的转换方式
-func (a *articleAuthorRepository) toDomainMany(art []dao.ArticleAuthor) ([]domain.Article, error) {
-	domainA := make([]domain.Article, 0)
+func (a *articleAuthorRepository) toDomain(art ...dao.ArticleAuthor) ([]domain.Article, error) {
+	domainA := make([]domain.Article, 0, len(art))
 	for i, _ := range art {
-		domainA = append(domainA, a.toDomain(art[i]))
-
+		domainA = append(domainA, domain.Article{
+			ID:      art[i].Id,
+			Title:   art[i].Title,
+			Content: art[i].Content,
+			Status:  domain.StatusType(art[i].Status),
+			Ctime:   time.UnixMilli(art[i].Ctime),
+			Utime:   time.UnixMilli(art[i].Utime),
+		})
 	}
 	return domainA, nil
-}
-
-func (a *articleAuthorRepository) toDomain(art dao.ArticleAuthor) domain.Article {
-	return domain.Article{
-		ID:      art.Id,
-		Title:   art.Title,
-		Content: art.Content,
-		Status:  domain.StatusType(art.Status),
-		Ctime:   time.UnixMilli(art.Ctime),
-		Utime:   time.UnixMilli(art.Utime),
-	}
 }

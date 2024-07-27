@@ -37,6 +37,7 @@ func InitOTEL() func(ctx context.Context) {
 
 	//defer tp.Shutdown(context.Background())
 	otel.SetTracerProvider(tp)
+
 	return func(ctx context.Context) {
 		tp.Shutdown(ctx)
 	}
