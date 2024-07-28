@@ -6,6 +6,7 @@ import (
 	"github.com/google/wire"
 	"post/events"
 	"post/ioc"
+	distLock "post/redis_distributed_lock"
 	"post/repository"
 	"post/repository/cache"
 	"post/repository/dao"
@@ -13,8 +14,15 @@ import (
 	"post/web"
 )
 
+var rankingServiceSet = wire.NewSet(
+	cache.NewRankCache,
+	repository.NewBatchRankCache,
+	service.NewBatchRankService)
+
 func InitApp() *App {
 	wire.Build(
+		distLock.NewClient,
+
 		ioc.InitDB,
 		//ioc.InitMongoDB,
 		//ioc.InitLogger,
@@ -23,6 +31,10 @@ func InitApp() *App {
 		ioc.NewKafkaSyncProducer,
 		ioc.NewKafkaConsumer,
 		ioc.InitWebServer,
+		ioc.InitJobs,
+		ioc.InitRankingJob,
+
+		rankingServiceSet,
 
 		//events.NewKafkaConsumer,
 		events.NewBatchKafkaConsumer,
@@ -32,6 +44,7 @@ func InitApp() *App {
 		dao.NewGORMArticleLikeDao,
 		//dao.NewMongoDB,
 		cache.NewRedisArticleCache,
+		cache.NewLocalCacheForRank,
 		//dao.NewSnowflakeNode,
 
 		repository.NewArticleAuthorRepository,

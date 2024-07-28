@@ -7,13 +7,43 @@ import (
 )
 
 type RankRepository interface {
-	ReplaceTopN(ctx context.Context, arts []domain.Article) error
+	ReplaceTopNDetail(ctx context.Context, arts []domain.Article) error
+	ReplaceTopNBrief(ctx context.Context, arts []domain.Article) error
+	GetRankTopNBrief(ctx context.Context) ([]domain.Article, error)
 }
 
 type BatchRankCache struct {
-	cache cache.ArticleCache
+	redisCache cache.RankCache
+	localCache cache.RankCache
 }
 
-func (b *BatchRankCache) ReplaceTopN(ctx context.Context, arts []domain.Article) error {
-	return b.cache.SetTopN(ctx, arts)
+func NewBatchRankCache(cache *cache.RankRedisCache, localCache *cache.LocalCacheForRank) RankRepository {
+	return &BatchRankCache{
+		redisCache: cache,
+		localCache: localCache,
+	}
+}
+
+func (b *BatchRankCache) GetRankTopNBrief(ctx context.Context) ([]domain.Article, error) {
+	brief, err := b.localCache.GetTopNBrief(ctx)
+	if err == nil {
+		return brief, nil
+	}
+
+	brief, err = b.redisCache.GetTopNBrief(ctx)
+	if err == nil {
+		go b.localCache.SetTopNBrief(ctx, brief)
+	}
+
+	return brief, err
+}
+
+func (b *BatchRankCache) ReplaceTopNDetail(ctx context.Context, arts []domain.Article) error {
+	go b.localCache.SetTopN(ctx, arts)
+	return b.redisCache.SetTopN(ctx, arts)
+}
+
+func (b *BatchRankCache) ReplaceTopNBrief(ctx context.Context, arts []domain.Article) error {
+	go b.localCache.SetTopNBrief(ctx, arts)
+	return b.redisCache.SetTopNBrief(ctx, arts)
 }

@@ -30,6 +30,8 @@ func (p *PrometheusRedisHook) DialHook(next redis.DialHook) redis.DialHook {
 	}
 }
 
+// ProcessHook
+// todo hook可以用于拦截命令后，先查询本地缓存，如果命中则直接返回，否则才发送命令到redis上执行
 func (p *PrometheusRedisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 	return func(ctx context.Context, cmd redis.Cmder) error {
 		start := time.Now()

@@ -7,6 +7,7 @@
 package main
 
 import (
+	"github.com/google/wire"
 	"post/events"
 	"post/ioc"
 	"post/repository"
@@ -36,9 +37,19 @@ func InitApp() *App {
 	engine := ioc.InitWebServer(articleHandler)
 	batchKafkaConsumer := events.NewBatchKafkaConsumer(client, likeRepository)
 	v := ioc.NewKafkaConsumer(batchKafkaConsumer)
+	rankCache := cache.NewRankCache(cmdable)
+	rankRepository := repository.NewBatchRankCache(rankCache)
+	rankService := service.NewBatchRankService(articleService, likeService, rankRepository)
+	rankingJob := ioc.InitRankingJob(rankService)
+	cron := ioc.InitJobs(rankingJob)
 	app := &App{
 		server:    engine,
 		consumers: v,
+		cron:      cron,
 	}
 	return app
 }
+
+// wire.go:
+
+var rankingServiceSet = wire.NewSet(cache.NewRankCache, repository.NewBatchRankCache, service.NewBatchRankService)

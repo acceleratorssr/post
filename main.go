@@ -25,6 +25,9 @@ func main() {
 			panic(err)
 		}
 	}
+
+	app.cron.Start()
+
 	err := server.Run(":9091")
 	if err != nil {
 		panic(err)
@@ -32,6 +35,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	fn(ctx)
+	<-app.cron.Stop().Done()
 }
 
 func initPrometheus() {

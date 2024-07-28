@@ -36,26 +36,12 @@ type ArticleCache interface {
 	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
 	IncrLikeCount(ctx context.Context, ObjType string, ObjID int64) error
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error
-
-	SetTopN(ctx context.Context, arts []domain.Article) error
 }
 
 func NewRedisArticleCache(client redis.Cmdable) ArticleCache {
 	return &RedisArticleCache{
 		client: client,
 	}
-}
-
-// SetTopN 每个文章单独设缓存
-func (r *RedisArticleCache) SetTopN(ctx context.Context, arts []domain.Article) error {
-	for i, _ := range arts {
-		val, err := json.Marshal(arts[i])
-		err = r.client.Set(ctx, r.keyIncrReadCount("article", arts[i].ID), val, 70*time.Minute).Err()
-		if err != nil {
-			// log
-		}
-	}
-	return nil
 }
 
 func (r *RedisArticleCache) DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {

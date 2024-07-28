@@ -4,19 +4,20 @@ import (
 	"context"
 	"math"
 	"post/domain"
-	"post/repository/cache"
+	"post/repository"
 	"post/utils"
 	"time"
 )
 
 type RankService interface {
-	GetRankTopN(ctx context.Context, n int) error
+	SetRankTopN(ctx context.Context, n int) error
+	GetRankTopNBrief(ctx context.Context) ([]domain.Article, error)
 }
 
 type BatchRankService struct {
-	artSvc  ArticleService
-	likeSvc LikeService
-	cache   cache.ArticleCache
+	artSvc   ArticleService
+	likeSvc  LikeService
+	rankRepo repository.RankRepository
 }
 
 type scoreNum struct {
@@ -24,14 +25,19 @@ type scoreNum struct {
 	score float64
 }
 
-func NewBatchRankService(artSvc ArticleService, likeSvc LikeService) BatchRankService {
-	return BatchRankService{
-		artSvc:  artSvc,
-		likeSvc: likeSvc,
+func NewBatchRankService(artSvc ArticleService, likeSvc LikeService, rankRepo repository.RankRepository) RankService {
+	return &BatchRankService{
+		artSvc:   artSvc,
+		likeSvc:  likeSvc,
+		rankRepo: rankRepo,
 	}
 }
 
-func (svc *BatchRankService) GetRankTopN(ctx context.Context, n int) error {
+func (svc *BatchRankService) GetRankTopNBrief(ctx context.Context) ([]domain.Article, error) {
+	return svc.rankRepo.GetRankTopNBrief(ctx)
+}
+
+func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 	offset := 0
 	// 直接从like取出数据，然后找出topn后，返回ids即可，再根据id获取文章
 	pq := utils.NewMinHeap()
@@ -65,12 +71,22 @@ func (svc *BatchRankService) GetRankTopN(ctx context.Context, n int) error {
 		res[i] = v.ID
 	}
 
-	// todo 更新进缓存中
 	arts, err := svc.artSvc.GetPublishedByIDS(ctx, res)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	err = svc.cache.SetTopN(ctx, arts)
+
+	// 缓存每篇热帖
+	err = svc.rankRepo.ReplaceTopNDetail(ctx, arts)
+	if err != nil {
+		panic(err)
+	}
+
+	// todo 有点粗糙缓存帖子的简要信息在一起
+	err = svc.rankRepo.ReplaceTopNBrief(ctx, arts)
+	if err != nil {
+		panic(err)
+	}
 
 	return err
 }
