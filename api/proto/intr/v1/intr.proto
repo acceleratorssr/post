@@ -1,0 +1,77 @@
+// interactive.proto
+syntax = "proto3";
+
+package intr.v1;
+option go_package="intr/v1;intrv1"; //;后为给生成的包起的别名
+
+service LikeService {
+    rpc  IncrReadCount(IncrReadCountRequest) returns (IncrReadCountResponse);
+    rpc  Like(LikeRequest) returns (LikeResponse);
+    rpc  UnLike(UnLikeRequest) returns (UnLikeResponse);
+    rpc  Collect(CollectRequest) returns (CollectResponse);
+    rpc  GetListBatchOfLikes(GetListBatchOfLikesRequest) returns (GetListBatchOfLikesResponse);
+}
+
+message Like {
+  int64 ID = 1;
+  int64 LikeCount = 2;
+  int64 Ctime = 3;
+}
+
+message IncrReadCountRequest {
+  string ObjType = 1;
+  int64 ObjID = 2;
+}
+
+message IncrReadCountResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+message LikeRequest {
+  string ObjType = 1;
+  int64 ObjID = 2;
+  int64 uid = 3;
+}
+
+message LikeResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+message UnLikeRequest {
+  string ObjType = 1;
+  int64 ObjID = 2;
+  int64 uid = 3;
+}
+
+message UnLikeResponse {
+  // 响应状态码
+  int32 code = 1;
+  // 响应消息
+  string message = 2;
+}
+
+message CollectRequest {
+  string ObjType = 1;
+  int64 ObjID = 2;
+  int64 uid = 3;
+}
+
+message CollectResponse {
+  int32 code = 1;
+  string message = 2;
+}
+
+message GetListBatchOfLikesRequest {
+  string ObjType = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+  int64 now = 4;
+}
+
+message GetListBatchOfLikesResponse {
+  int32 code = 1;
+  string message = 2;
+  repeated Like data = 3;
+}

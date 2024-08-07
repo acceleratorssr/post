@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
-	"post/domain"
-	"post/user"
-	"post/utils"
+	"post/internal/domain"
+	"post/internal/user"
+	"post/internal/utils"
 	"strconv"
 )
 
