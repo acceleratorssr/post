@@ -251,22 +251,22 @@ func (s *InteractiveTestSuite) TestLike() {
 					Ctime:        6,
 				}, data)
 
-				var likeBiz dao.UserGiveLike
+				var like dao.UserGiveLike
 				err = s.db.Where("obj_type = ? AND obj_id = ? AND uid = ?",
-					"test", 2, 123).First(&likeBiz).Error
+					"test", 2, 123).First(&like).Error
 				assert.NoError(t, err)
-				assert.True(t, likeBiz.ID > 0)
-				assert.True(t, likeBiz.Ctime > 0)
-				assert.True(t, likeBiz.Utime > 0)
-				likeBiz.ID = 0
-				likeBiz.Ctime = 0
-				likeBiz.Utime = 0
+				assert.True(t, like.ID > 0)
+				assert.True(t, like.Ctime > 0)
+				assert.True(t, like.Utime > 0)
+				like.ID = 0
+				like.Ctime = 0
+				like.Utime = 0
 				assert.Equal(t, dao.UserGiveLike{
 					ObjType: "test",
 					ObjID:   2,
 					Uid:     123,
 					Status:  0, // 0点赞 1取消
-				}, likeBiz)
+				}, like)
 
 				cnt, err := s.rdb.HGet(ctx, "article_incr_Like_count:test:2", "like_cnt").Int()
 				assert.NoError(t, err)
@@ -303,22 +303,22 @@ func (s *InteractiveTestSuite) TestLike() {
 					LikeCount: 1,
 				}, data)
 
-				var likeBiz dao.UserGiveLike
+				var like dao.UserGiveLike
 				err = s.db.Where("obj_type = ? AND obj_id = ? AND uid = ?",
-					"test", 3, 123).First(&likeBiz).Error
+					"test", 3, 123).First(&like).Error
 				assert.NoError(t, err)
-				assert.True(t, likeBiz.ID > 0)
-				assert.True(t, likeBiz.Ctime > 0)
-				assert.True(t, likeBiz.Utime > 0)
-				likeBiz.ID = 0
-				likeBiz.Ctime = 0
-				likeBiz.Utime = 0
+				assert.True(t, like.ID > 0)
+				assert.True(t, like.Ctime > 0)
+				assert.True(t, like.Utime > 0)
+				like.ID = 0
+				like.Ctime = 0
+				like.Utime = 0
 				assert.Equal(t, dao.UserGiveLike{
 					ObjType: "test",
 					ObjID:   3,
 					Uid:     123,
 					Status:  0,
-				}, likeBiz)
+				}, like)
 
 				cnt, err := s.rdb.Exists(ctx, "article_incr_Like_count:test:2").Result()
 				assert.NoError(t, err)
@@ -489,22 +489,22 @@ func (s *InteractiveTestSuite) TestCollect() {
 				}, intr)
 
 				// 收藏记录
-				var cbiz dao.UserGiveCollect
+				var c dao.UserGiveCollect
 				err = s.db.WithContext(ctx).
 					Where("uid = ? AND obj_type = ? AND obj_id = ?", 1, "test", 1).
-					First(&cbiz).Error
+					First(&c).Error
 				assert.NoError(t, err)
-				assert.True(t, cbiz.Ctime > 0)
-				cbiz.Ctime = 0
-				assert.True(t, cbiz.Utime > 0)
-				cbiz.Utime = 0
-				assert.True(t, cbiz.ID > 0)
-				cbiz.ID = 0
+				assert.True(t, c.Ctime > 0)
+				c.Ctime = 0
+				assert.True(t, c.Utime > 0)
+				c.Utime = 0
+				assert.True(t, c.ID > 0)
+				c.ID = 0
 				assert.Equal(t, dao.UserGiveCollect{
 					ObjType: "test",
 					ObjID:   1,
 					Uid:     1,
-				}, cbiz)
+				}, c)
 			},
 			objID:   1,
 			objType: "test",
@@ -548,22 +548,22 @@ func (s *InteractiveTestSuite) TestCollect() {
 					CollectCount: 11,
 				}, intr)
 
-				var cbiz dao.UserGiveCollect
+				var c dao.UserGiveCollect
 				err = s.db.WithContext(ctx).
 					Where("uid = ? AND obj_type = ? AND obj_id = ?", 1, "test", 2).
-					First(&cbiz).Error
+					First(&c).Error
 				assert.NoError(t, err)
-				assert.True(t, cbiz.Ctime > 0)
-				cbiz.Ctime = 0
-				assert.True(t, cbiz.Utime > 0)
-				cbiz.Utime = 0
-				assert.True(t, cbiz.ID > 0)
-				cbiz.ID = 0
+				assert.True(t, c.Ctime > 0)
+				c.Ctime = 0
+				assert.True(t, c.Utime > 0)
+				c.Utime = 0
+				assert.True(t, c.ID > 0)
+				c.ID = 0
 				assert.Equal(t, dao.UserGiveCollect{
 					ObjType: "test",
 					ObjID:   2,
 					Uid:     1,
-				}, cbiz)
+				}, c)
 			},
 			objID:   2,
 			objType: "test",
@@ -588,101 +588,6 @@ func (s *InteractiveTestSuite) TestCollect() {
 		})
 	}
 }
-
-//func (s *InteractiveTestSuite) TestGet() {
-//	testCases := []struct {
-//		name string
-//
-//		before func(t *testing.T)
-//
-//		objID int64
-//		objType   string
-//		uid   int64
-//
-//		wantErr error
-//		wantRes *intrv1.GetResponse
-//	}{
-//		{
-//			name:  "全部取出来了-无缓存",
-//			objType:   "test",
-//			objID: 12,
-//			uid:   123,
-//			before: func(t *testing.T) {
-//				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-//				defer cancel()
-//				err := s.db.WithContext(ctx).Create(&dao.Like{
-//					ObjType:      "test",
-//					ObjID:        12,
-//					ViewCount:    100,
-//					CollectCount: 200,
-//					LikeCount:    300,
-//					Ctime:        123,
-//					Utime:        234,
-//				}).Error
-//				assert.NoError(t, err)
-//			},
-//			wantRes: &intrv1.GetResponse{
-//				Intr: &intrv1.Interactive{
-//					Biz:        "test",
-//					BizId:      12,
-//					ReadCnt:    100,
-//					CollectCnt: 200,
-//					LikeCnt:    300,
-//				},
-//			},
-//		},
-//		{
-//			name:  "全部取出来了-命中缓存-用户已点赞收藏",
-//			objType:   "test",
-//			objID: 3,
-//			uid:   123,
-//			before: func(t *testing.T) {
-//				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-//				defer cancel()
-//				err := s.db.WithContext(ctx).
-//					Create(&dao.UserGiveCollect{
-//						ObjType: "test",
-//						ObjID:   3,
-//						Uid:     123,
-//						Ctime:   123,
-//						Utime:   124,
-//					}).Error
-//				assert.NoError(t, err)
-//				err = s.db.WithContext(ctx).
-//					Create(&dao.UserGiveLike{
-//						ObjType: "test",
-//						ObjID:   3,
-//						Uid:     123,
-//						Ctime:   123,
-//						Utime:   124,
-//						Status:  1,
-//					}).Error
-//				assert.NoError(t, err)
-//				err = s.rdb.HSet(ctx, "interactive:test:3",
-//					"read_cnt", 0, "collect_cnt", 1).Err()
-//				assert.NoError(t, err)
-//			},
-//			wantRes: &intrv1.GetResponse{
-//				Intr: &intrv1.Interactive{
-//					BizId:      3,
-//					CollectCnt: 1,
-//					Collected:  true,
-//					Liked:      true,
-//				},
-//			},
-//		},
-//	}
-//	for _, tc := range testCases {
-//		s.T().Run(tc.name, func(t *testing.T) {
-//			tc.before(t)
-//			res, err := s.server.Get(context.Background(), &intrv1.GetRequest{
-//				Biz: tc.objType, BizId: tc.objID, Uid: tc.uid,
-//			})
-//			assert.Equal(t, tc.wantErr, err)
-//			assert.Equal(t, tc.wantRes, res)
-//		})
-//	}
-//}
 
 func (s *InteractiveTestSuite) TestGetListBatchOfLikes() {
 	preCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)

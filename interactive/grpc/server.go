@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	intrv1 "post/api/proto/gen/intr/v1"
@@ -20,6 +21,10 @@ func NewLikeServiceServer(svc service.LikeService) *LikeServiceServer {
 	return &LikeServiceServer{
 		svc: svc,
 	}
+}
+
+func (l *LikeServiceServer) Register(server *grpc.Server) {
+	intrv1.RegisterLikeServiceServer(server, l)
 }
 
 // IncrReadCount GetObjType 防止req为空
