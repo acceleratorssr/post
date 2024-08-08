@@ -15,6 +15,7 @@ func InitRedis() redis.Cmdable {
 	if redisClient == nil {
 		redisClient = redis.NewClient(&redis.Options{
 			Addr: addrRedis,
+			DB:   0,
 		})
 
 		for err := redisClient.Ping(context.Background()).Err(); err != nil; {

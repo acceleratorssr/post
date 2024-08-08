@@ -28,19 +28,24 @@ func NewRedisArticleLikeCache(client redis.Cmdable) ArticleLikeCache {
 
 func (r *RedisArticleLikeCache) DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {
 	return r.client.Eval(ctx, luaIncrCnt,
-		[]string{r.keyIncrReadCount(ObjType, ObjID)}, "like_cnt", -1).Err()
+		[]string{r.keyIncrLikeCount(ObjType, ObjID)}, "like_cnt", -1).Err()
 }
 
 func (r *RedisArticleLikeCache) IncrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {
 	return r.client.Eval(ctx, luaIncrCnt,
-		[]string{r.keyIncrReadCount(ObjType, ObjID)}, "like_cnt", 1).Err()
+		[]string{r.keyIncrLikeCount(ObjType, ObjID)}, "like_cnt", 1).Err()
 }
 
 func (r *RedisArticleLikeCache) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
-	return r.client.Eval(ctx, luaIncrCnt,
+	err := r.client.Eval(ctx, luaIncrCnt,
 		[]string{r.keyIncrReadCount(ObjType, ObjID)}, "read_cnt", 1).Err()
+	return err
 }
 
 func (r *RedisArticleLikeCache) keyIncrReadCount(ObjType string, ObjID int64) string {
 	return "article_incr_read_count:" + ObjType + ":" + strconv.FormatInt(ObjID, 10)
+}
+
+func (r *RedisArticleLikeCache) keyIncrLikeCount(ObjType string, ObjID int64) string {
+	return "article_incr_Like_count:" + ObjType + ":" + strconv.FormatInt(ObjID, 10)
 }

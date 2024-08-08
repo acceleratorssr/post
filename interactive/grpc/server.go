@@ -16,6 +16,12 @@ type LikeServiceServer struct {
 	svc                                   service.LikeService
 }
 
+func NewLikeServiceServer(svc service.LikeService) *LikeServiceServer {
+	return &LikeServiceServer{
+		svc: svc,
+	}
+}
+
 // IncrReadCount GetObjType 防止req为空
 func (l *LikeServiceServer) IncrReadCount(ctx context.Context, request *intrv1.IncrReadCountRequest) (*intrv1.IncrReadCountResponse, error) {
 	err := l.svc.IncrReadCount(ctx, request.GetObjType(), request.GetObjID())
@@ -79,7 +85,8 @@ func (l *LikeServiceServer) GetListBatchOfLikes(ctx context.Context, request *in
 
 // data transfer object 数据传输对象
 func (l *LikeServiceServer) toDTO(intr ...domain.Like) []*intrv1.Like {
-	var data []*intrv1.Like
+	//var data []*intrv1.Like 		// 声明写法，为nil
+	data := make([]*intrv1.Like, 0) // 声明并初始化为空切片
 	for _, v := range intr {
 		data = append(data, &intrv1.Like{
 			ID:        v.ID,

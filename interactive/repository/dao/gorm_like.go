@@ -101,9 +101,9 @@ func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, i
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 此处where的顺序可以不用管，mysql会自动调整的
-		err := tx.Model(&Like{}).Where("obj_id = ? and obj_type = ? and uid = ?", id, objType, uid).
+		err := tx.Model(&Like{}).Where("obj_id = ? and obj_type = ?", id, objType).
 			Updates(map[string]any{
-				"like_count": gorm.Expr("collect_count - ?", 1),
+				"like_count": gorm.Expr("like_count - ?", 1),
 				"utime":      now,
 			}).Error
 		if err != nil {
@@ -188,7 +188,7 @@ func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string
 
 func (gad *GORMArticleLikeDao) GetPublishedByBatch(ctx context.Context, ObjType string, offset, limit int, now int64) ([]Like, error) {
 	var res []Like
-	return res, gad.db.WithContext(ctx).Where("obj_type = ? and status = ? and ctime < ?", ObjType, 0, now).
+	return res, gad.db.WithContext(ctx).Where("obj_type = ? and ctime < ?", ObjType, now).
 		Offset(offset).Limit(limit).Find(&res).Error
 }
 

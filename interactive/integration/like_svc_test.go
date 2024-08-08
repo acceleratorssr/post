@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
 	"gorm.io/gorm"
+	intrv1 "post/api/proto/gen/intr/v1"
+	"post/interactive/grpc"
 	"post/interactive/integration/startup"
 	"post/interactive/repository/dao"
 	"testing"
@@ -16,7 +18,7 @@ type InteractiveTestSuite struct {
 	suite.Suite
 	db     *gorm.DB
 	rdb    redis.Cmdable
-	server *grpc.InteractiveServiceServer
+	server *grpc.LikeServiceServer
 }
 
 func (s *InteractiveTestSuite) SetupSuite() {
@@ -28,28 +30,28 @@ func (s *InteractiveTestSuite) SetupSuite() {
 func (s *InteractiveTestSuite) TearDownTest() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	err := s.db.Exec("TRUNCATE TABLE `interactives`").Error
+	err := s.db.Exec("TRUNCATE TABLE `likes`").Error
 	assert.NoError(s.T(), err)
-	err = s.db.Exec("TRUNCATE TABLE `user_like_bizs`").Error
+	err = s.db.Exec("TRUNCATE TABLE `user_give_likes`").Error
 	assert.NoError(s.T(), err)
-	err = s.db.Exec("TRUNCATE TABLE `user_collection_bizs`").Error
+	err = s.db.Exec("TRUNCATE TABLE `user_give_collects`").Error
 	assert.NoError(s.T(), err)
 	// 清空 Redis
 	err = s.rdb.FlushDB(ctx).Err()
 	assert.NoError(s.T(), err)
 }
 
-func (s *InteractiveTestSuite) TestIncrReadCnt() {
+func (s *InteractiveTestSuite) TestIncrReadCount() {
 	testCases := []struct {
 		name   string
 		before func(t *testing.T)
 		after  func(t *testing.T)
 
-		biz   string
-		bizId int64
+		objType string
+		objID   int64
 
 		wantErr  error
-		wantResp *intrv1.IncrReadCntResponse
+		wantResp *intrv1.IncrReadCountResponse
 	}{
 		{
 			// DB 和缓存都有数据
@@ -68,7 +70,7 @@ func (s *InteractiveTestSuite) TestIncrReadCnt() {
 					Utime:        7,
 				}).Error
 				assert.NoError(t, err)
-				err = s.rdb.HSet(ctx, "interactive:test:2",
+				err = s.rdb.HSet(ctx, "article_incr_read_count:test:2",
 					"read_cnt", 3).Err()
 				assert.NoError(t, err)
 			},
@@ -81,24 +83,26 @@ func (s *InteractiveTestSuite) TestIncrReadCnt() {
 				assert.True(t, data.Utime > 7)
 				data.Utime = 0
 				assert.Equal(t, dao.Like{
-					ID:      1,
-					ObjType: "test",
-					ObjID:   2,
-					// +1 之后
+					ID:           1,
+					ObjType:      "test",
+					ObjID:        2,
 					ViewCount:    4,
 					CollectCount: 4,
 					LikeCount:    5,
 					Ctime:        6,
 				}, data)
-				cnt, err := s.rdb.HGet(ctx, "interactive:test:2", "read_cnt").Int()
+				cnt, err := s.rdb.HGet(ctx, "article_incr_read_count:test:2", "read_cnt").Int()
 				assert.NoError(t, err)
 				assert.Equal(t, 4, cnt)
-				err = s.rdb.Del(ctx, "interactive:test:2").Err()
+				err = s.rdb.Del(ctx, "article_incr_read_count:test:2").Err()
 				assert.NoError(t, err)
 			},
-			biz:      "test",
-			bizId:    2,
-			wantResp: &intrv1.IncrReadCntResponse{},
+			objType: "test",
+			objID:   2,
+			wantResp: &intrv1.IncrReadCountResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 		{
 			// DB 有数据，缓存没有数据
@@ -136,13 +140,16 @@ func (s *InteractiveTestSuite) TestIncrReadCnt() {
 					LikeCount:    5,
 					Ctime:        6,
 				}, data)
-				cnt, err := s.rdb.Exists(ctx, "interactive:test:3").Result()
+				cnt, err := s.rdb.Exists(ctx, "article_incr_read_count:test:3").Result()
 				assert.NoError(t, err)
 				assert.Equal(t, int64(0), cnt)
 			},
-			biz:      "test",
-			bizId:    3,
-			wantResp: &intrv1.IncrReadCntResponse{},
+			objType: "test",
+			objID:   3,
+			wantResp: &intrv1.IncrReadCountResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 		{
 			name:   "增加成功-都没有",
@@ -151,7 +158,7 @@ func (s *InteractiveTestSuite) TestIncrReadCnt() {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 				defer cancel()
 				var data dao.Like
-				err := s.db.Where("biz = ? AND biz_id = ?", "test", 4).First(&data).Error
+				err := s.db.Where("obj_type = ? AND obj_id = ?", "test", 4).First(&data).Error
 				assert.NoError(t, err)
 				assert.True(t, data.Utime > 0)
 				assert.True(t, data.Ctime > 0)
@@ -164,13 +171,16 @@ func (s *InteractiveTestSuite) TestIncrReadCnt() {
 					ObjID:     4,
 					ViewCount: 1,
 				}, data)
-				cnt, err := s.rdb.Exists(ctx, "interactive:test:4").Result()
+				cnt, err := s.rdb.Exists(ctx, "article_incr_read_count:test:4").Result()
 				assert.NoError(t, err)
 				assert.Equal(t, int64(0), cnt)
 			},
-			biz:      "test",
-			bizId:    4,
-			wantResp: &intrv1.IncrReadCntResponse{},
+			objType: "test",
+			objID:   4,
+			wantResp: &intrv1.IncrReadCountResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 	}
 
@@ -179,8 +189,8 @@ func (s *InteractiveTestSuite) TestIncrReadCnt() {
 	for _, tc := range testCases {
 		s.T().Run(tc.name, func(t *testing.T) {
 			tc.before(t)
-			resp, err := s.server.IncrReadCnt(context.Background(), &intrv1.IncrReadCntRequest{
-				objType: tc.biz, BizId: tc.bizId,
+			resp, err := s.server.IncrReadCount(context.Background(), &intrv1.IncrReadCountRequest{
+				ObjType: tc.objType, ObjID: tc.objID,
 			})
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantResp, resp)
@@ -196,9 +206,9 @@ func (s *InteractiveTestSuite) TestLike() {
 		before func(t *testing.T)
 		after  func(t *testing.T)
 
-		biz   string
-		bizId int64
-		uid   int64
+		objType string
+		objID   int64
+		uid     int64
 
 		wantErr  error
 		wantResp *intrv1.LikeResponse
@@ -219,7 +229,7 @@ func (s *InteractiveTestSuite) TestLike() {
 					Utime:        7,
 				}).Error
 				assert.NoError(t, err)
-				err = s.rdb.HSet(ctx, "interactive:test:2",
+				err = s.rdb.HSet(ctx, "article_incr_Like_count:test:2",
 					"like_cnt", 3).Err()
 				assert.NoError(t, err)
 			},
@@ -232,13 +242,13 @@ func (s *InteractiveTestSuite) TestLike() {
 				assert.True(t, data.Utime > 7)
 				data.Utime = 0
 				assert.Equal(t, dao.Like{
-					ID:         1,
-					ObjType:        "test",
-					ObjID:      2,
+					ID:           1,
+					ObjType:      "test",
+					ObjID:        2,
 					ViewCount:    3,
 					CollectCount: 4,
 					LikeCount:    6,
-					:      6,
+					Ctime:        6,
 				}, data)
 
 				var likeBiz dao.UserGiveLike
@@ -252,22 +262,25 @@ func (s *InteractiveTestSuite) TestLike() {
 				likeBiz.Ctime = 0
 				likeBiz.Utime = 0
 				assert.Equal(t, dao.UserGiveLike{
-					ObjType:    "test",
-					ObjID:  2,
-					Uid:    123,
-					Status: 1,
+					ObjType: "test",
+					ObjID:   2,
+					Uid:     123,
+					Status:  0, // 0点赞 1取消
 				}, likeBiz)
 
-				cnt, err := s.rdb.HGet(ctx, "interactive:test:2", "like_cnt").Int()
+				cnt, err := s.rdb.HGet(ctx, "article_incr_Like_count:test:2", "like_cnt").Int()
 				assert.NoError(t, err)
 				assert.Equal(t, 4, cnt)
-				err = s.rdb.Del(ctx, "interactive:test:2").Err()
+				err = s.rdb.Del(ctx, "article_incr_Like_count:test:2").Err()
 				assert.NoError(t, err)
 			},
-			biz:      "test",
-			bizId:    2,
-			uid:      123,
-			wantResp: &intrv1.LikeResponse{},
+			objType: "test",
+			objID:   2,
+			uid:     123,
+			wantResp: &intrv1.LikeResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 		{
 			name:   "点赞-都没有",
@@ -276,7 +289,7 @@ func (s *InteractiveTestSuite) TestLike() {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 				defer cancel()
 				var data dao.Like
-				err := s.db.Where("biz = ? AND biz_id = ?", "test", 3).First(&data).Error
+				err := s.db.Where("obj_type = ? AND obj_id = ?", "test", 3).First(&data).Error
 				assert.NoError(t, err)
 				assert.True(t, data.Utime > 0)
 				assert.True(t, data.Ctime > 0)
@@ -285,13 +298,13 @@ func (s *InteractiveTestSuite) TestLike() {
 				data.Ctime = 0
 				data.ID = 0
 				assert.Equal(t, dao.Like{
-					ObjType:     "test",
-					ObjID:   3,
+					ObjType:   "test",
+					ObjID:     3,
 					LikeCount: 1,
 				}, data)
 
 				var likeBiz dao.UserGiveLike
-				err = s.db.Where("biz = ? AND biz_id = ? AND uid = ?",
+				err = s.db.Where("obj_type = ? AND obj_id = ? AND uid = ?",
 					"test", 3, 123).First(&likeBiz).Error
 				assert.NoError(t, err)
 				assert.True(t, likeBiz.ID > 0)
@@ -301,20 +314,23 @@ func (s *InteractiveTestSuite) TestLike() {
 				likeBiz.Ctime = 0
 				likeBiz.Utime = 0
 				assert.Equal(t, dao.UserGiveLike{
-					ObjType:    "test",
-					ObjID:  3,
-					Uid:    123,
-					Status: 1,
+					ObjType: "test",
+					ObjID:   3,
+					Uid:     123,
+					Status:  0,
 				}, likeBiz)
 
-				cnt, err := s.rdb.Exists(ctx, "interactive:test:2").Result()
+				cnt, err := s.rdb.Exists(ctx, "article_incr_Like_count:test:2").Result()
 				assert.NoError(t, err)
 				assert.Equal(t, int64(0), cnt)
 			},
-			biz:      "test",
-			bizId:    3,
-			uid:      123,
-			wantResp: &intrv1.LikeResponse{},
+			objType: "test",
+			objID:   3,
+			uid:     123,
+			wantResp: &intrv1.LikeResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 	}
 
@@ -322,7 +338,7 @@ func (s *InteractiveTestSuite) TestLike() {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.before(t)
 			resp, err := s.server.Like(context.Background(), &intrv1.LikeRequest{
-				Biz: tc.biz, BizId: tc.bizId, Uid: tc.uid,
+				ObjType: tc.objType, ObjID: tc.objID, Uid: tc.uid,
 			})
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantResp, resp)
@@ -331,19 +347,19 @@ func (s *InteractiveTestSuite) TestLike() {
 	}
 }
 
-func (s *InteractiveTestSuite) TestDislike() {
+func (s *InteractiveTestSuite) TestUnLike() {
 	t := s.T()
 	testCases := []struct {
 		name   string
 		before func(t *testing.T)
 		after  func(t *testing.T)
 
-		biz   string
-		bizId int64
-		uid   int64
+		objType string
+		objID   int64
+		uid     int64
 
 		wantErr  error
-		wantResp *intrv1.CancelLikeResponse
+		wantResp *intrv1.UnLikeResponse
 	}{
 		{
 			name: "取消点赞-DB和cache都有",
@@ -351,28 +367,28 @@ func (s *InteractiveTestSuite) TestDislike() {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 				defer cancel()
 				err := s.db.Create(dao.Like{
-					ID:         1,
-					ObjType:        "test",
-					ObjID:      2,
+					ID:           1,
+					ObjType:      "test",
+					ObjID:        2,
 					ViewCount:    3,
 					CollectCount: 4,
 					LikeCount:    5,
-					Ctime:      6,
-					Utime:      7,
+					Ctime:        6,
+					Utime:        7,
 				}).Error
 				assert.NoError(t, err)
 				err = s.db.Create(dao.UserGiveLike{
-					ID:     1,
-					ObjType:    "test",
-					ObjID:  2,
-					Uid:    123,
-					Ctime:  6,
-					Utime:  7,
-					Status: 1,
+					ID:      1,
+					ObjType: "test",
+					ObjID:   2,
+					Uid:     123,
+					Ctime:   6,
+					Utime:   7,
+					Status:  0,
 				}).Error
 				assert.NoError(t, err)
-				err = s.rdb.HSet(ctx, "interactive:test:2",
-					"like_cnt", 3).Err()
+				err = s.rdb.HSet(ctx, "article_incr_Like_count:test:2",
+					"like_cnt", 5).Err()
 				assert.NoError(t, err)
 			},
 			after: func(t *testing.T) {
@@ -384,47 +400,50 @@ func (s *InteractiveTestSuite) TestDislike() {
 				assert.True(t, data.Utime > 7)
 				data.Utime = 0
 				assert.Equal(t, dao.Like{
-					ID:         1,
-					ObjType:        "test",
-					ObjID:      2,
+					ID:           1,
+					ObjType:      "test",
+					ObjID:        2,
 					ViewCount:    3,
 					CollectCount: 4,
 					LikeCount:    4,
-					Ctime:      6,
+					Ctime:        6,
 				}, data)
 
-				var likeBiz dao.Like
-				err = s.db.Where("id = ?", 1).First(&likeBiz).Error
+				var likeType dao.UserGiveLike
+				err = s.db.Where("id = ?", 1).First(&likeType).Error
 				assert.NoError(t, err)
-				assert.True(t, likeBiz.Utime > 7)
-				likeBiz.Utime = 0
-				assert.Equal(t, dao.Like{
-					ID:     1,
-					ObjType:    "test",
-					ObjID:  2,
-					ViewCount:    123,
-					CollectCount:  6,
-					LikeCount: 0,
-				}, likeBiz)
+				assert.True(t, likeType.Utime > 7)
+				likeType.Utime = 0
+				assert.Equal(t, dao.UserGiveLike{
+					ID:      1,
+					ObjType: "test",
+					ObjID:   2,
+					Uid:     123,
+					Ctime:   6,
+					Status:  1,
+				}, likeType)
 
-				cnt, err := s.rdb.HGet(ctx, "interactive:test:2", "like_cnt").Int()
+				cnt, err := s.rdb.HGet(ctx, "article_incr_Like_count:test:2", "like_cnt").Int()
 				assert.NoError(t, err)
-				assert.Equal(t, 2, cnt)
-				err = s.rdb.Del(ctx, "interactive:test:2").Err()
+				assert.Equal(t, 4, cnt)
+				err = s.rdb.Del(ctx, "article_incr_Like_count:test:2").Err()
 				assert.NoError(t, err)
 			},
-			biz:      "test",
-			bizId:    2,
-			uid:      123,
-			wantResp: &intrv1.CancelLikeResponse{},
+			objType: "test",
+			objID:   2,
+			uid:     123,
+			wantResp: &intrv1.UnLikeResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.before(t)
-			resp, err := s.server.CancelLike(context.Background(), &intrv1.CancelLikeRequest{
-				Biz: tc.biz, BizId: tc.bizId, Uid: tc.uid,
+			resp, err := s.server.UnLike(context.Background(), &intrv1.UnLikeRequest{
+				ObjType: tc.objType, ObjID: tc.objID, Uid: tc.uid,
 			})
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantResp, resp)
@@ -440,22 +459,22 @@ func (s *InteractiveTestSuite) TestCollect() {
 		before func(t *testing.T)
 		after  func(t *testing.T)
 
-		bizId int64
-		biz   string
-		cid   int64
-		uid   int64
+		objType string
+		objID   int64
+		cid     int64
+		uid     int64
 
 		wantErr  error
 		wantResp *intrv1.CollectResponse
 	}{
 		{
-			name:   "收藏成功,db和缓存都没有",
+			name:   "收藏成功",
 			before: func(t *testing.T) {},
 			after: func(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				var intr dao.Like
-				err := s.db.Where("biz = ? AND biz_id = ?", "test", 1).First(&intr).Error
+				err := s.db.Where("obj_type = ? AND obj_id = ?", "test", 1).First(&intr).Error
 				assert.NoError(t, err)
 				assert.True(t, intr.Ctime > 0)
 				intr.Ctime = 0
@@ -464,17 +483,15 @@ func (s *InteractiveTestSuite) TestCollect() {
 				assert.True(t, intr.ID > 0)
 				intr.ID = 0
 				assert.Equal(t, dao.Like{
-					ObjType:        "test",
-					ObjID:      1,
+					ObjType:      "test",
+					ObjID:        1,
 					CollectCount: 1,
 				}, intr)
-				cnt, err := s.rdb.Exists(ctx, "interactive:test:1").Result()
-				assert.NoError(t, err)
-				assert.Equal(t, int64(0), cnt)
+
 				// 收藏记录
 				var cbiz dao.UserGiveCollect
 				err = s.db.WithContext(ctx).
-					Where("uid = ? AND biz = ? AND biz_id = ?", 1, "test", 1).
+					Where("uid = ? AND obj_type = ? AND obj_id = ?", 1, "test", 1).
 					First(&cbiz).Error
 				assert.NoError(t, err)
 				assert.True(t, cbiz.Ctime > 0)
@@ -484,28 +501,31 @@ func (s *InteractiveTestSuite) TestCollect() {
 				assert.True(t, cbiz.ID > 0)
 				cbiz.ID = 0
 				assert.Equal(t, dao.UserGiveCollect{
-					ObjType:   "test",
-					ObjID: 1,
-					Uid:   1,
+					ObjType: "test",
+					ObjID:   1,
+					Uid:     1,
 				}, cbiz)
 			},
-			bizId:    1,
-			biz:      "test",
-			cid:      1,
-			uid:      1,
-			wantResp: &intrv1.CollectResponse{},
+			objID:   1,
+			objType: "test",
+			cid:     1,
+			uid:     1,
+			wantResp: &intrv1.CollectResponse{
+				Code:    200,
+				Message: "success",
+			},
 		},
 		{
-			name: "收藏成功,db有缓存没有",
+			name: "收藏成功,db有",
 			before: func(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				defer cancel()
 				err := s.db.WithContext(ctx).Create(&dao.Like{
-					ObjType:        "test",
-					ObjID:      2,
+					ObjType:      "test",
+					ObjID:        2,
 					CollectCount: 10,
-					Ctime:      123,
-					Utime:      234,
+					Ctime:        123,
+					Utime:        234,
 				}).Error
 				assert.NoError(t, err)
 			},
@@ -514,7 +534,7 @@ func (s *InteractiveTestSuite) TestCollect() {
 				defer cancel()
 				var intr dao.Like
 				err := s.db.WithContext(ctx).
-					Where("biz = ? AND biz_id = ?", "test", 2).First(&intr).Error
+					Where("obj_type = ? AND obj_id = ?", "test", 2).First(&intr).Error
 				assert.NoError(t, err)
 				assert.True(t, intr.Ctime > 0)
 				intr.Ctime = 0
@@ -523,17 +543,14 @@ func (s *InteractiveTestSuite) TestCollect() {
 				assert.True(t, intr.ID > 0)
 				intr.ID = 0
 				assert.Equal(t, dao.Like{
-					ObjType:        "test",
-					ObjID:      2,
+					ObjType:      "test",
+					ObjID:        2,
 					CollectCount: 11,
 				}, intr)
-				cnt, err := s.rdb.Exists(ctx, "interactive:test:2").Result()
-				assert.NoError(t, err)
-				assert.Equal(t, int64(0), cnt)
 
 				var cbiz dao.UserGiveCollect
 				err = s.db.WithContext(ctx).
-					Where("uid = ? AND biz = ? AND biz_id = ?", 1, "test", 2).
+					Where("uid = ? AND obj_type = ? AND obj_id = ?", 1, "test", 2).
 					First(&cbiz).Error
 				assert.NoError(t, err)
 				assert.True(t, cbiz.Ctime > 0)
@@ -543,77 +560,19 @@ func (s *InteractiveTestSuite) TestCollect() {
 				assert.True(t, cbiz.ID > 0)
 				cbiz.ID = 0
 				assert.Equal(t, dao.UserGiveCollect{
-					ObjType:   "test",
-					ObjID: 2,
-					Uid:   1,
+					ObjType: "test",
+					ObjID:   2,
+					Uid:     1,
 				}, cbiz)
 			},
-			bizId:    2,
-			biz:      "test",
-			cid:      1,
-			uid:      1,
-			wantResp: &intrv1.CollectResponse{},
-		},
-		{
-			name: "收藏成功,db和缓存都有",
-			before: func(t *testing.T) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
-				err := s.db.WithContext(ctx).Create(&dao.Like{
-					ObjType:        "test",
-					ObjID:      3,
-					CollectCount: 10,
-					Ctime:      123,
-					Utime:      234,
-				}).Error
-				assert.NoError(t, err)
-				err = s.rdb.HSet(ctx, "interactive:test:3", "collect_cnt", 10).Err()
-				assert.NoError(t, err)
+			objID:   2,
+			objType: "test",
+			cid:     1,
+			uid:     1,
+			wantResp: &intrv1.CollectResponse{
+				Code:    200,
+				Message: "success",
 			},
-			after: func(t *testing.T) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
-				var intr dao.Like
-				err := s.db.WithContext(ctx).
-					Where("biz = ? AND biz_id = ?", "test", 3).First(&intr).Error
-				assert.NoError(t, err)
-				assert.True(t, intr.Ctime > 0)
-				intr.Ctime = 0
-				assert.True(t, intr.Utime > 0)
-				intr.Utime = 0
-				assert.True(t, intr.ID > 0)
-				intr.ID = 0
-				assert.Equal(t, dao.Like{
-					ObjType:        "test",
-					ObjID:      3,
-					CollectCount: 11,
-				}, intr)
-				cnt, err := s.rdb.HGet(ctx, "interactive:test:3", "collect_cnt").Int()
-				assert.NoError(t, err)
-				assert.Equal(t, 11, cnt)
-
-				var cbiz dao.UserGiveCollect
-				err = s.db.WithContext(ctx).
-					Where("uid = ? AND biz = ? AND biz_id = ?", 1, "test", 3).
-					First(&cbiz).Error
-				assert.NoError(t, err)
-				assert.True(t, cbiz.Ctime > 0)
-				cbiz.Ctime = 0
-				assert.True(t, cbiz.Utime > 0)
-				cbiz.Utime = 0
-				assert.True(t, cbiz.ID > 0)
-				cbiz.ID = 0
-				assert.Equal(t, dao.UserGiveCollect{
-					ObjType:   "test",
-					ObjID: 3,
-					Uid:   1,
-				}, cbiz)
-			},
-			bizId:    3,
-			biz:      "test",
-			cid:      1,
-			uid:      1,
-			wantResp: &intrv1.CollectResponse{},
 		},
 	}
 
@@ -621,7 +580,7 @@ func (s *InteractiveTestSuite) TestCollect() {
 		s.T().Run(tc.name, func(t *testing.T) {
 			tc.before(t)
 			resp, err := s.server.Collect(context.Background(), &intrv1.CollectRequest{
-				Biz: tc.biz, BizId: tc.bizId, Cid: tc.cid, Uid: tc.uid,
+				ObjType: tc.objType, ObjID: tc.objID, Uid: tc.uid,
 			})
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantResp, resp)
@@ -630,102 +589,102 @@ func (s *InteractiveTestSuite) TestCollect() {
 	}
 }
 
-func (s *InteractiveTestSuite) TestGet() {
-	testCases := []struct {
-		name string
+//func (s *InteractiveTestSuite) TestGet() {
+//	testCases := []struct {
+//		name string
+//
+//		before func(t *testing.T)
+//
+//		objID int64
+//		objType   string
+//		uid   int64
+//
+//		wantErr error
+//		wantRes *intrv1.GetResponse
+//	}{
+//		{
+//			name:  "全部取出来了-无缓存",
+//			objType:   "test",
+//			objID: 12,
+//			uid:   123,
+//			before: func(t *testing.T) {
+//				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+//				defer cancel()
+//				err := s.db.WithContext(ctx).Create(&dao.Like{
+//					ObjType:      "test",
+//					ObjID:        12,
+//					ViewCount:    100,
+//					CollectCount: 200,
+//					LikeCount:    300,
+//					Ctime:        123,
+//					Utime:        234,
+//				}).Error
+//				assert.NoError(t, err)
+//			},
+//			wantRes: &intrv1.GetResponse{
+//				Intr: &intrv1.Interactive{
+//					Biz:        "test",
+//					BizId:      12,
+//					ReadCnt:    100,
+//					CollectCnt: 200,
+//					LikeCnt:    300,
+//				},
+//			},
+//		},
+//		{
+//			name:  "全部取出来了-命中缓存-用户已点赞收藏",
+//			objType:   "test",
+//			objID: 3,
+//			uid:   123,
+//			before: func(t *testing.T) {
+//				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+//				defer cancel()
+//				err := s.db.WithContext(ctx).
+//					Create(&dao.UserGiveCollect{
+//						ObjType: "test",
+//						ObjID:   3,
+//						Uid:     123,
+//						Ctime:   123,
+//						Utime:   124,
+//					}).Error
+//				assert.NoError(t, err)
+//				err = s.db.WithContext(ctx).
+//					Create(&dao.UserGiveLike{
+//						ObjType: "test",
+//						ObjID:   3,
+//						Uid:     123,
+//						Ctime:   123,
+//						Utime:   124,
+//						Status:  1,
+//					}).Error
+//				assert.NoError(t, err)
+//				err = s.rdb.HSet(ctx, "interactive:test:3",
+//					"read_cnt", 0, "collect_cnt", 1).Err()
+//				assert.NoError(t, err)
+//			},
+//			wantRes: &intrv1.GetResponse{
+//				Intr: &intrv1.Interactive{
+//					BizId:      3,
+//					CollectCnt: 1,
+//					Collected:  true,
+//					Liked:      true,
+//				},
+//			},
+//		},
+//	}
+//	for _, tc := range testCases {
+//		s.T().Run(tc.name, func(t *testing.T) {
+//			tc.before(t)
+//			res, err := s.server.Get(context.Background(), &intrv1.GetRequest{
+//				Biz: tc.objType, BizId: tc.objID, Uid: tc.uid,
+//			})
+//			assert.Equal(t, tc.wantErr, err)
+//			assert.Equal(t, tc.wantRes, res)
+//		})
+//	}
+//}
 
-		before func(t *testing.T)
-
-		bizId int64
-		biz   string
-		uid   int64
-
-		wantErr error
-		wantRes *intrv1.GetResponse
-	}{
-		{
-			name:  "全部取出来了-无缓存",
-			biz:   "test",
-			bizId: 12,
-			uid:   123,
-			before: func(t *testing.T) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-				defer cancel()
-				err := s.db.WithContext(ctx).Create(&dao.Like{
-					ObjType:        "test",
-					ObjID:      12,
-					ViewCount:    100,
-					CollectCount: 200,
-					LikeCount:    300,
-					Ctime:      123,
-					Utime:      234,
-				}).Error
-				assert.NoError(t, err)
-			},
-			wantRes: &intrv1.GetResponse{
-				Intr: &intrv1.Interactive{
-					Biz:        "test",
-					BizId:      12,
-					ReadCnt:    100,
-					CollectCnt: 200,
-					LikeCnt:    300,
-				},
-			},
-		},
-		{
-			name:  "全部取出来了-命中缓存-用户已点赞收藏",
-			biz:   "test",
-			bizId: 3,
-			uid:   123,
-			before: func(t *testing.T) {
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-				defer cancel()
-				err := s.db.WithContext(ctx).
-					Create(&dao.UserGiveCollect{
-						ObjType:   "test",
-						ObjID: 3,
-						Uid:   123,
-						Ctime: 123,
-						Utime: 124,
-					}).Error
-				assert.NoError(t, err)
-				err = s.db.WithContext(ctx).
-					Create(&dao.UserGiveLike{
-						ObjType:    "test",
-						ObjID:  3,
-						Uid:    123,
-						Ctime:  123,
-						Utime:  124,
-						Status: 1,
-					}).Error
-				assert.NoError(t, err)
-				err = s.rdb.HSet(ctx, "interactive:test:3",
-					"read_cnt", 0, "collect_cnt", 1).Err()
-				assert.NoError(t, err)
-			},
-			wantRes: &intrv1.GetResponse{
-				Intr: &intrv1.Interactive{
-					BizId:      3,
-					CollectCnt: 1,
-					Collected:  true,
-					Liked:      true,
-				},
-			},
-		},
-	}
-	for _, tc := range testCases {
-		s.T().Run(tc.name, func(t *testing.T) {
-			tc.before(t)
-			res, err := s.server.Get(context.Background(), &intrv1.GetRequest{
-				Biz: tc.biz, BizId: tc.bizId, Uid: tc.uid,
-			})
-			assert.Equal(t, tc.wantErr, err)
-			assert.Equal(t, tc.wantRes, res)
-		})
-	}
-}
-
-func (s *InteractiveTestSuite) TestGetByIds() {
+func (s *InteractiveTestSuite) TestGetListBatchOfLikes() {
 	preCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
@@ -734,9 +693,9 @@ func (s *InteractiveTestSuite) TestGetByIds() {
 		i := int64(i)
 		err := s.db.WithContext(preCtx).
 			Create(&dao.Like{
-				ID:         i,
-				ObjType:        "test",
-				ObjID:      i,
+				ID:           i,
+				ObjType:      "test",
+				ObjID:        i,
 				ViewCount:    i,
 				CollectCount: i + 1,
 				LikeCount:    i + 2,
@@ -744,53 +703,57 @@ func (s *InteractiveTestSuite) TestGetByIds() {
 		assert.NoError(s.T(), err)
 	}
 
+	now := time.Now().UnixMilli()
+
 	testCases := []struct {
 		name string
 
-		before func(t *testing.T)
-		biz    string
-		ids    []int64
+		before  func(t *testing.T)
+		objType string
+		limit   int32
+		offset  int32
+		now     int64
 
 		wantErr error
-		wantRes *intrv1.GetByIdsResponse
+		wantRes *intrv1.GetListBatchOfLikesResponse
 	}{
 		{
-			name: "查找成功",
-			biz:  "test",
-			ids:  []int64{1, 2},
-			wantRes: &intrv1.GetByIdsResponse{
-				Intrs: map[int64]*intrv1.Interactive{
-					1: {
-						Biz:        "test",
-						BizId:      1,
-						ReadCnt:    1,
-						CollectCnt: 2,
-						LikeCnt:    3,
+			name:    "查找成功",
+			objType: "test",
+			limit:   2,
+			offset:  0,
+			now:     now,
+			// todo 时间也可以加入考虑
+			wantRes: &intrv1.GetListBatchOfLikesResponse{
+				Code:    200,
+				Message: "success",
+				Data: []*intrv1.Like{
+					{
+						ID:        1,
+						LikeCount: 3,
 					},
-					2: {
-						Biz:        "test",
-						BizId:      2,
-						ReadCnt:    2,
-						CollectCnt: 3,
-						LikeCnt:    4,
+					{
+						ID:        2,
+						LikeCount: 4,
 					},
 				},
 			},
 		},
 		{
-			name: "没有对应的数据",
-			biz:  "test",
-			ids:  []int64{100, 200},
-			wantRes: &intrv1.GetByIdsResponse{
-				Intrs: map[int64]*intrv1.Interactive{},
+			name:    "没有对应的数据",
+			objType: "test",
+			wantRes: &intrv1.GetListBatchOfLikesResponse{
+				Code:    200,
+				Message: "success",
+				Data:    []*intrv1.Like{},
 			},
 		},
 	}
 
 	for _, tc := range testCases {
 		s.T().Run(tc.name, func(t *testing.T) {
-			res, err := s.server.GetByIds(context.Background(), &intrv1.GetByIdsRequest{
-				Biz: tc.biz, Ids: tc.ids,
+			res, err := s.server.GetListBatchOfLikes(context.Background(), &intrv1.GetListBatchOfLikesRequest{
+				ObjType: tc.objType, Offset: tc.offset, Limit: tc.limit, Now: tc.now,
 			})
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantRes, res)

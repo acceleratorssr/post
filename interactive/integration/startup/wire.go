@@ -17,14 +17,14 @@ var thirdProvider = wire.NewSet(
 	InitKafka,
 )
 
-func InitGRPCServer() *grpc.InteractiveServiceServer {
+func InitGRPCServer() *grpc.LikeServiceServer {
 	wire.Build(
-		grpc.NewInteractiveServiceServer,
+		grpc.NewLikeServiceServer,
 		thirdProvider,
-		dao.NewGORMInteractiveDAO,
-		cache.NewRedisInteractiveCache,
-		repository.NewCachedInteractiveRepository,
-		service.NewInteractiveService,
+		dao.NewGORMArticleLikeDao,
+		cache.NewRedisArticleLikeCache,
+		repository.NewLikeRepository,
+		service.NewLikeService,
 	)
-	return new(grpc.InteractiveServiceServer)
+	return new(grpc.LikeServiceServer)
 }
