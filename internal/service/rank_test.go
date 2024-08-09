@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	intrv1 "post/api/proto/gen/intr/v1"
 	domain2 "post/interactive/domain"
 	"post/internal/domain"
 	svcmocks "post/internal/service/mock"
@@ -15,14 +16,14 @@ func TestRankTopN(t *testing.T) {
 	now := time.Now()
 	testCases := []struct {
 		name string
-		mock func(ctrl *gomock.Controller) (ArticleService, LikeService)
+		mock func(ctrl *gomock.Controller) (ArticleService, intrv1.LikeServiceClient)
 
 		wantErr  error
 		wantArts []domain.Article
 	}{
 		{
 			name: "成功",
-			mock: func(ctrl *gomock.Controller) (ArticleService, LikeService) {
+			mock: func(ctrl *gomock.Controller) (ArticleService, intrv1.LikeServiceClient) {
 				artSvc := svcmocks.NewMockArticleService(ctrl)
 				likeSvc := svcmocks.NewMockLikeService(ctrl)
 

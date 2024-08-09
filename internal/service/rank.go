@@ -3,8 +3,7 @@ package service
 import (
 	"context"
 	"math"
-	domain2 "post/interactive/domain"
-	"post/interactive/service"
+	intrv1 "post/api/proto/gen/intr/v1"
 	"post/internal/domain"
 	"post/internal/repository"
 	"post/internal/utils"
@@ -17,8 +16,9 @@ type RankService interface {
 }
 
 type BatchRankService struct {
-	artSvc   ArticleService
-	likeSvc  service.LikeService
+	artSvc ArticleService
+	//likeSvc  service.LikeService
+	likeSvc  intrv1.LikeServiceClient
 	rankRepo repository.RankRepository
 }
 
@@ -27,7 +27,7 @@ type scoreNum struct {
 	score float64
 }
 
-func NewBatchRankService(artSvc ArticleService, likeSvc service.LikeService, rankRepo repository.RankRepository) RankService {
+func NewBatchRankService(artSvc ArticleService, likeSvc intrv1.LikeServiceClient, rankRepo repository.RankRepository) RankService {
 	return &BatchRankService{
 		artSvc:   artSvc,
 		likeSvc:  likeSvc,
@@ -47,13 +47,19 @@ func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 	pq := utils.NewMinHeap()
 	now := time.Now().UnixMilli()
 	for {
-		likes, err := svc.likeSvc.GetListBatchOfLikes(ctx, "article", offset, n, now)
+		//likes, err := svc.likeSvc.GetListBatchOfLikes(ctx, "article", offset, n, now)
+		likes, err := svc.likeSvc.GetListBatchOfLikes(ctx, &intrv1.GetListBatchOfLikesRequest{
+			ObjType: "article",
+			Offset:  int32(offset),
+			Limit:   int32(n),
+			Now:     now,
+		})
 		if err != nil {
 			return err
 		}
 
 		// todo likes内有空吗
-		ids, score := svc.CountRank(likes)
+		ids, score := svc.CountRank(svc.grpc2domain(likes.Data))
 		for i := 0; i < len(ids); i++ {
 			// 此处是同一批次的，即当前的时间戳相同，所以一定存在该时间下的No100
 			if pq.GetLen() > n && pq.GetMin().Score > score[i] {
@@ -63,10 +69,10 @@ func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 		}
 
 		// 无剩余数据
-		if len(likes) < n {
+		if len(likes.Data) < n {
 			break
 		}
-		offset = offset + len(likes)
+		offset = offset + len(likes.Data)
 	}
 
 	res := make([]int64, pq.GetLen())
@@ -96,7 +102,7 @@ func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 }
 
 // CountRank 计算排行榜公式（简化为只考虑时间和点赞）：Score = (P - 1) / ((T + 2) ^ G)
-func (svc *BatchRankService) CountRank(ds []domain2.Like) ([]int64, []float64) {
+func (svc *BatchRankService) CountRank(ds []domain.Like) ([]int64, []float64) {
 	now := time.Now().UnixMilli()
 	ids := make([]int64, 0, len(ds))
 	scores := make([]float64, 0, len(ds))
@@ -106,4 +112,15 @@ func (svc *BatchRankService) CountRank(ds []domain2.Like) ([]int64, []float64) {
 		scores = append(scores, float64(d.LikeCount-1)/(math.Pow(float64(now-d.Ctime+2), 1.5)))
 	}
 	return ids, scores
+}
+func (svc *BatchRankService) grpc2domain(like []*intrv1.Like) []domain.Like {
+	ds := make([]domain.Like, 0, len(like))
+	for _, l := range like {
+		ds = append(ds, domain.Like{
+			ID:        l.ID,
+			Ctime:     l.Ctime,
+			LikeCount: l.LikeCount,
+		})
+	}
+	return ds
 }

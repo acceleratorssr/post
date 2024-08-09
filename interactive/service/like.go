@@ -35,6 +35,7 @@ func (l *likeService) IncrReadCount(ctx context.Context, ObjType string, ObjID i
 	return l.repo.IncrReadCount(ctx, ObjType, ObjID)
 }
 
+// Like 没控制重复点赞
 func (l *likeService) Like(ctx context.Context, ObjType string, ObjID, uid int64) error {
 	return l.repo.IncrLikeCount(ctx, ObjType, ObjID, uid)
 }

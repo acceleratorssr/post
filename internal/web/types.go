@@ -25,7 +25,7 @@ type ReqList struct {
 }
 
 type LikeReq struct {
-	ID    int64 `json:"obj_id"`
+	ObjID int64 `json:"obj_id"`
 	Liked bool  `json:"liked"`
 }
 

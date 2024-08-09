@@ -6,6 +6,8 @@ import (
 
 type ArticleDao interface {
 	Insert(ctx context.Context, art ArticleAuthor) (int64, error)
+	InsertReader(ctx context.Context, art ArticleReader) (int64, error)
+
 	UpdateByID(ctx context.Context, art ArticleAuthor) error
 	SyncStatus(ctx context.Context, art ArticleAuthor) error
 	GetListByAuthor(ctx context.Context, uid int64, limit int, offset int) ([]ArticleAuthor, error)

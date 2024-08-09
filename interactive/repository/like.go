@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"post/interactive/domain"
 	"post/interactive/repository/cache"
 	"post/interactive/repository/dao"
@@ -44,7 +45,14 @@ func (l *likeRepository) IncrReadCountMany(ctx context.Context, ObjType string, 
 }
 
 func (l *likeRepository) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
-	go l.cache.IncrReadCount(ctx, ObjType, ObjID)
+	go func() {
+		err := l.cache.IncrReadCount(ctx, ObjType, ObjID)
+		if err != nil {
+			fmt.Println("incr read count cache error:", err)
+			return
+		}
+		fmt.Println("ok")
+	}()
 	return l.dao.IncrReadCount(ctx, ObjType, ObjID)
 }
 

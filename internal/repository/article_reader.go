@@ -38,11 +38,11 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id int64
 }
 
 func (a *articleReaderRepository) Save(ctx context.Context, art domain.Article) (int64, error) {
-	return a.dao.Insert(ctx, ToEntity(art))
+	return a.dao.InsertReader(ctx, ToReaderEntity(art))
 }
 
 func (a *articleReaderRepository) Sync(ctx context.Context, art domain.Article) error {
-	err := a.dao.SyncStatus(ctx, ToEntity(art))
+	err := a.dao.SyncStatus(ctx, ToAuthorEntity(art))
 	// todo 同步删除likeRepo内的数据
 	if err != nil { // 防止发布出现错误
 		a.cache.DeleteFirstPage(ctx, art.ID)

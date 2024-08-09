@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
 	"math/rand"
-	service2 "post/interactive/service"
+	intrv1 "post/api/proto/gen/intr/v1"
 	"post/internal/domain"
 	"post/internal/service"
 	"post/internal/user"
@@ -21,11 +21,11 @@ var _ handler = (*ArticleHandler)(nil)
 
 type ArticleHandler struct {
 	svc     service.ArticleService
-	like    service2.LikeService
+	like    intrv1.LikeServiceClient
 	ObjType string
 }
 
-func NewArticleHandler(svc service.ArticleService, like service2.LikeService) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, like intrv1.LikeServiceClient) *ArticleHandler {
 	return &ArticleHandler{
 		svc:     svc,
 		like:    like,
@@ -80,7 +80,12 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
 func (a *ArticleHandler) Collect(ctx context.Context, req CollectReq, claims user.ClaimsUser) (utils.Response, error) {
 	var err error
 
-	err = a.like.Collect(ctx, a.ObjType, req.ObjID, claims.Id)
+	//err = a.like.Collect(ctx, a.ObjType, req.ObjID, claims.Id)
+	_, err = a.like.Collect(ctx, &intrv1.CollectRequest{
+		ObjID:   req.ObjID,
+		ObjType: a.ObjType,
+		Uid:     claims.Id,
+	})
 
 	if err != nil {
 		return utils.Response{
@@ -98,9 +103,19 @@ func (a *ArticleHandler) Collect(ctx context.Context, req CollectReq, claims use
 func (a *ArticleHandler) Like(ctx context.Context, req LikeReq, claims user.ClaimsUser) (utils.Response, error) {
 	var err error
 	if req.Liked {
-		err = a.like.Like(ctx, a.ObjType, req.ID, claims.Id)
+		//err = a.like.Like(ctx, a.ObjType, req.ObjID, claims.Id)
+		_, err = a.like.Like(ctx, &intrv1.LikeRequest{
+			ObjID:   req.ObjID,
+			ObjType: a.ObjType,
+			Uid:     claims.Id,
+		})
 	} else {
-		err = a.like.UnLike(ctx, a.ObjType, req.ID, claims.Id)
+		//err = a.like.UnLike(ctx, a.ObjType, req.ObjID, claims.Id)
+		_, err = a.like.UnLike(ctx, &intrv1.UnLikeRequest{
+			ObjID:   req.ObjID,
+			ObjType: a.ObjType,
+			Uid:     claims.Id,
+		})
 	}
 
 	if err != nil {
@@ -123,13 +138,14 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 		//log
 		return
 	}
+
 	claim, ok := ctx.Get("userClaims")
 	if !ok {
 		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
 		return
 	}
 
-	claims, ok := claim.(user.ClaimsUser)
+	claims, ok := claim.(*user.ClaimsUser)
 	if !ok {
 		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
 		return

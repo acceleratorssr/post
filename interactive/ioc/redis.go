@@ -11,6 +11,7 @@ var addrRedis string
 func InitRedis() redis.Cmdable {
 	cmd := redis.NewClient(&redis.Options{
 		Addr: addrRedis,
+		DB:   0,
 	})
 	return cmd
 }

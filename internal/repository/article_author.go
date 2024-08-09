@@ -66,12 +66,12 @@ func (a *articleAuthorRepository) List(ctx context.Context, uid int64, limit, of
 
 func (a *articleAuthorRepository) Create(ctx context.Context, art domain.Article) (int64, error) {
 	defer a.cache.DeleteFirstPage(ctx, art.Author.Id)
-	return a.dao.Insert(ctx, ToEntity(art))
+	return a.dao.Insert(ctx, ToAuthorEntity(art))
 }
 
 func (a *articleAuthorRepository) Update(ctx context.Context, art domain.Article) error {
 	defer a.cache.DeleteFirstPage(ctx, art.Author.Id)
-	return a.dao.UpdateByID(ctx, ToEntity(art))
+	return a.dao.UpdateByID(ctx, ToAuthorEntity(art))
 }
 
 func (a *articleAuthorRepository) toDomain(art ...dao.ArticleAuthor) ([]domain.Article, error) {

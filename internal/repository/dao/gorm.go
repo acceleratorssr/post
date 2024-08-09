@@ -55,6 +55,13 @@ func (gad *GORMArticleDao) Insert(ctx context.Context, art ArticleAuthor) (int64
 	return art.Id, err
 }
 
+func (gad *GORMArticleDao) InsertReader(ctx context.Context, art ArticleReader) (int64, error) {
+	art.Ctime = time.Now().UnixMilli()
+	art.Utime = art.Ctime
+	err := gad.db.WithContext(ctx).Create(&art).Error
+	return art.Id, err
+}
+
 func (gad *GORMArticleDao) UpdateByID(ctx context.Context, art ArticleAuthor) error {
 	art.Utime = time.Now().UnixMilli()
 	// 写简单，但是可读性不强，从代码看不出哪些字段不是零值，会被更新

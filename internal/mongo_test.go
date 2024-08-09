@@ -26,7 +26,7 @@ package main
 //)
 //
 //type Article struct {
-//	ID      int64  `json:"id"`
+//	ObjID      int64  `json:"id"`
 //	Title   string `json:"title"`
 //	Content string `json:"content"`
 //}
@@ -200,7 +200,7 @@ package main
 //				}
 //			},
 //			article: Article{
-//				ID:      snowID,
+//				ObjID:      snowID,
 //				Title:   "测试标题",
 //				Content: "测试内容",
 //			},
@@ -256,7 +256,7 @@ package main
 //				}
 //			},
 //			article: Article{
-//				ID:      snowID,
+//				ObjID:      snowID,
 //				Title:   "测试标题",
 //				Content: "测试内容",
 //			},

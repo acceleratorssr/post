@@ -8,7 +8,6 @@ package main
 
 import (
 	"github.com/google/wire"
-	events2 "post/interactive/events"
 	repository2 "post/interactive/repository"
 	cache2 "post/interactive/repository/cache"
 	dao2 "post/interactive/repository/dao"
@@ -40,14 +39,13 @@ func InitApp() *App {
 	articleLikeCache := cache2.NewRedisArticleLikeCache(cmdable)
 	likeRepository := repository2.NewLikeRepository(articleLikeDao, articleLikeCache)
 	likeService := service2.NewLikeService(likeRepository)
-	articleHandler := web.NewArticleHandler(articleService, likeService)
+	likeServiceClient := ioc.InitIntrGRPCClient(likeService)
+	articleHandler := web.NewArticleHandler(articleService, likeServiceClient)
 	engine := ioc.InitWebServer(articleHandler)
-	batchKafkaConsumer := events2.NewBatchKafkaConsumer(client, likeRepository)
-	v := ioc.NewKafkaConsumer(batchKafkaConsumer)
 	rankCache := cache.NewRankCache(cmdable)
 	localCacheForRank := cache.NewLocalCacheForRank()
 	rankRepository := repository.NewBatchRankCache(rankCache, localCacheForRank)
-	rankService := service.NewBatchRankService(articleService, likeService, rankRepository)
+	rankService := service.NewBatchRankService(articleService, likeServiceClient, rankRepository)
 	redis_distributed_lockClient := redis_distributed_lock.NewClient(cmdable)
 	rankingJob := ioc.InitRankingJob(rankService, redis_distributed_lockClient)
 	cron := ioc.InitJobs(rankingJob)
@@ -58,7 +56,6 @@ func InitApp() *App {
 	scheduler := ioc.InitScheduler(jobService, localFuncExecutor)
 	app := &App{
 		server:         engine,
-		consumers:      v,
 		cron:           cron,
 		cronJobService: jobService,
 		scheduler:      scheduler,

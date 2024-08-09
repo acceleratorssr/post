@@ -17,14 +17,14 @@ func main() {
 		return
 	}
 	server := app.server
-	topic := "article"
-	for _, c := range app.consumers {
-		err := c.Start(topic)
-		// TODO 错误处理
-		if err != nil {
-			panic(err)
-		}
-	}
+	//topic := "article"
+	//for _, c := range app.consumers {
+	//	err := c.Start(topic)
+	//	// TODO 错误处理
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}
 
 	app.cron.Start()
 

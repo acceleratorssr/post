@@ -5,7 +5,7 @@ local exists = redis.call('EXISTS', key)
 
 if exists == 1 then
     redis.call('HINCRBY', key, field, delta)
-    return 1
 else
-    return 0
+    redis.call('HSET', key, field, delta)
 end
+return 1

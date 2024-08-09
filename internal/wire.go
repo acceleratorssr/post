@@ -4,7 +4,6 @@ package main
 
 import (
 	"github.com/google/wire"
-	events2 "post/interactive/events"
 	interRepo "post/interactive/repository"
 	cache2 "post/interactive/repository/cache"
 	interDAO "post/interactive/repository/dao"
@@ -40,11 +39,12 @@ func InitApp() *App {
 		ioc.InitRankingJob,
 		ioc.InitScheduler,
 		ioc.InitLocalFuncExecutor,
+		ioc.InitIntrGRPCClient,
 
 		rankingServiceSet,
 
 		//events.NewKafkaConsumer,
-		events2.NewBatchKafkaConsumer,
+		//events2.NewBatchKafkaConsumer,
 		events.NewKafkaProducer,
 
 		dao.NewGORMArticleDao,

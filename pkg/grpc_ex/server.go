@@ -1,6 +1,7 @@
 package grpc_ex
 
 import (
+	"fmt"
 	"google.golang.org/grpc"
 	"net"
 )
@@ -16,5 +17,6 @@ func (s *Server) Serve() error {
 		panic(err)
 	}
 
+	fmt.Println("grpc server run on 9200")
 	return s.Server.Serve(l)
 }

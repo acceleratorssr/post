@@ -39,7 +39,7 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (u
 			return
 		}
 
-		claims, ok := claim.(user.ClaimsUser)
+		claims, ok := claim.(*user.ClaimsUser)
 		if !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
@@ -47,7 +47,7 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (u
 			return
 		}
 
-		res, err := fn(ctx.Request.Context(), req, claims)
+		res, err := fn(ctx.Request.Context(), req, *claims)
 
 		if err != nil {
 			err = fmt.Errorf("业务失败:%w", err)

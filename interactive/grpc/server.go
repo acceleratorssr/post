@@ -13,8 +13,9 @@ import (
 // LikeServiceServer 将service包装为grpc暴露出去
 // 即此处不考虑调用方
 type LikeServiceServer struct {
-	intrv1.UnimplementedLikeServiceServer // 继承
-	svc                                   service.LikeService
+	// 继承
+	intrv1.UnimplementedLikeServiceServer
+	svc service.LikeService
 }
 
 func NewLikeServiceServer(svc service.LikeService) *LikeServiceServer {
