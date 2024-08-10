@@ -17,5 +17,7 @@ func InitIntrGRPCClient(svc service.LikeService) intrv1.LikeServiceClient {
 	}
 	remote := intrv1.NewLikeServiceClient(c)
 
-	return client.NewGreyScaleServiceAdapter(local, remote)
+	g := client.NewGreyScaleServiceAdapter(local, remote)
+	g.UpdateThreshold(50) // 调整流量比例
+	return g
 }
