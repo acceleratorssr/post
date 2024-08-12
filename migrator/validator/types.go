@@ -29,59 +29,83 @@ func NewValidator[T migrator.Entity](base, target *gorm.DB, p events.Inconsisten
 	}
 }
 
-// Validate 仅适用同构数据库
-// todo 注意，此处校验完后，会存在多余数据，即base硬删除了数据，但是target没发现
-// todo 可以采用慢启动的方式，对比count的数量，不一致再遍历找到多余的数据
-func (v *Validator[T]) Validate(ctx context.Context, utime int64) {
+// Validate
+// todo 仅适用同构数据库，可改造offset并行
+//
+//	注意，此处校验完后，会存在多余数据，即base硬删除了数据，但是target没发现
+//	可以采用慢启动的方式，对比count的数量，不一致再遍历找到多余的数据
+func (v *Validator[T]) Validate(ctx context.Context, utime, timeout int64, limit int) {
 	//utime := time.Now().UnixMilli() // 需要外部传入，即开始同步的时间
-	for offset := 0; ; offset++ {
-		// base, 实现了Entity的struct
-		var base T
-		ctxSon, cancel := context.WithTimeout(ctx, time.Second)
+	// base, 实现了Entity的struct
+	base := make([]T, 0, limit)
+
+	var target T
+	// 查看T类型是否实现 CompareWith 接口
+	// 另一种方法是直接将CompareWith作为方法写入Entity接口中，因为T类型一定要实现Entity接口
+	var targetAny any = target // 因为断言需要interface{}类型
+	var fn func(index int)
+
+	if t, ok := targetAny.(interface {
+		CompareWith(e migrator.Entity) bool
+	}); ok {
+		fn = func(index int) {
+			if !t.CompareWith(target) {
+				v.sendEvent(ctx, base[index].GetID(), events.InconsistentEventTypeNoEquals)
+			}
+		}
+	} else {
+		fn = func(index int) {
+			if !reflect.DeepEqual(base, target) {
+				v.sendEvent(ctx, base[index].GetID(), events.InconsistentEventTypeNoEquals)
+			}
+		}
+	}
+
+	for offset := 0; ; offset += limit {
+		//base = make([]T, 0, limit)
+		base = base[:0] // 清空切片，但保留容量不变
+
+		ctxSon, cancel := context.WithTimeout(ctx, time.Duration(timeout))
 		//err := v.base.WithContext(ctxSon).Offset(offset).Order("id").First(&base).Error
-		err := v.base.Where("utime < ?", utime).Offset(offset).First(&base).Error
+		err := v.base.Where("utime < ?", utime).Offset(offset).Find(&base).Limit(limit).Error // utime记得加索引
 		cancel()
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return
+				return //校验完成
 			}
-			//panic(err)
+			if errors.Is(err, context.DeadlineExceeded) {
+				// log
+				// 监控，超时了
+			}
 			// 监控，数据库不正常错误
 			continue
 		}
 
-		// target, 实现了Entity的struct
-		var target T
-		ctxSon, cancel = context.WithTimeout(ctx, time.Second)
-		err = v.target.WithContext(ctxSon).Where("id = ?", base.GetID()).First(&target).Error
-		cancel()
-		if err != nil {
-			// target 缺失数据
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				v.sendEvent(ctx, base.GetID(), events.InconsistentEventTypeNoExist)
+		for i := 0; i < len(base); i++ {
+			// target, 实现了Entity的struct
+
+			ctxSon, cancel = context.WithTimeout(ctx, 200*time.Millisecond)
+			err = v.target.WithContext(ctxSon).Where("id = ?", base[i].GetID()).First(&target).Error
+			cancel()
+			if err != nil {
+				// target 缺失数据
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					v.sendEvent(ctx, base[i].GetID(), events.InconsistentEventTypeNoExist)
+				}
+				if errors.Is(err, context.DeadlineExceeded) {
+					// log
+					// 监控，超时了
+				}
+
+				// todo
+				// 监控，数据库不正常错误
 			}
 
-			// todo
-			// 监控，数据库不正常错误
+			fn(i)
 		}
 
-		//// 简单直接的版本
-		//if !base.CompareWith(target) {
-		//
-		//}
-
-		// 查看base是否实现CompareWith接口
-		var baseAny any = base // 因为断言需要interface{}类型
-		if b, ok := baseAny.(interface {
-			CompareWith(e migrator.Entity) bool
-		}); ok {
-			if !b.CompareWith(target) {
-				v.sendEvent(ctx, base.GetID(), events.InconsistentEventTypeNoEquals)
-			}
-		} else {
-			if !reflect.DeepEqual(base, target) {
-
-			}
+		if limit < len(base) {
+			return //校验完成
 		}
 	}
 }
