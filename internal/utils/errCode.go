@@ -2,6 +2,7 @@ package utils
 
 // （模块+错误方+错误编号） xx + x + xxx
 // InvalidInput = 014001//前导0为8进制
+// todo errcode后面懒得用了，最后有必要的话再整合下
 
 // TODO 和statusCode好像有点重复，考虑合并
 const (

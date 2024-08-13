@@ -20,7 +20,10 @@ import (
 // Injectors from wire.go:
 
 func InitApp() *App {
-	db := ioc.InitDB()
+	baseDB := ioc.InitBaseDB()
+	targetDB := ioc.InitTargetDB()
+	doubleWritePool := ioc.InitDoubleWritePool(baseDB, targetDB)
+	db := ioc.InitDoubleWriteDB(doubleWritePool)
 	articleLikeDao := dao.NewGORMArticleLikeDao(db)
 	cmdable := ioc.InitRedis()
 	articleLikeCache := cache.NewRedisArticleLikeCache(cmdable)
@@ -29,17 +32,24 @@ func InitApp() *App {
 	likeServiceServer := grpc.NewLikeServiceServer(likeService)
 	server := ioc.InitGRPCexServer(likeServiceServer)
 	client := ioc.InitKafka()
-	kafkaConsumer := events.NewKafkaConsumer(client, likeRepository)
-	v := ioc.NewKafkaConsumer(kafkaConsumer)
+	kafkaConsumer := events.NewKafkaIncrReadConsumer(client, likeRepository)
+	consumer := ioc.InitFixConsumer(baseDB, targetDB, client)
+	v := ioc.NewKafkaConsumer(kafkaConsumer, consumer)
+	syncProducer := ioc.InitSyncProducer(client)
+	inconsistentProducer := ioc.InitMigratorProducer(syncProducer)
+	gin_exServer := ioc.InitMigratorServer(baseDB, targetDB, doubleWritePool, inconsistentProducer)
 	app := &App{
 		server:    server,
 		consumers: v,
+		webAdmin:  gin_exServer,
 	}
 	return app
 }
 
 // wire.go:
 
-var thirdPartySet = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitLogger, ioc.InitKafka, ioc.InitGRPCexServer, ioc.NewKafkaConsumer)
+var thirdPartySet = wire.NewSet(ioc.InitDoubleWritePool, ioc.InitDoubleWriteDB, ioc.InitBaseDB, ioc.InitTargetDB, ioc.InitGRPCexServer, ioc.InitRedis, ioc.InitLogger, events.NewKafkaIncrReadConsumer, ioc.NewKafkaConsumer, ioc.InitKafka, ioc.InitSyncProducer)
 
 var likeSvcProvider = wire.NewSet(service.NewLikeService, repository.NewLikeRepository, dao.NewGORMArticleLikeDao, cache.NewRedisArticleLikeCache)
+
+var migratorSet = wire.NewSet(ioc.InitMigratorServer, ioc.InitFixConsumer, ioc.InitMigratorProducer)

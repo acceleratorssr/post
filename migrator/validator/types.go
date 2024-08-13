@@ -17,15 +17,18 @@ type Validator[T migrator.Entity] struct {
 
 	p         events.InconsistentProducer
 	direction string
+
+	utime int64
 }
 
-func NewValidator[T migrator.Entity](base, target *gorm.DB, p events.InconsistentProducer, direction string) *Validator[T] {
+func NewValidator[T migrator.Entity](base, target *gorm.DB, p events.InconsistentProducer, direction string, utime int64) *Validator[T] {
 	// 可在此处开一个goroutine监控负载情况
 	return &Validator[T]{
 		base:      base,
 		target:    target,
 		p:         p,
 		direction: direction,
+		utime:     utime,
 	}
 }
 
@@ -34,7 +37,7 @@ func NewValidator[T migrator.Entity](base, target *gorm.DB, p events.Inconsisten
 //
 //	注意，此处校验完后，会存在多余数据，即base硬删除了数据，但是target没发现
 //	可以采用慢启动的方式，对比count的数量，不一致再遍历找到多余的数据
-func (v *Validator[T]) Validate(ctx context.Context, utime, timeout int64, limit int) {
+func (v *Validator[T]) Validate(ctx context.Context, msTimeout int64, limit int) {
 	//utime := time.Now().UnixMilli() // 需要外部传入，即开始同步的时间
 	// base, 实现了Entity的struct
 	base := make([]T, 0, limit)
@@ -65,9 +68,9 @@ func (v *Validator[T]) Validate(ctx context.Context, utime, timeout int64, limit
 		//base = make([]T, 0, limit)
 		base = base[:0] // 清空切片，但保留容量不变
 
-		ctxSon, cancel := context.WithTimeout(ctx, time.Duration(timeout))
+		ctxSon, cancel := context.WithTimeout(ctx, time.Duration(msTimeout))
 		//err := v.base.WithContext(ctxSon).Offset(offset).Order("id").First(&base).Error
-		err := v.base.Where("utime < ?", utime).Offset(offset).Find(&base).Limit(limit).Error // utime记得加索引
+		err := v.base.Where("utime < ?", v.utime).Offset(offset).Find(&base).Limit(limit).Error // utime记得加索引
 		cancel()
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -107,6 +110,8 @@ func (v *Validator[T]) Validate(ctx context.Context, utime, timeout int64, limit
 		if limit < len(base) {
 			return //校验完成
 		}
+
+		// 也可以通过switch：context.Canceled
 	}
 }
 

@@ -19,14 +19,13 @@ type KafkaConsumer struct {
 	repo    repository.LikeRepository
 }
 
-func NewKafkaConsumer(client sarama.Client,
+func NewKafkaIncrReadConsumer(client sarama.Client,
 	repo repository.LikeRepository) *KafkaConsumer { // todo 为什么不返回接口
 	return &KafkaConsumer{
 		client: client,
 		repo:   repo,
 	}
 }
-
 func (k *KafkaConsumer) Start(topic string) error {
 	// todo k.groupID
 	cg, err := sarama.NewConsumerGroupFromClient("t", k.client)

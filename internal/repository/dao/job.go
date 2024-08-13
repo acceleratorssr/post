@@ -14,12 +14,12 @@ const (
 
 // Job 任务表
 type Job struct {
-	ID       int64  `gorm:"primaryKey,autoIncrement"`
-	Name     string `gorm:"unique"`
+	ID       int64  `gorm_ex:"primaryKey,autoIncrement"`
+	Name     string `gorm_ex:"unique"`
 	Cfg      string
 	Executor string
 
-	ExecuteTime int64 `gorm:"column:execute_time,index"`
+	ExecuteTime int64 `gorm_ex:"column:execute_time,index"`
 	Status      int
 	Cron        string
 	Version     int64

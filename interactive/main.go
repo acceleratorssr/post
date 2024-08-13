@@ -8,6 +8,9 @@ func main() {
 			panic(err)
 		}
 	}
+	go func() {
+		app.webAdmin.Run()
+	}()
 
 	err := app.server.Serve()
 	panic(err)

@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	pattenDependBase   = "depend_base"
-	pattenDependTarget = "depend_target"
-	pattenOnlyBase     = "only_base"
-	pattenOnlyTarget   = "only_target"
+	PattenDependBase   = "depend_base"
+	PattenDependTarget = "depend_target"
+	PattenOnlyBase     = "only_base"
+	PattenOnlyTarget   = "only_target"
 )
 
 // sql语句执行会进这
@@ -23,6 +23,20 @@ type DoubleWritePool struct {
 	patten atomic.Value
 }
 
+func NewDoubleWritePool(base, target gorm.ConnPool) *DoubleWritePool {
+	var p atomic.Value
+	p.Store(PattenDependBase)
+	return &DoubleWritePool{
+		base:   base,
+		target: target,
+		patten: p,
+	}
+}
+
+func (d *DoubleWritePool) UpdatePatten(patten string) {
+	d.patten.Store(patten)
+}
+
 // PrepareContext prepare进入此方法
 func (d *DoubleWritePool) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
 	panic("不支持 ")
@@ -31,7 +45,7 @@ func (d *DoubleWritePool) PrepareContext(ctx context.Context, query string) (*sq
 // ExecContext 非查询语句进入此方法
 func (d *DoubleWritePool) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	switch d.patten.Load().(string) {
-	case pattenDependBase:
+	case PattenDependBase:
 		res, err := d.base.ExecContext(ctx, query, args...)
 		if err != nil {
 			return res, err
@@ -42,7 +56,7 @@ func (d *DoubleWritePool) ExecContext(ctx context.Context, query string, args ..
 		}
 		return res, err
 
-	case pattenDependTarget:
+	case PattenDependTarget:
 		res, err := d.target.ExecContext(ctx, query, args...)
 		if err != nil {
 			return res, err
@@ -53,10 +67,10 @@ func (d *DoubleWritePool) ExecContext(ctx context.Context, query string, args ..
 		}
 		return res, err
 
-	case pattenOnlyBase:
+	case PattenOnlyBase:
 		return d.base.ExecContext(ctx, query, args...)
 
-	case pattenOnlyTarget:
+	case PattenOnlyTarget:
 		return d.target.ExecContext(ctx, query, args...)
 
 	default:
@@ -68,10 +82,10 @@ func (d *DoubleWritePool) ExecContext(ctx context.Context, query string, args ..
 // QueryContext 查询语句进入此方法
 func (d *DoubleWritePool) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	switch d.patten.Load().(string) {
-	case pattenDependBase, pattenOnlyBase:
+	case PattenDependBase, PattenOnlyBase:
 		return d.base.QueryContext(ctx, query, args...)
 
-	case pattenDependTarget, pattenOnlyTarget:
+	case PattenDependTarget, PattenOnlyTarget:
 		return d.target.QueryContext(ctx, query, args...)
 
 	default:
@@ -83,10 +97,10 @@ func (d *DoubleWritePool) QueryContext(ctx context.Context, query string, args .
 
 func (d *DoubleWritePool) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	switch d.patten.Load().(string) {
-	case pattenDependBase, pattenOnlyBase:
+	case PattenDependBase, PattenOnlyBase:
 		return d.base.QueryRowContext(ctx, query, args...)
 
-	case pattenDependTarget, pattenOnlyTarget:
+	case PattenDependTarget, PattenOnlyTarget:
 		return d.target.QueryRowContext(ctx, query, args...)
 
 	default:
@@ -98,13 +112,13 @@ func (d *DoubleWritePool) QueryRowContext(ctx context.Context, query string, arg
 
 func (d *DoubleWritePool) BeginTx(ctx context.Context, opts *sql.TxOptions) (gorm.ConnPool, error) {
 	switch d.patten.Load().(string) {
-	case pattenOnlyBase:
+	case PattenOnlyBase:
 		tx, err := d.base.(gorm.TxBeginner).BeginTx(ctx, opts)
 		return &DoubleWritePoolTx{
 			base:   tx,
-			patten: pattenOnlyBase,
+			patten: PattenOnlyBase,
 		}, err
-	case pattenDependBase:
+	case PattenDependBase:
 		baseTx, err := d.base.(gorm.TxBeginner).BeginTx(ctx, opts)
 		if err != nil {
 			return nil, err
@@ -118,15 +132,15 @@ func (d *DoubleWritePool) BeginTx(ctx context.Context, opts *sql.TxOptions) (gor
 		return &DoubleWritePoolTx{
 			base:   baseTx,
 			target: targetTx,
-			patten: pattenDependBase,
+			patten: PattenDependBase,
 		}, nil
-	case pattenOnlyTarget:
+	case PattenOnlyTarget:
 		tx, err := d.target.(gorm.TxBeginner).BeginTx(ctx, opts)
 		return &DoubleWritePoolTx{
 			target: tx,
-			patten: pattenOnlyTarget,
+			patten: PattenOnlyTarget,
 		}, err
-	case pattenDependTarget:
+	case PattenDependTarget:
 		targetTx, err := d.target.(gorm.TxBeginner).BeginTx(ctx, opts)
 		if err != nil {
 			return nil, err
@@ -140,7 +154,7 @@ func (d *DoubleWritePool) BeginTx(ctx context.Context, opts *sql.TxOptions) (gor
 		return &DoubleWritePoolTx{
 			base:   baseTx,
 			target: targetTx,
-			patten: pattenDependBase,
+			patten: PattenDependBase,
 		}, nil
 	default:
 		return nil, errors.New("patten error")
@@ -155,9 +169,9 @@ type DoubleWritePoolTx struct {
 
 func (d *DoubleWritePoolTx) Commit() error {
 	switch d.patten {
-	case pattenOnlyBase:
+	case PattenOnlyBase:
 		return d.base.Commit()
-	case pattenDependBase:
+	case PattenDependBase:
 		err := d.base.Commit()
 		if err != nil { // 事务提交失败，直接返回
 			return err
@@ -170,9 +184,9 @@ func (d *DoubleWritePoolTx) Commit() error {
 		}
 
 		return nil
-	case pattenOnlyTarget:
+	case PattenOnlyTarget:
 		return d.target.Commit()
-	case pattenDependTarget:
+	case PattenDependTarget:
 		err := d.target.Commit()
 		if err != nil {
 			return err
@@ -191,9 +205,9 @@ func (d *DoubleWritePoolTx) Commit() error {
 
 func (d *DoubleWritePoolTx) Rollback() error {
 	switch d.patten {
-	case pattenOnlyBase:
+	case PattenOnlyBase:
 		return d.base.Rollback()
-	case pattenDependBase:
+	case PattenDependBase:
 		err := d.base.Rollback()
 		if err != nil {
 			return err
@@ -205,9 +219,9 @@ func (d *DoubleWritePoolTx) Rollback() error {
 		}
 
 		return nil
-	case pattenOnlyTarget:
+	case PattenOnlyTarget:
 		return d.target.Rollback()
-	case pattenDependTarget:
+	case PattenDependTarget:
 		err := d.target.Rollback()
 		if err != nil {
 			return err
@@ -230,7 +244,7 @@ func (d *DoubleWritePoolTx) PrepareContext(ctx context.Context, query string) (*
 
 func (d *DoubleWritePoolTx) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	switch d.patten {
-	case pattenDependBase:
+	case PattenDependBase:
 		res, err := d.base.ExecContext(ctx, query, args...)
 		if err != nil {
 			return res, err
@@ -245,7 +259,7 @@ func (d *DoubleWritePoolTx) ExecContext(ctx context.Context, query string, args 
 		}
 		return res, err
 
-	case pattenDependTarget:
+	case PattenDependTarget:
 		res, err := d.target.ExecContext(ctx, query, args...)
 		if err != nil {
 			return res, err
@@ -260,10 +274,10 @@ func (d *DoubleWritePoolTx) ExecContext(ctx context.Context, query string, args 
 		}
 		return res, err
 
-	case pattenOnlyBase:
+	case PattenOnlyBase:
 		return d.base.ExecContext(ctx, query, args...)
 
-	case pattenOnlyTarget:
+	case PattenOnlyTarget:
 		return d.target.ExecContext(ctx, query, args...)
 
 	default:
@@ -274,10 +288,10 @@ func (d *DoubleWritePoolTx) ExecContext(ctx context.Context, query string, args 
 
 func (d *DoubleWritePoolTx) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	switch d.patten {
-	case pattenDependBase, pattenOnlyBase:
+	case PattenDependBase, PattenOnlyBase:
 		return d.base.QueryContext(ctx, query, args...)
 
-	case pattenDependTarget, pattenOnlyTarget:
+	case PattenDependTarget, PattenOnlyTarget:
 		return d.target.QueryContext(ctx, query, args...)
 
 	default:
@@ -289,10 +303,10 @@ func (d *DoubleWritePoolTx) QueryContext(ctx context.Context, query string, args
 
 func (d *DoubleWritePoolTx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	switch d.patten {
-	case pattenDependBase, pattenOnlyBase:
+	case PattenDependBase, PattenOnlyBase:
 		return d.base.QueryRowContext(ctx, query, args...)
 
-	case pattenDependTarget, pattenOnlyTarget:
+	case PattenDependTarget, PattenOnlyTarget:
 		return d.target.QueryRowContext(ctx, query, args...)
 
 	default:

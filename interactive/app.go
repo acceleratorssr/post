@@ -1,6 +1,7 @@
 package main
 
 import (
+	"post/pkg/gin_ex"
 	"post/pkg/grpc_ex"
 	"post/pkg/sarama_ex"
 )
@@ -9,4 +10,5 @@ import (
 type App struct {
 	server    *grpc_ex.Server
 	consumers []sarama_ex.Consumer
+	webAdmin  *gin_ex.Server
 }

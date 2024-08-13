@@ -8,21 +8,48 @@ import (
 	"gorm.io/plugin/opentelemetry/tracing"
 	prom "gorm.io/plugin/prometheus"
 	dao2 "post/interactive/repository/dao"
+	"post/pkg/gorm_ex/connpool"
 	"time"
 )
 
 //go:embed mysql.yaml
 var mysqlDSN string
 
-func InitDB() *gorm.DB {
-	type Config struct {
-		DSN string `yaml:"dsn"`
-	}
-	c := Config{
-		DSN: mysqlDSN,
-	}
+//go:embed target_mysql.yaml
+var target string
 
-	db, err := gorm.Open(mysql.Open(c.DSN), &gorm.Config{})
+// TargetDB 为了区分两个不同的DB
+type TargetDB *gorm.DB
+
+type BaseDB *gorm.DB
+
+func InitDoubleWriteDB(pool *connpool.DoubleWritePool) *gorm.DB {
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		Conn: pool,
+	}))
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+func InitTargetDB() TargetDB {
+	db, err := gorm.Open(mysql.Open(target), &gorm.Config{})
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+func InitBaseDB() BaseDB {
+	//type Config struct {
+	//	DSN string `yaml:"dsn"`
+	//}
+	//c := Config{
+	//	DSN: mysqlDSN,
+	//}
+
+	db, err := gorm.Open(mysql.Open(mysqlDSN), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}

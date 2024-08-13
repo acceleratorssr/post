@@ -14,12 +14,19 @@ import (
 )
 
 var thirdPartySet = wire.NewSet(
-	ioc.InitDB,
+	ioc.InitDoubleWritePool,
+	ioc.InitDoubleWriteDB,
+	ioc.InitBaseDB,
+	ioc.InitTargetDB,
+
+	ioc.InitGRPCexServer,
 	ioc.InitRedis,
 	ioc.InitLogger,
-	ioc.InitKafka,
-	ioc.InitGRPCexServer,
+
+	events.NewKafkaIncrReadConsumer,
 	ioc.NewKafkaConsumer,
+	ioc.InitKafka,
+	ioc.InitSyncProducer,
 )
 
 var likeSvcProvider = wire.NewSet(
@@ -29,13 +36,20 @@ var likeSvcProvider = wire.NewSet(
 	cache.NewRedisArticleLikeCache,
 )
 
+var migratorSet = wire.NewSet(
+	ioc.InitMigratorServer,
+	ioc.InitFixConsumer,
+	ioc.InitMigratorProducer,
+)
+
 func InitApp() *App {
 	wire.Build(
-		likeSvcProvider,
 		thirdPartySet,
-		events.NewKafkaConsumer,
+		likeSvcProvider,
+		migratorSet,
 
 		grpc.NewLikeServiceServer,
+
 		wire.Struct(new(App), "*"),
 	)
 	return new(App)

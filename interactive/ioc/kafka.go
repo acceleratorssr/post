@@ -4,6 +4,8 @@ import (
 	_ "embed"
 	"github.com/IBM/sarama"
 	"post/interactive/events"
+	"post/interactive/repository/dao"
+	"post/migrator/events/fixer"
 	"post/pkg/sarama_ex"
 )
 
@@ -24,10 +26,19 @@ func InitKafka() sarama.Client {
 	return client
 }
 
-func NewKafkaConsumer(consumer *events.KafkaConsumer) []sarama_ex.Consumer {
-	return []sarama_ex.Consumer{consumer}
+func NewKafkaConsumer(consumer *events.KafkaConsumer,
+	fix *fixer.Consumer[dao.Like]) []sarama_ex.Consumer {
+	return []sarama_ex.Consumer{consumer, fix}
 }
 
 //func NewKafkaConsumer(consumer *events2.BatchKafkaConsumer) []events2.Consumer {
 //	return []events2.Consumer{consumer}
 //}
+
+func InitSyncProducer(client sarama.Client) sarama.SyncProducer {
+	res, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}

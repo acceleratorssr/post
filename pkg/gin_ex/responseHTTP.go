@@ -1,4 +1,4 @@
-package utils
+package gin_ex
 
 import (
 	"errors"
@@ -59,14 +59,14 @@ func FailWithCode(code domain.StatusType, c *gin.Context) {
 	Result(code.ToInt(), nil, msg, c)
 }
 
-func FailWithMessage(code domain.StatusType, msg string, c *gin.Context) {
+func FailWithMessage(c *gin.Context, code domain.StatusType, msg string) {
 	Result(code.ToInt(), nil, msg, c)
 }
 
 // FailWithError 从验证错误中提取字段的自定义错误消息，obj为对应结构体
 func FailWithError(err error, obj any, c *gin.Context) {
 	msg := GetValidMsg(err, obj)
-	FailWithMessage(domain.TypeUnknown, msg, c)
+	FailWithMessage(c, domain.TypeUnknown, msg)
 }
 
 func GetValidMsg(err error, obj any) string {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-
 	"time"
 )
 
@@ -33,7 +32,7 @@ func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, ObjType st
 	}
 
 	////此处只有一个事务，即事务提交仅触发一次刷入磁盘，批量只消耗一次磁盘IO
-	//return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	//return gad.db.WithContext(ctx).Transaction(func(tx *gorm_ex.DB) error {
 	//	txDAO := NewGORMArticleLikeDao(tx)
 	//	for i := 0; i < len(ObjIDs); i++ {
 	//		err := txDAO.IncrReadCount(ctx, ObjType, ObjIDs[i])
@@ -47,7 +46,7 @@ func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, ObjType st
 	//return gad.db.WithContext(ctx).Clauses(clause.OnConflict{
 	//	Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}}, // 指定冲突列
 	//	DoUpdates: clause.Assignments(map[string]any{
-	//		"view_count": gorm.Expr("view_count + ?", 1),
+	//		"view_count": gorm_ex.Expr("view_count + ?", 1),
 	//		"utime":      time.Now().UnixMilli(),
 	//	}),
 	//}).CreateInBatches(likes, len(ObjIDs)).Error // len(ObjIDs)是每批次插入的记录数
@@ -156,11 +155,11 @@ func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, i
 func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
 	// 这两种分别是one和many，但不考虑insert的情况
 	//return gad.db.WithContext(ctx).Where("obj_id = ? and obj_type = ?", ObjID, ObjType).
-	//	Update("view_count", gorm.Expr("view_count + ?", 1)).Error
+	//	Update("view_count", gorm_ex.Expr("view_count + ?", 1)).Error
 
 	//return gad.db.WithContext(ctx).Where("obj_id = ? and obj_type = ?", ObjID, ObjType).
 	//	Updates(map[string]any{
-	//		"view_count": gorm.Expr("view_count + ?", 1),
+	//		"view_count": gorm_ex.Expr("view_count + ?", 1),
 	//		"utime":      time.Now().UnixMilli(),
 	//	}).Error
 

@@ -13,6 +13,20 @@ type Fixer[T migrator.Entity] struct {
 	target *gorm.DB
 }
 
+func NewFixerDependBase[T migrator.Entity](base, target *gorm.DB) *Fixer[T] {
+	return &Fixer[T]{
+		base:   base,
+		target: target,
+	}
+}
+
+func NewFixerDependTarget[T migrator.Entity](base, target *gorm.DB) *Fixer[T] {
+	return &Fixer[T]{
+		base:   target,
+		target: base,
+	}
+}
+
 // Fix 也可改批量
 func (f *Fixer[T]) Fix(ctx context.Context, event events.InconsistentEvent) error {
 	switch event.Type {

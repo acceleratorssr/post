@@ -22,12 +22,12 @@ func InitCounter(opt prometheus.CounterOpts) {
 
 // WrapClaimsAndReq
 // TODO 除此之外还可以考虑单独解析claims或者req，解决全部post
-func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (utils.Response, error)) gin.HandlerFunc {
+func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (Response, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req Req
 		if err := ctx.Bind(&req); err != nil {
-			err = fmt.Errorf("解析请求失败%w", err)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+			err = fmt.Errorf("解析请求参数失败%w", err)
+			FailWithMessage(ctx, domain.ErrSystem, err.Error())
 			return
 		}
 
@@ -35,7 +35,7 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (u
 		if !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+			FailWithMessage(ctx, domain.ErrSystem, err.Error())
 			return
 		}
 
@@ -43,7 +43,7 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (u
 		if !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+			FailWithMessage(ctx, domain.ErrSystem, err.Error())
 			return
 		}
 
@@ -51,14 +51,37 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (u
 
 		if err != nil {
 			err = fmt.Errorf("业务失败:%w", err)
-			utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+			FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		}
 
-		utils.OK(res.Data, res.Msg, ctx)
+		OK(res.Data, res.Msg, ctx)
 	}
 }
 
-func WrapNilReq(fn func(context.Context) (utils.Response, error)) gin.HandlerFunc {
+func WrapWithReq[Req any](fn func(context.Context, Req) (Response, error)) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req Req
+		if err := ctx.Bind(&req); err != nil {
+			err = fmt.Errorf("解析请求参数失败%w", err)
+			FailWithMessage(ctx, domain.ErrSystem, err.Error())
+			return
+		}
+
+		res, err := fn(ctx.Request.Context(), req)
+
+		vector.WithLabelValues(strconv.Itoa(res.Code)).Inc()
+
+		// utils.UserInvalidInput 为最小错误码
+		if err != nil || res.Code >= utils.UserInvalidInput {
+			err = fmt.Errorf("业务失败:%w", err)
+			FailWithMessage(ctx, domain.StatusType(res.Code), err.Error())
+		}
+
+		OK(res.Data, res.Msg, ctx)
+	}
+}
+
+func WrapNilReq(fn func(context.Context) (Response, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		res, err := fn(ctx.Request.Context())
@@ -68,9 +91,9 @@ func WrapNilReq(fn func(context.Context) (utils.Response, error)) gin.HandlerFun
 		// utils.UserInvalidInput 为最小错误码
 		if err != nil || res.Code >= utils.UserInvalidInput {
 			err = fmt.Errorf("业务失败:%w", err)
-			utils.FailWithMessage(domain.StatusType(res.Code), err.Error(), ctx)
+			FailWithMessage(ctx, domain.StatusType(res.Code), err.Error())
 		}
 
-		utils.OK(res.Data, res.Msg, ctx)
+		OK(res.Data, res.Msg, ctx)
 	}
 }

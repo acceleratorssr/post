@@ -33,7 +33,7 @@ func NewArticleHandler(svc service.ArticleService, like intrv1.LikeServiceClient
 	}
 }
 
-func (a *ArticleHandler) Test(ctx context.Context) (utils.Response, error) {
+func (a *ArticleHandler) Test(ctx context.Context) (gin_ex.Response, error) {
 	// 注意此处传入的是context.context，而不是gin.Context
 	a.svc.Save(ctx, domain.Article{
 		Title:   "test",
@@ -45,12 +45,12 @@ func (a *ArticleHandler) Test(ctx context.Context) (utils.Response, error) {
 
 	if rand.Int31n(100)%2 == 0 {
 
-		return utils.Response{
+		return gin_ex.Response{
 			Code: utils.UserInvalidInput,
 			Msg:  "fail",
 		}, nil
 	}
-	return utils.Response{
+	return gin_ex.Response{
 		Code: 200,
 		Msg:  "ok",
 	}, nil
@@ -77,7 +77,7 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine) {
 		gin_ex.WrapClaimsAndReq[CollectReq](a.Collect))
 }
 
-func (a *ArticleHandler) Collect(ctx context.Context, req CollectReq, claims user.ClaimsUser) (utils.Response, error) {
+func (a *ArticleHandler) Collect(ctx context.Context, req CollectReq, claims user.ClaimsUser) (gin_ex.Response, error) {
 	var err error
 
 	//err = a.like.Collect(ctx, a.ObjType, req.ObjID, claims.Id)
@@ -88,19 +88,19 @@ func (a *ArticleHandler) Collect(ctx context.Context, req CollectReq, claims use
 	})
 
 	if err != nil {
-		return utils.Response{
+		return gin_ex.Response{
 			Code: domain.ErrSystem.ToInt(),
 			Msg:  "系统错误",
 			Data: nil,
 		}, err
 	}
-	return utils.Response{
+	return gin_ex.Response{
 		Msg: "collect successful",
 	}, nil
 }
 
 // Like todo 添加like等测试
-func (a *ArticleHandler) Like(ctx context.Context, req LikeReq, claims user.ClaimsUser) (utils.Response, error) {
+func (a *ArticleHandler) Like(ctx context.Context, req LikeReq, claims user.ClaimsUser) (gin_ex.Response, error) {
 	var err error
 	if req.Liked {
 		//err = a.like.Like(ctx, a.ObjType, req.ObjID, claims.Id)
@@ -119,13 +119,13 @@ func (a *ArticleHandler) Like(ctx context.Context, req LikeReq, claims user.Clai
 	}
 
 	if err != nil {
-		return utils.Response{
+		return gin_ex.Response{
 			Code: domain.ErrSystem.ToInt(),
 			Msg:  "系统错误",
 			Data: nil,
 		}, err
 	}
-	return utils.Response{
+	return gin_ex.Response{
 		Msg: "like successful",
 	}, nil
 }
@@ -134,26 +134,26 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 	id := ctx.Param("id")
 	artId, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		utils.FailWithMessage(domain.ErrSystem, "id必须为数字", ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, "id必须为数字")
 		//log
 		return
 	}
 
 	claim, ok := ctx.Get("userClaims")
 	if !ok {
-		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		return
 	}
 
 	claims, ok := claim.(*user.ClaimsUser)
 	if !ok {
-		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		return
 	}
 
 	art, err := a.svc.GetPublishedByID(ctx.Request.Context(), artId, claims.Id)
 	if err != nil {
-		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		return
 	}
 
@@ -165,7 +165,7 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 	//	}
 	//}()
 
-	utils.OK(ArticleVO{
+	gin_ex.OK(ArticleVO{
 		Content: art.Content,
 		ID:      art.ID,
 		Status:  art.Status.ToUint8(),
@@ -179,37 +179,37 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 	id := ctx.Param("id")
 	artId, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		utils.FailWithMessage(domain.ErrSystem, "id必须为数字", ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, "id必须为数字")
 		//log
 		return
 	}
 
 	claim, ok := ctx.Get("userClaims")
 	if !ok {
-		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		return
 	}
 
 	claims, ok := claim.(user.ClaimsUser)
 	if !ok {
-		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		return
 	}
 
 	art, err := a.svc.GetAuthorModelsByID(ctx.Request.Context(), artId)
 	if err != nil {
-		utils.FailWithMessage(domain.ErrSystem, err.Error(), ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, err.Error())
 		return
 	}
 
 	// 高危，即查询他人私有文章
 	if claims.Id != art.ID {
-		utils.FailWithMessage(domain.ErrSystem, "无权限", ctx)
+		gin_ex.FailWithMessage(ctx, domain.ErrSystem, "无权限")
 		// 监控
 		return
 	}
 
-	utils.OK(ArticleVO{
+	gin_ex.OK(ArticleVO{
 		Content: art.Content,
 		ID:      art.ID,
 		Status:  art.Status.ToUint8(),
@@ -219,15 +219,15 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 	}, "success", ctx)
 }
 
-func (a *ArticleHandler) List(ctx context.Context, req ReqList, claims user.ClaimsUser) (utils.Response, error) {
+func (a *ArticleHandler) List(ctx context.Context, req ReqList, claims user.ClaimsUser) (gin_ex.Response, error) {
 	res, err := a.svc.List(ctx, claims.Id, req.Limit, req.Offset)
 	if err != nil {
-		return utils.Response{
+		return gin_ex.Response{
 			Code: domain.ErrSystem.ToInt(),
 			Msg:  err.Error(),
 		}, nil
 	}
-	return utils.Response{
+	return gin_ex.Response{
 		Data: res,
 	}, nil
 }
@@ -243,11 +243,11 @@ func (a *ArticleHandler) Publish(c *gin.Context) {
 
 	id, err := a.svc.Publish(c, req.toDomain(claims.Id, claims.Name))
 	if err != nil {
-		utils.Fail(domain.ErrSystem, err.Error(), "系统错误", c)
+		gin_ex.Fail(domain.ErrSystem, err.Error(), "系统错误", c)
 		// log
 		return
 	}
-	utils.OK(id, "success", c)
+	gin_ex.OK(id, "success", c)
 }
 
 func (a *ArticleHandler) Save(c *gin.Context) {
@@ -261,12 +261,12 @@ func (a *ArticleHandler) Save(c *gin.Context) {
 
 	id, err := a.svc.Save(c, req.toDomain(claims.Id, claims.Name))
 	if err != nil {
-		utils.FailWithMessage(domain.ErrSystem, "系统错误", c)
+		gin_ex.FailWithMessage(c, domain.ErrSystem, "系统错误")
 		// log
 		return
 	}
 
-	utils.OK(id, "success", c)
+	gin_ex.OK(id, "success", c)
 }
 
 func (a *ArticleHandler) Withdraw(c *gin.Context) {
@@ -279,19 +279,19 @@ func (a *ArticleHandler) Withdraw(c *gin.Context) {
 	claims := a.getUserInfo(c)
 	err := a.svc.Withdraw(c, req.toDomain(claims.Id, claims.Name))
 	if err != nil {
-		utils.FailWithMessage(domain.ErrSystem, "系统错误", c)
+		gin_ex.FailWithMessage(c, domain.ErrSystem, "系统错误")
 		// log
 		return
 	}
 
-	utils.OKWithMessage("success", c)
+	gin_ex.OKWithMessage("success", c)
 }
 
 func (a *ArticleHandler) getUserInfo(c *gin.Context) *user.ClaimsUser {
 	claim := c.MustGet("userClaims")
 	claims, ok := claim.(*user.ClaimsUser)
 	if !ok {
-		utils.FailWithMessage(domain.ErrSystem, "系统错误", c)
+		gin_ex.FailWithMessage(c, domain.ErrSystem, "系统错误")
 		// log
 		return nil
 	}

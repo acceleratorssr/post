@@ -9,17 +9,17 @@ import (
 )
 
 type Like struct {
-	ID int64 `gorm:"primaryKey,autoIncrement"`
+	ID int64 `gorm_ex:"primaryKey,autoIncrement"`
 
 	// 联合索引， ObjID区分度更高，放左侧
-	ObjID   int64  `gorm:"uniqueIndex:idx_objid_objtype"`
-	ObjType string `gorm:"uniqueIndex:idx_objid_objtype;type:varchar(64)"`
+	ObjID   int64  `gorm_ex:"uniqueIndex:idx_objid_objtype"`
+	ObjType string `gorm_ex:"uniqueIndex:idx_objid_objtype;type:varchar(64)"`
 
-	LikeCount    int64 `gorm:"column:like_count"`
-	CollectCount int64 `gorm:"column:collect_count"`
-	ViewCount    int64 `gorm:"column:view_count"`
+	LikeCount    int64 `gorm_ex:"column:like_count"`
+	CollectCount int64 `gorm_ex:"column:collect_count"`
+	ViewCount    int64 `gorm_ex:"column:view_count"`
 
-	Ctime int64 `gorm:"index:idx_ctime"`
+	Ctime int64 `gorm_ex:"index:idx_ctime"`
 	Utime int64
 }
 
@@ -31,7 +31,7 @@ func TestConnPool(t *testing.T) {
 		mysql.Open("root:20031214pzw!@tcp(127.0.0.1:3306)/test"))
 
 	var v atomic.Value
-	v.Store(pattenDependBase)
+	v.Store(PattenDependBase)
 	db, err := gorm.Open(mysql.New(mysql.Config{
 		Conn: &DoubleWritePool{
 			base:   src.ConnPool,
