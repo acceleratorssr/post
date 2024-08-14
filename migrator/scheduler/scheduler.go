@@ -97,7 +97,7 @@ func (s *Scheduler[T]) StopIncrementValidation(c *gin.Context) {
 
 func (s *Scheduler[T]) StartIncrementValidation(c context.Context,
 	req StartIncrRequest) (gin_ex.Response, error) {
-	// 开启增量校验
+	// 指定时间校验
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

@@ -11,7 +11,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/plugin/opentelemetry/tracing"
-	prom "gorm_ex.io/plugin/prometheus"
+	prom "gorm.io/plugin/prometheus"
 	"post/internal/repository/dao"
 	"time"
 )

@@ -17,21 +17,21 @@ type ArticleDao interface {
 
 // ArticleAuthor 为ing库，或者说草稿库，制作库
 type ArticleAuthor struct {
-	Id       int64  `gorm_ex:"primaryKey,autoIncrement"`
-	Title    string `gorm_ex:"size:4096"`
-	Content  string `gorm_ex:"type=BLOB"`
-	Authorid int64  `gorm_ex:"index"`
-	Ctime    int64  `gorm_ex:"index"`
+	Id       int64  `gorm:"primaryKey,autoIncrement"`
+	Title    string `gorm:"size:4096"`
+	Content  string `gorm:"type=BLOB"`
+	Authorid int64  `gorm:"index"`
+	Ctime    int64  `gorm:"index"`
 	Utime    int64
 	Status   uint8
 }
 
 type ArticleReader struct {
-	Id       int64  `gorm_ex:"primaryKey,autoIncrement"`
-	Title    string `gorm_ex:"size:4096"`
-	Content  string `gorm_ex:"type=BLOB"`
-	Authorid int64  `gorm_ex:"index"`
-	Ctime    int64  `gorm_ex:"index"`
+	Id       int64  `gorm:"primaryKey,autoIncrement"`
+	Title    string `gorm:"size:4096"`
+	Content  string `gorm:"type=BLOB"`
+	Authorid int64  `gorm:"index"`
+	Ctime    int64  `gorm:"index"`
 	Utime    int64
 	Status   uint8
 }

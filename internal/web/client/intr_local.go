@@ -8,7 +8,10 @@ import (
 	"post/interactive/service"
 )
 
-// LikeServiceAdapter 将本地实现伪装为grpc客户端，即实际调用本地方法
+// todo 本地方法有点问题，因为调的db还是自己的，没有对应的like表
+
+// LikeServiceAdapter
+// 将本地实现伪装为grpc客户端，即实际调用本地方法
 type LikeServiceAdapter struct {
 	svc service.LikeService
 }

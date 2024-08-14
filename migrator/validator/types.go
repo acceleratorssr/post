@@ -37,12 +37,15 @@ func NewValidator[T migrator.Entity](base, target *gorm.DB, p events.Inconsisten
 //
 //	注意，此处校验完后，会存在多余数据，即base硬删除了数据，但是target没发现
 //	可以采用慢启动的方式，对比count的数量，不一致再遍历找到多余的数据
+//
+// todo 此处的sql可以优化下，可以将两库都按照时间顺序排序，然后对比，均批量取数据
 func (v *Validator[T]) Validate(ctx context.Context, msTimeout int64, limit int) {
 	//utime := time.Now().UnixMilli() // 需要外部传入，即开始同步的时间
 	// base, 实现了Entity的struct
 	base := make([]T, 0, limit)
 
 	var target T
+	var null T
 	// 查看T类型是否实现 CompareWith 接口
 	// 另一种方法是直接将CompareWith作为方法写入Entity接口中，因为T类型一定要实现Entity接口
 	var targetAny any = target // 因为断言需要interface{}类型
@@ -64,13 +67,13 @@ func (v *Validator[T]) Validate(ctx context.Context, msTimeout int64, limit int)
 		}
 	}
 
-	for offset := 0; ; offset += limit {
+	for offset := 0; ; offset += len(base) {
 		//base = make([]T, 0, limit)
 		base = base[:0] // 清空切片，但保留容量不变
 
 		ctxSon, cancel := context.WithTimeout(ctx, time.Duration(msTimeout))
 		//err := v.base.WithContext(ctxSon).Offset(offset).Order("id").First(&base).Error
-		err := v.base.Where("utime < ?", v.utime).Offset(offset).Find(&base).Limit(limit).Error // utime记得加索引
+		err := v.base.Where("utime < ?", v.utime).Offset(offset).Limit(limit).Find(&base).Error // utime记得加索引
 		cancel()
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -80,13 +83,15 @@ func (v *Validator[T]) Validate(ctx context.Context, msTimeout int64, limit int)
 				// log
 				// 监控，超时了
 			}
+			if errors.Is(err, context.Canceled) {
+				return
+			}
 			// 监控，数据库不正常错误
 			continue
 		}
 
 		for i := 0; i < len(base); i++ {
 			// target, 实现了Entity的struct
-
 			ctxSon, cancel = context.WithTimeout(ctx, 200*time.Millisecond)
 			err = v.target.WithContext(ctxSon).Where("id = ?", base[i].GetID()).First(&target).Error
 			cancel()
@@ -99,19 +104,33 @@ func (v *Validator[T]) Validate(ctx context.Context, msTimeout int64, limit int)
 					// log
 					// 监控，超时了
 				}
+				if errors.Is(err, context.Canceled) {
+					return
+				}
 
 				// todo
 				// 监控，数据库不正常错误
 			}
 
 			fn(i)
+			target = null
 		}
 
-		if limit < len(base) {
-			return //校验完成
+		// 校验完成后改为调stop结束
+		//if limit > len(base) {
+		//	return
+		//}
+		if len(base) == 0 {
+			offset = 0
 		}
 
 		// 也可以通过switch：context.Canceled
+		select {
+		case <-ctx.Done():
+			return
+		default:
+
+		}
 	}
 }
 

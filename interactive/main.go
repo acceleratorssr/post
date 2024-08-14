@@ -9,7 +9,7 @@ func main() {
 		}
 	}
 	go func() {
-		app.webAdmin.Run()
+		app.webAdmin.Start()
 	}()
 
 	err := app.server.Serve()

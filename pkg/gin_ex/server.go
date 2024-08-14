@@ -1,6 +1,8 @@
 package gin_ex
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 type Server struct {
 	*gin.Engine
@@ -8,5 +10,5 @@ type Server struct {
 }
 
 func (s *Server) Start() error {
-	return s.Run(s.Addr)
+	return s.Engine.Run(s.Addr)
 }

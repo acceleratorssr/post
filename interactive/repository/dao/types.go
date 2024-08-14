@@ -21,17 +21,17 @@ type ArticleLikeDao interface {
 // Like 收集点赞数TOPn的数据
 // 帖子的点赞，收藏，观看数
 type Like struct {
-	ID int64 `gorm_ex:"primaryKey,autoIncrement"`
+	ID int64 `gorm:"primaryKey,autoIncrement"`
 
 	// 联合索引， ObjID区分度更高，放左侧
-	ObjID   int64  `gorm_ex:"uniqueIndex:idx_objid_objtype"`
-	ObjType string `gorm_ex:"uniqueIndex:idx_objid_objtype;type:varchar(64)"`
+	ObjID   int64  `gorm:"uniqueIndex:idx_objid_objtype"`
+	ObjType string `gorm:"uniqueIndex:idx_objid_objtype;type:varchar(64)"`
 
-	LikeCount    int64 `gorm_ex:"column:like_count"`
-	CollectCount int64 `gorm_ex:"column:collect_count"`
-	ViewCount    int64 `gorm_ex:"column:view_count"`
+	LikeCount    int64 `gorm:"column:like_count"`
+	CollectCount int64 `gorm:"column:collect_count"`
+	ViewCount    int64 `gorm:"column:view_count"`
 
-	Ctime int64 `gorm_ex:"index:idx_ctime"`
+	Ctime int64 `gorm:"index:idx_ctime"`
 	Utime int64
 }
 
@@ -49,13 +49,13 @@ func (l Like) GetID() int64 {
 
 // UserGiveLike 用户点赞记录
 type UserGiveLike struct {
-	ID int64 `gorm_ex:"primaryKey,autoIncrement"`
+	ID int64 `gorm:"primaryKey,autoIncrement"`
 
 	// 此处的频繁查询应该是：查用户对帖子是否点赞，即where uid=? and objid=? and objtype=?
 	// 考虑用户查看自己点赞的帖子，所以放左侧
-	Uid     int64  `gorm_ex:"uniqueIndex:idx_uid_objid_objtype"`
-	ObjID   int64  `gorm_ex:"uniqueIndex:idx_uid_objid_objtype"`
-	ObjType string `gorm_ex:"uniqueIndex:idx_uid_objid_objtype;type:varchar(64)"`
+	Uid     int64  `gorm:"uniqueIndex:idx_uid_objid_objtype"`
+	ObjID   int64  `gorm:"uniqueIndex:idx_uid_objid_objtype"`
+	ObjType string `gorm:"uniqueIndex:idx_uid_objid_objtype;type:varchar(64)"`
 
 	Ctime int64
 	Utime int64
@@ -64,13 +64,13 @@ type UserGiveLike struct {
 }
 
 type UserGiveCollect struct {
-	ID int64 `gorm_ex:"primaryKey,autoIncrement"`
+	ID int64 `gorm:"primaryKey,autoIncrement"`
 
 	// 此处的频繁查询应该是：查用户对帖子是否点赞，即where uid=? and objid=? and objtype=?
 	// 考虑用户查看自己点赞的帖子，所以放左侧
-	Uid     int64  `gorm_ex:"uniqueIndex:idx_uid_objid_objtype"`
-	ObjID   int64  `gorm_ex:"uniqueIndex:idx_uid_objid_objtype"`
-	ObjType string `gorm_ex:"uniqueIndex:idx_uid_objid_objtype;type:varchar(64)"`
+	Uid     int64  `gorm:"uniqueIndex:idx_uid_objid_objtype"`
+	ObjID   int64  `gorm:"uniqueIndex:idx_uid_objid_objtype"`
+	ObjType string `gorm:"uniqueIndex:idx_uid_objid_objtype;type:varchar(64)"`
 
 	Ctime int64
 	Utime int64
@@ -81,9 +81,9 @@ type UserGiveCollect struct {
 type UserGiveRead struct {
 	ID int64 `gorm_ex:"primaryKey,autoIncrement"`
 
-	Uid     int64  `gorm_ex:"uniqueIndex:idx_uid_objid_objtype"`
-	ObjID   int64  `gorm_ex:"uniqueIndex:idx_uid_objid_objtype"`
-	ObjType string `gorm_ex:"uniqueIndex:idx_uid_objid_objtype;type:varchar(64)"`
+	Uid     int64  `gorm:"uniqueIndex:idx_uid_objid_objtype"`
+	ObjID   int64  `gorm:"uniqueIndex:idx_uid_objid_objtype"`
+	ObjType string `gorm:"uniqueIndex:idx_uid_objid_objtype;type:varchar(64)"`
 
 	Ctime int64
 	Utime int64

@@ -19,7 +19,7 @@ func InitMigratorServer(base BaseDB, target TargetDB,
 	intrScheduler.RegisterRoutes(engine.Group("/migrator/like"))
 
 	return &gin_ex.Server{
-		Addr:   "9300",
+		Addr:   ":9300",
 		Engine: engine,
 	}
 }

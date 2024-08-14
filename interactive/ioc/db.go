@@ -38,6 +38,7 @@ func InitTargetDB() TargetDB {
 	if err != nil {
 		panic(err)
 	}
+	err = dao2.InitTables(db)
 	return db
 }
 
