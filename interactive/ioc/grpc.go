@@ -9,8 +9,7 @@ import (
 func InitGRPCexServer(intr *grpc2.LikeServiceServer) *grpc_ex.Server {
 	server := grpc.NewServer()
 	intr.Register(server)
-	return &grpc_ex.Server{
-		Addr:   ":9200",
-		Server: server,
-	}
+
+	port := "9200"
+	return grpc_ex.NewServer(server, grpc_ex.InitEtcdClient(port), port)
 }

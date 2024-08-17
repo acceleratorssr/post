@@ -39,6 +39,7 @@ func NewValidator[T migrator.Entity](base, target *gorm.DB, p events.Inconsisten
 //	可以采用慢启动的方式，对比count的数量，不一致再遍历找到多余的数据
 //
 // todo 此处的sql可以优化下，可以将两库都按照时间顺序排序，然后对比，均批量取数据
+// 在主从的情况下，校验可以通过从库进行，发现不一致再查主库
 func (v *Validator[T]) Validate(ctx context.Context, msTimeout int64, limit int) {
 	//utime := time.Now().UnixMilli() // 需要外部传入，即开始同步的时间
 	// base, 实现了Entity的struct
