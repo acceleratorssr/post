@@ -51,7 +51,6 @@ func (l *likeRepository) IncrReadCount(ctx context.Context, ObjType string, ObjI
 			fmt.Println("incr read count cache error:", err)
 			return
 		}
-		fmt.Println("ok")
 	}()
 	return l.dao.IncrReadCount(ctx, ObjType, ObjID)
 }

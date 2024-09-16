@@ -14,6 +14,7 @@ type ArticleLikeCache interface {
 	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
 	IncrLikeCount(ctx context.Context, ObjType string, ObjID int64) error
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error
+	GetLikeCount(ctx context.Context, ObjType string, ObjID int64) (int64, error)
 }
 
 type RedisArticleLikeCache struct {
@@ -24,6 +25,10 @@ func NewRedisArticleLikeCache(client redis.Cmdable) ArticleLikeCache {
 	return &RedisArticleLikeCache{
 		client: client,
 	}
+}
+
+func (r *RedisArticleLikeCache) GetLikeCount(ctx context.Context, ObjType string, ObjID int64) (int64, error) {
+	r.client.HMGet(ctx, r.keyIncrLikeCount(ObjType, ObjID))
 }
 
 func (r *RedisArticleLikeCache) DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {
