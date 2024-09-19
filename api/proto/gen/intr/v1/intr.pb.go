@@ -27,7 +27,7 @@ type Like struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID        int64 `protobuf:"varint,1,opt,name=ObjID,proto3" json:"ObjID,omitempty"`
+	ID        int64 `protobuf:"varint,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	LikeCount int64 `protobuf:"varint,2,opt,name=LikeCount,proto3" json:"LikeCount,omitempty"`
 	Ctime     int64 `protobuf:"varint,3,opt,name=Ctime,proto3" json:"Ctime,omitempty"`
 }

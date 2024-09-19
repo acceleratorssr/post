@@ -19,15 +19,15 @@ type etcdClient struct {
 	ip       string
 }
 
-func InitEtcdClient(port string) *etcdv3.Client {
+func InitEtcdClient(port string, name string) *etcdv3.Client {
 	c := etcdClient{
 		Port:     port,
 		EtcdAddr: []string{"127.0.0.1:12379"},
 		TTL:      12,
+		name:     name,
 	}
 	c.initIp()
 	c.initService()
-	c.initLike()
 	c.initEtcdClient()
 
 	return c.client
@@ -40,11 +40,6 @@ func (ec *etcdClient) initIp() {
 func (ec *etcdClient) initService() {
 	ec.key = "service"
 }
-
-func (ec *etcdClient) initLike() {
-	ec.name = "like"
-}
-
 func (ec *etcdClient) initEtcdClient() {
 	client, err := etcdv3.New(etcdv3.Config{
 		Endpoints: ec.EtcdAddr,
