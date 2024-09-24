@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	initViperV2Watch()
+	initViperWatch()
 	app := Init()
 	for _, c := range app.consumers {
 		err := c.Start()
@@ -20,7 +20,7 @@ func main() {
 	panic(err)
 }
 
-func initViperV2Watch() {
+func initViperWatch() {
 	cfile := pflag.String("config",
 		"config/dev.yaml", "配置文件路径")
 	pflag.Parse()

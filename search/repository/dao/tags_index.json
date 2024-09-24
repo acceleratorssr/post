@@ -4,13 +4,10 @@
       "tags": {
         "type": "keyword"
       },
-      "uid": {
-        "type": "long"
-      },
-      "biz": {
+      "obj_type": {
         "type": "keyword"
       },
-      "biz_id": {
+      "obj_id": {
         "type": "long"
       }
     }

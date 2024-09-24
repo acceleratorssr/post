@@ -31,6 +31,7 @@ func (k *KafkaSyncProducer) ProduceReadEventMany(ctx context.Context, event *Rea
 		Topic: "article_read",
 		Value: sarama.ByteEncoder(data),
 	})
+
 	return err
 }
 

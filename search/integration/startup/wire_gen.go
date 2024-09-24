@@ -20,7 +20,8 @@ import (
 func InitSearchServer() *grpc.SearchServiceServer {
 	client := InitESClient()
 	articleDAO := dao.NewArticleElasticDAO(client)
-	articleRepository := repository.NewArticleRepository(articleDAO)
+	tagDAO := dao.NewTagESDAO(client)
+	articleRepository := repository.NewArticleRepository(articleDAO, tagDAO)
 	searchService := service.NewSearchService(articleRepository)
 	searchServiceServer := grpc.NewSearchService(searchService)
 	return searchServiceServer
@@ -31,7 +32,8 @@ func InitSyncServer() *grpc.SyncServiceServer {
 	anyDAO := dao.NewAnyESDAO(client)
 	anyRepository := repository.NewAnyRepository(anyDAO)
 	articleDAO := dao.NewArticleElasticDAO(client)
-	articleRepository := repository.NewArticleRepository(articleDAO)
+	tagDAO := dao.NewTagESDAO(client)
+	articleRepository := repository.NewArticleRepository(articleDAO, tagDAO)
 	syncService := service.NewSyncService(anyRepository, articleRepository)
 	syncServiceServer := grpc.NewSyncServiceServer(syncService)
 	return syncServiceServer
@@ -39,7 +41,7 @@ func InitSyncServer() *grpc.SyncServiceServer {
 
 // wire.go:
 
-var serviceProviderSet = wire.NewSet(dao.NewArticleElasticDAO, dao.NewAnyESDAO, repository.NewAnyRepository, repository.NewArticleRepository, service.NewSyncService, service.NewSearchService)
+var serviceProviderSet = wire.NewSet(dao.NewArticleElasticDAO, dao.NewAnyESDAO, dao.NewTagESDAO, repository.NewAnyRepository, repository.NewArticleRepository, service.NewSyncService, service.NewSearchService)
 
 var thirdProvider = wire.NewSet(
 	InitESClient, ioc.InitLogger,

@@ -7,13 +7,17 @@ import (
 )
 
 type articleRepository struct {
-	dao dao.ArticleDAO
+	dao  dao.ArticleDAO
+	tags dao.TagDAO
 }
 
 func (a *articleRepository) SearchArticle(ctx context.Context,
-	uid int64,
 	keywords []string) ([]domain.Article, error) {
-	arts, err := a.dao.Search(ctx, nil, keywords)
+	ids, err := a.tags.Search(ctx, "article", keywords)
+	if err != nil {
+		return nil, err
+	}
+	arts, err := a.dao.Search(ctx, ids, keywords)
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +45,9 @@ func (a *articleRepository) InputArticle(ctx context.Context, msg domain.Article
 	})
 }
 
-func NewArticleRepository(d dao.ArticleDAO) ArticleRepository {
+func NewArticleRepository(d dao.ArticleDAO, td dao.TagDAO) ArticleRepository {
 	return &articleRepository{
-		dao: d,
+		dao:  d,
+		tags: td,
 	}
 }

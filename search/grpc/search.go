@@ -21,7 +21,7 @@ func (s *SearchServiceServer) Register(server grpc.ServiceRegistrar) {
 }
 
 func (s *SearchServiceServer) Search(ctx context.Context, request *searchv1.SearchRequest) (*searchv1.SearchResponse, error) {
-	resp, err := s.svc.Search(ctx, request.Uid, request.Expression)
+	resp, err := s.svc.Search(ctx, request.Expression)
 	if err != nil {
 		return nil, err
 	}

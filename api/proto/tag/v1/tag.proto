@@ -1,0 +1,51 @@
+syntax="proto3";
+package tag.v1;
+option go_package="tag/v1;tagv1";
+
+message Tag {
+  int64 id = 1;
+  string name = 2;
+}
+
+service TagService {
+  rpc CreateTag(CreateTagRequest) returns (CreateTagResponse);
+  // 覆盖式
+  rpc AttachTags(AttachTagsRequest) returns (AttachTagsResponse);
+
+  rpc GetTags(GetTagsRequest) returns (GetTagsResponse);
+  rpc GetBizTags(GetObjTagsRequest) returns(GetObjTagsResponse);
+}
+
+message AttachTagsRequest {
+  repeated int64 tids = 1;
+  string obj_type = 2;
+  int64 obj_id = 3;
+}
+
+message AttachTagsResponse {
+}
+
+message CreateTagRequest {
+  string name = 1;
+}
+
+message CreateTagResponse {
+  Tag tag = 1;
+}
+
+message GetTagsRequest {
+  int64 uid = 1;
+}
+
+message GetTagsResponse {
+ repeated Tag tag = 1;
+}
+
+message GetObjTagsRequest {
+  string obj_type = 1;
+  int64  obj_id = 2;
+}
+
+message GetObjTagsResponse {
+  repeated Tag tags = 1;
+}

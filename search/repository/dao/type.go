@@ -12,3 +12,7 @@ type ArticleDAO interface {
 type AnyDAO interface {
 	Input(ctx context.Context, index, docID, data string) error
 }
+
+type TagDAO interface {
+	Search(ctx context.Context, objType string, keywords []string) ([]int64, error)
+}

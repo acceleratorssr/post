@@ -3,9 +3,11 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"log"
 	searchv1 "post/api/proto/gen/search/v1"
 	"post/search/grpc"
 	"post/search/integration/startup"
@@ -28,11 +30,10 @@ func (s *SearchTestSuite) TestSearch() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	data, err := json.Marshal(BizTags{
-		Uid:   1001,
-		Biz:   "article",
-		BizId: 123,
-		Tags:  []string{"Jerry"},
+	data, err := json.Marshal(Tags{
+		ObjType: "article",
+		ObjId:   123,
+		Tags:    []string{"yes"},
 	})
 	require.NoError(s.T(), err)
 	_, err = s.syncSvc.InputAny(ctx, &searchv1.InputAnyRequest{
@@ -45,34 +46,48 @@ func (s *SearchTestSuite) TestSearch() {
 	_, err = s.syncSvc.InputArticle(ctx, &searchv1.InputArticleRequest{
 		Article: &searchv1.Article{
 			Id:     123,
-			Title:  "Tom 的小秘密",
+			Title:  "title2,yy",
 			Status: 2,
 		},
 	})
 	require.NoError(s.T(), err)
 	_, err = s.syncSvc.InputArticle(ctx, &searchv1.InputArticleRequest{
 		Article: &searchv1.Article{
-			Id:      124,
-			Content: "这是内容，Tom 的小秘密",
+			Id:      222,
+			Content: "content3,歪比八不",
 			Status:  2,
 		},
 	})
 	require.NoError(s.T(), err)
 	resp, err := s.searchSvc.Search(ctx, &searchv1.SearchRequest{
-		Expression: "Tom 内容 Jerry",
-		Uid:        1001,
+		Expression: "八不 yes",
 	})
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), 2, len(resp.Article.Articles))
+	//over()
 }
 
-type BizTags struct {
-	Uid   int64    `json:"uid"`
-	Biz   string   `json:"biz"`
-	BizId int64    `json:"biz_id"`
-	Tags  []string `json:"tags"`
+type Tags struct {
+	ObjType string   `json:"obj_type"`
+	ObjId   int64    `json:"obj_id"`
+	Tags    []string `json:"tags"`
 }
 
 func TestSearchService(t *testing.T) {
 	suite.Run(t, new(SearchTestSuite))
+}
+
+func over() {
+	// 初始化 Elasticsearch 客户端
+	const timeout = 10 * time.Second
+	opts := []elastic.ClientOptionFunc{
+		elastic.SetURL("http://localhost:9200"),
+		elastic.SetSniff(false),
+		elastic.SetHealthcheckTimeoutStartup(timeout),
+		elastic.SetTraceLog(log.Default()),
+	}
+	client, _ := elastic.NewClient(opts...)
+
+	// 执行删除所有索引的请求
+	_, _ = client.DeleteIndex("_all").Do(context.Background())
 }

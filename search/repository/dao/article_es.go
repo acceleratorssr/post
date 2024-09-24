@@ -48,15 +48,19 @@ func (h *ArticleElasticDAO) Search(ctx context.Context, tagArtIds []int64, keywo
 		ids[idx] = src
 	}
 
+	id := elastic.NewTermsQuery("id", ids...).Boost(2)   // 加权重
 	title := elastic.NewMatchQuery("title", queryString) // 模糊匹配
 	content := elastic.NewMatchQuery("content", queryString)
 	status := elastic.NewTermQuery("status", 2)
 
-	query := elastic.NewBoolQuery().Must( // and
-		elastic.NewBoolQuery().Should( // or
-			//elastic.NewTermsQuery("id", ids...).Boost(2), // 精确匹配
-			title, content,
-		), status)
+	or := elastic.NewBoolQuery().Should( // or
+		//elastic.NewTermsQuery("id", ids...).Boost(2), // 精确匹配
+		title, content,
+	)
+	if len(ids) > 0 { // 避免tags没查出数据导致id为空
+		or.Should(id)
+	}
+	query := elastic.NewBoolQuery().Must(or, status)
 
 	return NewSearcher[Article](h.client, []string{ArticleIndexName}, query).Query(query).Do(ctx)
 }
