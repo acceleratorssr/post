@@ -1,0 +1,3 @@
+.PHONY: wire
+wire:
+	@wire
