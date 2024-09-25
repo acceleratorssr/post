@@ -28,7 +28,8 @@ func NewRedisArticleLikeCache(client redis.Cmdable) ArticleLikeCache {
 }
 
 func (r *RedisArticleLikeCache) GetLikeCount(ctx context.Context, ObjType string, ObjID int64) (int64, error) {
-	r.client.HMGet(ctx, r.keyIncrLikeCount(ObjType, ObjID))
+	//return r.client.HMGet(ctx, r.keyIncrLikeCount(ObjType, ObjID))
+	return r.client.HGet(ctx, r.keyIncrLikeCount(ObjType, ObjID), "like_cnt").Int64()
 }
 
 func (r *RedisArticleLikeCache) DecrLikeCount(ctx context.Context, ObjType string, ObjID int64) error {

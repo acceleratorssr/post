@@ -61,19 +61,23 @@ func (l *likeRepository) AddCollectionItem(ctx context.Context, ObjType string, 
 }
 
 func (l *likeRepository) IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error {
-	err := l.dao.InSertLike(ctx, ObjType, ObjID, uid)
-	if err != nil {
-		return err
-	}
+	go func() {
+		err := l.dao.InSertLike(ctx, ObjType, ObjID, uid)
+		if err != nil {
+			// log
+		}
+	}()
 
 	return l.cache.IncrLikeCount(ctx, ObjType, ObjID)
 }
 
 func (l *likeRepository) DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error {
-	err := l.dao.DeleteLike(ctx, ObjType, ObjID, uid)
-	if err != nil {
-		return err
-	}
+	go func() {
+		err := l.dao.DeleteLike(ctx, ObjType, ObjID, uid)
+		if err != nil {
+			// log
+		}
+	}()
 
 	return l.cache.DecrLikeCount(ctx, ObjType, ObjID)
 }

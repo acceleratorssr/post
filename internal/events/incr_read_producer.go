@@ -35,7 +35,7 @@ func (k *KafkaSyncProducer) ProduceReadEventMany(ctx context.Context, event *Rea
 	return err
 }
 
-// ProduceReadEvent 当重试逻辑变复杂时，使用装饰器模式
+// ProduceReadEvent 当重试逻辑变复杂时，考虑使用装饰器模式
 func (k *KafkaSyncProducer) ProduceReadEvent(ctx context.Context, event *ReadEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {
