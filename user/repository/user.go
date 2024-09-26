@@ -42,7 +42,6 @@ func (u *userRepository) toDomain(user *dao.User) *domain.User {
 	return &domain.User{
 		ID:          user.ID,
 		Nickname:    user.Nickname,
-		Password:    user.Password,
 		Permissions: user.Permissions,
 		Username:    user.Username,
 	}
@@ -52,7 +51,6 @@ func (u *userRepository) toDao(user *domain.User) *dao.User {
 	return &dao.User{
 		ID:          user.ID,
 		Nickname:    user.Nickname,
-		Password:    user.Password,
 		Permissions: user.Permissions,
 		Username:    user.Username,
 	}

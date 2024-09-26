@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package sso.v1;
+option go_package="sso/v1;ssov1";
+
+import "common/common.proto";
+
+service AuthService {
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc Login (LoginRequest) returns (LoginResponse);
+  rpc Logout (LogoutRequest) returns (LogoutResponse);
+  rpc Register (RegisterRequest) returns (RegisterResponse);
+  rpc UpdatePassword (UpdatePasswordRequest) returns (UpdatePasswordResponse);
+}
+
+message UpdatePasswordRequest{
+  string id = 1;
+  string password = 2;
+}
+
+message UpdatePasswordResponse {
+}
+
+message RegisterRequest {
+  string username = 1;
+  string password = 2;
+  string user_agent = 3;
+}
+
+message RegisterResponse {
+  string QR_url = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 2;
+}
+
+message LogoutResponse {
+}
+
+message LoginRequest {
+  string username = 1;
+  string nickname = 2;
+  string password = 3;
+  string user_agent = 4;
+  string code = 5;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  JwtPayload jwt_payload = 2;
+  string message = 3;
+}
+
+message JwtPayload  {
+    string username = 1;
+    uint64 userid = 2;
+    string nickname = 3;
+    permissions.Permissions permissions = 4;
+}
+

@@ -26,8 +26,8 @@ func (u userGormDAO) Insert(ctx context.Context, user *User) error {
 }
 
 func (u userGormDAO) GetByUsername(ctx context.Context, username string) (*User, error) {
-	var user *User
-	return user, u.db.WithContext(ctx).Where("username = ?", username).First(user).Error
+	user := &User{}
+	return user, u.db.WithContext(ctx).Select("NickName").Where("username = ?", username).First(user).Error
 }
 
 func (u userGormDAO) Update(ctx context.Context, user *User) error {

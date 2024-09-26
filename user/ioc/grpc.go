@@ -1,17 +1,39 @@
 package ioc
 
 import (
+	etcdv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/naming/resolver"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	ssov1 "post/api/proto/gen/sso/v1"
 	"post/pkg/grpc_ex"
-	"post/pkg/grpc_ex/interceptors"
+	"post/pkg/grpc_ex/interceptors/limit"
 	grpc2 "post/user/grpc"
 )
 
 func InitGrpcServer(user *grpc2.UserServiceServer) *grpc_ex.Server {
-	interceptor := interceptors.NewInterceptorBuilder()
+	interceptor := limit.NewInterceptorBuilder()
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.BuildServerInterceptor()))
 	user.Register(server)
 
 	port := "9202"
 	return grpc_ex.NewServer(server, grpc_ex.InitEtcdClient(port, "user"), port)
+}
+
+func InitGrpcSSOClient() ssov1.AuthServiceClient {
+	etcdClient, err := etcdv3.New(etcdv3.Config{
+		Endpoints: []string{"localhost:12379"},
+	})
+	if err != nil {
+		panic(err)
+	}
+	bd, err := resolver.NewBuilder(etcdClient)
+	c, err := grpc.NewClient("etcd:///service/sso",
+		grpc.WithResolvers(bd),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	return ssov1.NewAuthServiceClient(c)
 }

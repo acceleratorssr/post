@@ -1,0 +1,43 @@
+syntax = "proto3";
+package user.v1;
+option go_package="user/v1;userv1";
+
+import "common/common.proto";
+
+message User {
+  string username = 1;
+  string password = 2;
+  string nickname = 3;
+  permissions.Permissions permissions = 4;
+  string user_agent = 5;
+}
+
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc GetUserInfoByUsername(GetUserInfoByUsernameRequest) returns (GetUserInfoByUsernameResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+}
+
+message CreateUserRequest {
+  User user = 1;
+}
+
+message CreateUserResponse {
+}
+
+message GetUserInfoByUsernameRequest {
+  string username = 1;
+}
+
+message GetUserInfoByUsernameResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  User user = 1;
+}
+
+message UpdateUserResponse {
+}
+
+

@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package permissions;
+
+enum Permissions {
+  UNKNOWN = 0;
+  ADMIN = 1;
+  USER = 2;
+}
