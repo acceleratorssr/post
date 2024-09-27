@@ -15,11 +15,12 @@ type Claims struct {
 }
 
 type User struct {
-	ID         uint64
-	Username   string
-	Nickname   string
-	Password   string
-	TotpSecret string
-	UserAgent  string
-	QrcodeURL  string
+	ID          uint64
+	Username    string
+	Nickname    string
+	Password    string
+	TotpSecret  string
+	UserAgent   string
+	QrcodeURL   string
+	Permissions int
 }

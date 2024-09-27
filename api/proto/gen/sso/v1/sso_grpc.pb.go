@@ -19,12 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_ValidateToken_FullMethodName  = "/sso.v1.AuthService/ValidateToken"
-	AuthService_RefreshToken_FullMethodName   = "/sso.v1.AuthService/RefreshToken"
-	AuthService_Login_FullMethodName          = "/sso.v1.AuthService/Login"
-	AuthService_Logout_FullMethodName         = "/sso.v1.AuthService/Logout"
-	AuthService_Register_FullMethodName       = "/sso.v1.AuthService/Register"
-	AuthService_UpdatePassword_FullMethodName = "/sso.v1.AuthService/UpdatePassword"
+	AuthService_ValidateToken_FullMethodName = "/sso.v1.AuthService/ValidateToken"
+	AuthService_RefreshToken_FullMethodName  = "/sso.v1.AuthService/RefreshToken"
+	AuthService_Login_FullMethodName         = "/sso.v1.AuthService/Login"
+	AuthService_Logout_FullMethodName        = "/sso.v1.AuthService/Logout"
+	AuthService_Register_FullMethodName      = "/sso.v1.AuthService/Register"
+	AuthService_UpdateInfo_FullMethodName    = "/sso.v1.AuthService/UpdateInfo"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -36,7 +36,7 @@ type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
+	UpdateInfo(ctx context.Context, in *UpdateInfoRequest, opts ...grpc.CallOption) (*UpdateInfoResponse, error)
 }
 
 type authServiceClient struct {
@@ -97,10 +97,10 @@ func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, o
 	return out, nil
 }
 
-func (c *authServiceClient) UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error) {
+func (c *authServiceClient) UpdateInfo(ctx context.Context, in *UpdateInfoRequest, opts ...grpc.CallOption) (*UpdateInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdatePasswordResponse)
-	err := c.cc.Invoke(ctx, AuthService_UpdatePassword_FullMethodName, in, out, cOpts...)
+	out := new(UpdateInfoResponse)
+	err := c.cc.Invoke(ctx, AuthService_UpdateInfo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
+	UpdateInfo(context.Context, *UpdateInfoRequest) (*UpdateInfoResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -142,8 +142,8 @@ func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*
 func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedAuthServiceServer) UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdatePassword not implemented")
+func (UnimplementedAuthServiceServer) UpdateInfo(context.Context, *UpdateInfoRequest) (*UpdateInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateInfo not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -256,20 +256,20 @@ func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_UpdatePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdatePasswordRequest)
+func _AuthService_UpdateInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).UpdatePassword(ctx, in)
+		return srv.(AuthServiceServer).UpdateInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_UpdatePassword_FullMethodName,
+		FullMethod: AuthService_UpdateInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).UpdatePassword(ctx, req.(*UpdatePasswordRequest))
+		return srv.(AuthServiceServer).UpdateInfo(ctx, req.(*UpdateInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -302,8 +302,8 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_Register_Handler,
 		},
 		{
-			MethodName: "UpdatePassword",
-			Handler:    _AuthService_UpdatePassword_Handler,
+			MethodName: "UpdateInfo",
+			Handler:    _AuthService_UpdateInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
