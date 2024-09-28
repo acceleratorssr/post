@@ -6,12 +6,34 @@ option go_package="sso/v1;ssov1";
 import "common/common.proto";
 
 service AuthService {
+  rpc BindTotp(BindTotpRequest) returns (BindTotpResponse);
+  rpc Register (RegisterRequest) returns (RegisterResponse);
+
   rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc Login (LoginRequest) returns (LoginResponse);
   rpc Logout (LogoutRequest) returns (LogoutResponse);
-  rpc Register (RegisterRequest) returns (RegisterResponse);
   rpc UpdateInfo (UpdateInfoRequest) returns (UpdateInfoResponse);
+}
+
+message BindTotpRequest {
+  string username = 1;
+}
+
+message BindTotpResponse {
+  string QR_url = 1;
+}
+
+message RegisterRequest {
+  UserInfo user_info = 1;
+  string password = 2;
+  string user_agent = 3;
+  string code = 4;
+}
+
+message RegisterResponse {
+  string access_token = 1;
+  string refresh_token = 2;
 }
 
 message UpdateInfoRequest{
@@ -22,16 +44,6 @@ message UpdateInfoRequest{
 }
 
 message UpdateInfoResponse {
-}
-
-message RegisterRequest {
-  UserInfo user_info = 1;
-  string password = 2;
-  string user_agent = 3;
-}
-
-message RegisterResponse {
-  string QR_url = 1;
 }
 
 message LogoutRequest {
@@ -55,7 +67,6 @@ message LoginResponse {
 
 message RefreshTokenRequest {
   string refresh_token = 1;
-  uint64 id = 2;
   UserInfo user_info =3;
 }
 
@@ -75,11 +86,9 @@ message ValidateTokenResponse {
 
 message JwtPayload  {
   UserInfo user_info = 1;
-  uint64 userid = 2;
 }
 
 message UserInfo {
   string username = 1;
   string nickname = 2;
-  permissions.Permissions permissions = 3;
 }

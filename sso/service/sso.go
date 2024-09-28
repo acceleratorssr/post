@@ -10,10 +10,15 @@ type AuthUserService interface {
 	GetInfoByUsername(ctx context.Context, username string) (*domain.User, error)
 	SaveUser(ctx context.Context, user *domain.User, utime int64) error
 	GetTotpSecret(ctx context.Context, username string) (string, error)
+	FindUsernameExist(ctx context.Context, username string) bool
 }
 
 type ssoService struct {
 	repo repository.SSORepository
+}
+
+func (a *ssoService) FindUsernameExist(ctx context.Context, username string) bool {
+	return a.repo.FindUsername(ctx, username)
 }
 
 func (a *ssoService) GetTotpSecret(ctx context.Context, username string) (string, error) {

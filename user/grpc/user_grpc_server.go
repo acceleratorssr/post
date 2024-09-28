@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"google.golang.org/grpc"
-	"post/api/proto/gen/common"
 	ssov1 "post/api/proto/gen/sso/v1"
 	userv1 "post/api/proto/gen/user/v1"
 	"post/user/domain"
@@ -16,25 +15,23 @@ type UserServiceServer struct {
 	ssoGrpcClient ssov1.AuthServiceClient
 }
 
-func NewUserServiceServer(svc service.UserService) *UserServiceServer {
-	return &UserServiceServer{
-		svc: svc,
-	}
-}
-
 func (u *UserServiceServer) Register(server *grpc.Server) {
 	userv1.RegisterUserServiceServer(server, u)
 }
 
 func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.CreateUserRequest) (*userv1.CreateUserResponse, error) {
 	// sso
-	_, err := u.ssoGrpcClient.Register(ctx, &ssov1.RegisterRequest{
-		Username:  request.User.Username,
-		Password:  request.User.Password,
-		UserAgent: request.User.UserAgent,
+	resp, err := u.ssoGrpcClient.Register(ctx, &ssov1.RegisterRequest{
+		UserInfo: &ssov1.UserInfo{
+			Username: request.GetUser().GetUsername(),
+			Nickname: request.GetUser().GetNickname(),
+		},
+		Password:  request.GetUser().GetPassword(),
+		UserAgent: request.GetUser().GetUserAgent(),
+		Code:      request.GetCode(),
 	})
 	if err != nil {
-		return nil, err
+		return nil, err // 此处err为 SSO服务 返回的
 	}
 
 	err = u.svc.CreateUser(ctx, u.ToDomain(request.GetUser()))
@@ -42,7 +39,10 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.Crea
 	if err != nil {
 		return nil, err
 	}
-	return &userv1.CreateUserResponse{}, nil
+	return &userv1.CreateUserResponse{
+		AccessToken:  resp.AccessToken,
+		RefreshToken: resp.RefreshToken,
+	}, nil
 }
 
 func (u *UserServiceServer) GetUserInfoByUsername(ctx context.Context, request *userv1.GetUserInfoByUsernameRequest) (*userv1.GetUserInfoByUsernameResponse, error) {
@@ -65,16 +65,20 @@ func (u *UserServiceServer) UpdateUser(ctx context.Context, request *userv1.Upda
 
 func (u *UserServiceServer) ToDomain(user *userv1.User) *domain.User {
 	return &domain.User{
-		Username:    user.Username,
-		Nickname:    user.Nickname,
-		Permissions: int(user.Permissions),
+		Username: user.Username,
+		Nickname: user.Nickname,
 	}
 }
 
 func (u *UserServiceServer) ToDTO(user *domain.User) *userv1.User {
 	return &userv1.User{
-		Username:    user.Username,
-		Nickname:    user.Nickname,
-		Permissions: common.Permissions(user.Permissions),
+		Username: user.Username,
+		Nickname: user.Nickname,
+	}
+}
+
+func NewUserServiceServer(svc service.UserService) *UserServiceServer {
+	return &UserServiceServer{
+		svc: svc,
 	}
 }

@@ -4,27 +4,91 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/boombuler/barcode/qr"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pquerna/otp/totp"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"image/png"
-	"os"
-	"post/api/proto/gen/common"
 	ssov1 "post/api/proto/gen/sso/v1"
 	"post/sso/config"
 	"post/sso/domain"
+	"post/sso/repository"
 	"post/sso/service"
 	"time"
 )
 
 type AuthServiceServer struct {
 	ssov1.UnimplementedAuthServiceServer
-	svc  service.AuthUserService
-	info *config.Info
+	issuer     string
+	expiration int64 // 用户和TOTP绑定关系的缓存时间
+	svc        service.AuthUserService
+	cache      repository.SSOCache
+	info       *config.Info
+}
+
+func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTotpRequest) (*ssov1.BindTotpResponse, error) {
+	if a.svc.FindUsernameExist(ctx, request.GetUsername()) {
+		return nil, status.Errorf(codes.AlreadyExists, "SSO 用户已存在")
+	}
+
+	key, url, err := a.GenTotpSecret(a.issuer, request.GetUsername())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO TOTP绑定失败: %s", err))
+	}
+
+	err = a.cache.SetUsernameAndKey(ctx, request.GetUsername(), key, 10*time.Minute)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 缓存用户绑定关系失败: %s", err))
+	}
+
+	return &ssov1.BindTotpResponse{
+		QRUrl: url,
+	}, nil
+}
+
+func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
+	now := time.Now().UnixMilli()
+	secretKey, err := a.cache.GetUsernameAndKey(ctx, request.GetUserInfo().GetUsername())
+	if err == redis.Nil {
+		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO 绑定密钥超时，请重新注册: %s", err))
+	} else if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 获取用户绑定关系失败: %s", err))
+	}
+
+	if !a.validateTOTP(secretKey, request.GetCode()) {
+		return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
+	}
+
+	err = a.svc.SaveUser(ctx, &domain.User{
+		Username:   request.GetUserInfo().GetUsername(),
+		Nickname:   request.GetUserInfo().GetNickname(),
+		Password:   request.GetPassword(),
+		TotpSecret: secretKey,
+		UserAgent:  request.GetUserAgent(),
+	}, now)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 保存用户信息失败: %s", err))
+	}
+
+	jwtPayload := &domain.JwtPayload{
+		Username: request.GetUserInfo().GetUsername(),
+		NickName: request.GetUserInfo().GetNickname(),
+	}
+	accessToken, err := a.generateAccessToken(jwtPayload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成 access token 失败: %s", err))
+	}
+	refreshToken, err := a.generateRefreshToken(jwtPayload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成 refresh token 失败: %s", err))
+	}
+
+	return &ssov1.RegisterResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 // UpdateInfo 注：SSO服务保存的用户数据是 凭证 + 必要用户信息（放入jwt），剩下的信息保存在user，将采用kafka异步消费更新数据
@@ -56,27 +120,6 @@ func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutReq
 	panic("implement me")
 }
 
-func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
-	// 展示2fa进行绑定
-	user, err := a.createUser(request.GetUserInfo().GetUsername())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 2FA失败: %s", err))
-	}
-	user.Password = a.HashAndSalt(request.GetPassword())
-	user.UserAgent = request.GetUserAgent()
-	user.Nickname = request.GetUserInfo().GetNickname()
-	user.Permissions = int(request.GetUserInfo().GetPermissions())
-
-	// 保存密码等凭证
-	err = a.svc.SaveUser(ctx, user, time.Now().UnixMilli())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 保存用户信息失败: %s", err))
-	}
-	return &ssov1.RegisterResponse{
-		QRUrl: user.QrcodeURL,
-	}, nil
-}
-
 func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
 	_, err := a.ParseToken(request.GetRefreshToken())
 	if err != nil {
@@ -84,10 +127,8 @@ func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.Ref
 	}
 
 	token, err := a.generateAccessToken(&domain.JwtPayload{
-		Username:    request.GetUserInfo().GetUsername(),
-		UserID:      request.GetId(),
-		NickName:    request.GetUserInfo().GetNickname(),
-		Permissions: int(request.GetUserInfo().Permissions),
+		Username: request.GetUserInfo().GetUsername(),
+		NickName: request.GetUserInfo().GetNickname(),
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成短token失败: %v", err))
@@ -109,18 +150,13 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 		return nil, status.Errorf(codes.Unauthenticated, "SSO 用户或密码错误")
 	}
 
-	// 懒得分开了，一起放着验证
 	if user.UserAgent != request.UserAgent {
-		if !a.validateTOTP(user.TotpSecret, request.GetCode()) {
-			return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
-		}
+
 	}
 
 	jwtPayload := &domain.JwtPayload{
-		UserID:      user.ID,
-		Username:    user.Username,
-		NickName:    user.Nickname,
-		Permissions: user.Permissions,
+		Username: user.Username,
+		NickName: user.Nickname,
 	}
 	accessToken, err := a.generateAccessToken(jwtPayload)
 	if err != nil {
@@ -146,11 +182,9 @@ func (a *AuthServiceServer) ValidateToken(ctx context.Context, request *ssov1.Va
 	return &ssov1.ValidateTokenResponse{
 		Valid: true,
 		JwtPayload: &ssov1.JwtPayload{
-			Userid: token.UserID,
 			UserInfo: &ssov1.UserInfo{
-				Username:    token.Username,
-				Nickname:    token.NickName,
-				Permissions: common.Permissions(token.Permissions),
+				Username: token.Username,
+				Nickname: token.NickName,
 			},
 		},
 		Message: "Token is valid",
@@ -162,44 +196,34 @@ func (a *AuthServiceServer) RegisterServer(server *grpc.Server) {
 	ssov1.RegisterAuthServiceServer(server, a)
 }
 
-func NewSSOServiceServer(svc service.AuthUserService, info *config.Info) *AuthServiceServer {
-	return &AuthServiceServer{
-		svc:  svc,
-		info: info,
-	}
-}
-
-func (a *AuthServiceServer) createUser(username string) (*domain.User, error) {
+// GenTotpSecret resp: (secretKey string, sRL string, err error)
+func (a *AuthServiceServer) GenTotpSecret(issuer, username string) (string, string, error) {
 	secret, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "歪比八不",
+		Issuer:      issuer,
 		AccountName: username,
 	})
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
-	return &domain.User{
-		Username:   username,
-		TotpSecret: secret.Secret(),
-		QrcodeURL:  secret.URL(),
-	}, nil
+	return secret.Secret(), secret.URL(), nil
 }
 
-func (a *AuthServiceServer) generateQRCode(user *domain.User) error {
-	url := user.QrcodeURL
-	qrCode, err := qr.Encode(url, qr.M, qr.Auto)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create("qrcode.png")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return png.Encode(file, qrCode)
-}
+//func (a *AuthServiceServer) generateQRCode(user *domain.User) error {
+//	url := user.QrcodeURL
+//	qrCode, err := qr.Encode(url, qr.M, qr.Auto)
+//	if err != nil {
+//		return err
+//	}
+//
+//	file, err := os.Create("qrcode.png")
+//	if err != nil {
+//		return err
+//	}
+//	defer file.Close()
+//
+//	return png.Encode(file, qrCode)
+//}
 
 func (a *AuthServiceServer) validateTOTP(totpSecret, code string) bool {
 	return totp.Validate(code, totpSecret)
@@ -268,4 +292,13 @@ func (a *AuthServiceServer) ParseToken(tokenStr string) (*domain.Claims, error) 
 		return claims, nil
 	}
 	return nil, errors.New("invalid token")
+}
+
+func NewSSOServiceServer(svc service.AuthUserService, info *config.Info, cache repository.SSOCache) *AuthServiceServer {
+	return &AuthServiceServer{
+		issuer: "歪比八不",
+		svc:    svc,
+		info:   info,
+		cache:  cache,
+	}
 }

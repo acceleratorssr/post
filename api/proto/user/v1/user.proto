@@ -2,13 +2,12 @@ syntax = "proto3";
 package user.v1;
 option go_package="user/v1;userv1";
 
-import "common/common.proto";
+//import "common/common.proto";
 
 message User {
   string username = 1;
   string password = 2;
   string nickname = 3;
-  permissions.Permissions permissions = 4;
   string user_agent = 5;
 }
 
@@ -20,9 +19,12 @@ service UserService {
 
 message CreateUserRequest {
   User user = 1;
+  string code = 2;
 }
 
 message CreateUserResponse {
+  string access_token = 1;
+  string refresh_token = 2;
 }
 
 message GetUserInfoByUsernameRequest {

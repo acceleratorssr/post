@@ -10,18 +10,23 @@ type SSORepository interface {
 	SaveUserInfo(ctx context.Context, user *domain.User, utime int64) error
 	GetInfoByUsername(ctx context.Context, username string) (*domain.User, error)
 	GetTotpSecret(ctx context.Context, username string) (string, error)
+	FindUsername(ctx context.Context, username string) bool
 }
 
 type ssoRepository struct {
 	dao dao.SSOGormDAO
 }
 
+func (s *ssoRepository) FindUsername(ctx context.Context, username string) bool {
+	return s.dao.UsernameExistOrNot(ctx, username)
+}
+
 func (s *ssoRepository) GetTotpSecret(ctx context.Context, username string) (string, error) {
-	return s.dao.QueryTotpSecretByUsername(ctx, username)
+	return s.dao.QueryTotpSecret(ctx, username)
 }
 
 func (s *ssoRepository) GetInfoByUsername(ctx context.Context, username string) (*domain.User, error) {
-	user, err := s.dao.QueryByUsername(ctx, username)
+	user, err := s.dao.Query(ctx, username)
 	return s.ToDomain(user), err
 }
 
@@ -31,28 +36,23 @@ func (s *ssoRepository) SaveUserInfo(ctx context.Context, user *domain.User, uti
 
 func (s *ssoRepository) ToDao(user *domain.User, now int64) *dao.User {
 	return &dao.User{
-		Password:    user.Password,
-		Username:    user.Username,
-		QrcodeURL:   user.QrcodeURL,
-		TotpSecret:  user.TotpSecret,
-		UserAgent:   user.UserAgent,
-		Nickname:    user.Nickname,
-		Permissions: user.Permissions,
-		Utime:       now,
-		Ctime:       now,
+		Password:   user.Password,
+		Username:   user.Username,
+		TotpSecret: user.TotpSecret,
+		UserAgent:  user.UserAgent,
+		Nickname:   user.Nickname,
+		Utime:      now,
+		Ctime:      now,
 	}
 }
 
 func (s *ssoRepository) ToDomain(user *dao.User) *domain.User {
 	return &domain.User{
-		ID:          user.ID,
-		Password:    user.Password,
-		Username:    user.Username,
-		QrcodeURL:   user.QrcodeURL,
-		TotpSecret:  user.TotpSecret,
-		UserAgent:   user.UserAgent,
-		Nickname:    user.Nickname,
-		Permissions: user.Permissions,
+		Password:   user.Password,
+		Username:   user.Username,
+		TotpSecret: user.TotpSecret,
+		UserAgent:  user.UserAgent,
+		Nickname:   user.Nickname,
 	}
 }
 

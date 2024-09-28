@@ -3,6 +3,7 @@ package config
 type Config struct {
 	Jwt   JwtConf   `yaml:"jwt"`
 	Mysql mysqlConf `yaml:"mysql"`
+	Redis redisConf `yaml:"redis"`
 }
 
 type JwtConf struct {
@@ -19,4 +20,9 @@ type mysqlConf struct {
 	Password string `yaml:"password"`
 	Table    string `yaml:"table"`
 	DB       string `yaml:"db"`
+}
+
+type redisConf struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
 }
