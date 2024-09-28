@@ -47,6 +47,7 @@ message UpdateInfoResponse {
 }
 
 message LogoutRequest {
+  string access_token = 1;
   string refresh_token = 2;
 }
 
@@ -81,11 +82,11 @@ message ValidateTokenRequest {
 message ValidateTokenResponse {
   bool valid = 1;
   JwtPayload jwt_payload = 2;
-  string message = 3;
 }
 
 message JwtPayload  {
   UserInfo user_info = 1;
+  int64 ctime = 2;
 }
 
 message UserInfo {

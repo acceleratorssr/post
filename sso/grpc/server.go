@@ -38,7 +38,7 @@ func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTot
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO TOTP绑定失败: %s", err))
 	}
 
-	err = a.cache.SetUsernameAndKey(ctx, request.GetUsername(), key, 10*time.Minute)
+	err = a.cache.SetString(ctx, request.GetUsername(), key, 10*time.Minute)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 缓存用户绑定关系失败: %s", err))
 	}
@@ -50,7 +50,7 @@ func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTot
 
 func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
 	now := time.Now().UnixMilli()
-	secretKey, err := a.cache.GetUsernameAndKey(ctx, request.GetUserInfo().GetUsername())
+	secretKey, err := a.cache.GetString(ctx, request.GetUserInfo().GetUsername())
 	if err == redis.Nil {
 		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO 绑定密钥超时，请重新注册: %s", err))
 	} else if err != nil {
@@ -75,6 +75,7 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	jwtPayload := &domain.JwtPayload{
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
+		Ctime:    now,
 	}
 	accessToken, err := a.generateAccessToken(jwtPayload)
 	if err != nil {
@@ -116,8 +117,23 @@ func (a *AuthServiceServer) UpdateInfo(ctx context.Context, request *ssov1.Updat
 }
 
 func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	handleToken := func(tokenStr string, maxExpires int64) error {
+		token, err := a.ParseToken(tokenStr)
+		if err != nil {
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				return nil
+			}
+			return status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO token 验证失败: %v", err))
+		}
+		return a.cache.SetString(ctx, tokenStr, "",
+			time.Duration(max(0, maxExpires-(time.Now().UnixMilli()-token.Ctime))))
+	}
+
+	if err := handleToken(request.GetRefreshToken(), a.info.Config.Jwt.LongExpires); err != nil {
+		return nil, err
+	}
+
+	return &ssov1.LogoutResponse{}, nil
 }
 
 func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
@@ -129,6 +145,7 @@ func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.Ref
 	token, err := a.generateAccessToken(&domain.JwtPayload{
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
+		Ctime:    time.Now().UnixMilli(),
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成短token失败: %v", err))
@@ -157,6 +174,7 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 	jwtPayload := &domain.JwtPayload{
 		Username: user.Username,
 		NickName: user.Nickname,
+		Ctime:    time.Now().UnixMilli(),
 	}
 	accessToken, err := a.generateAccessToken(jwtPayload)
 	if err != nil {
@@ -187,9 +205,7 @@ func (a *AuthServiceServer) ValidateToken(ctx context.Context, request *ssov1.Va
 				Nickname: token.NickName,
 			},
 		},
-		Message: "Token is valid",
 	}, nil
-
 }
 
 func (a *AuthServiceServer) RegisterServer(server *grpc.Server) {
@@ -281,11 +297,7 @@ func (a *AuthServiceServer) ParseToken(tokenStr string) (*domain.Claims, error) 
 	})
 
 	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errors.New("token has expired")
-		} else {
-			return nil, errors.New("invalid token")
-		}
+		return nil, err
 	}
 
 	if claims, ok := token.Claims.(*domain.Claims); ok && token.Valid {

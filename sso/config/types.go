@@ -8,9 +8,9 @@ type Config struct {
 
 type JwtConf struct {
 	Issuer       string `yaml:"issuer"`
-	LongExpires  int    `yaml:"long_expires"`
+	LongExpires  int64  `yaml:"long_expires"`
 	Secret       string `yaml:"secret"`
-	ShortExpires int    `yaml:"short_expires"`
+	ShortExpires int64  `yaml:"short_expires"`
 }
 
 type mysqlConf struct {

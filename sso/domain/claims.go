@@ -5,6 +5,7 @@ import "github.com/golang-jwt/jwt/v5"
 type JwtPayload struct {
 	Username string
 	NickName string
+	Ctime    int64
 }
 
 type Claims struct {
