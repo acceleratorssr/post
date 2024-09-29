@@ -2,7 +2,9 @@ import os
 import base64
 import yaml
 
+# <--!  暂时无用法  !-->
 
+# 生成随机的 256 位密钥
 def generate_secret():
     secret = os.urandom(32)  # 256 bits
     return base64.urlsafe_b64encode(secret).decode('utf-8')

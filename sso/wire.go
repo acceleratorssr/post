@@ -17,6 +17,7 @@ func InitApp() *App {
 	wire.Build(
 		config.InitConfig,
 		service.NewAuthService,
+		service.NewJWTService,
 
 		repository.NewSSOGormRepository,
 		repository.NewSSOCache,

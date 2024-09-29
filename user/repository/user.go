@@ -40,18 +40,16 @@ func (u *userRepository) Update(ctx context.Context, user *domain.User) error {
 
 func (u *userRepository) toDomain(user *dao.User) *domain.User {
 	return &domain.User{
-		ID:          user.ID,
-		Nickname:    user.Nickname,
-		Permissions: user.Permissions,
-		Username:    user.Username,
+		ID:       user.ID,
+		Nickname: user.Nickname,
+		Username: user.Username,
 	}
 }
 
 func (u *userRepository) toDao(user *domain.User) *dao.User {
 	return &dao.User{
-		ID:          user.ID,
-		Nickname:    user.Nickname,
-		Permissions: user.Permissions,
-		Username:    user.Username,
+		ID:       user.ID,
+		Nickname: user.Nickname,
+		Username: user.Username,
 	}
 }

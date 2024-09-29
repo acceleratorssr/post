@@ -11,6 +11,7 @@ import (
 	"post/sso/grpc"
 	"post/sso/ioc"
 	"post/sso/repository"
+	"post/sso/repository/cache"
 	"post/sso/repository/dao"
 	"post/sso/service"
 )
@@ -23,7 +24,11 @@ func InitApp() *App {
 	ssoGormDAO := dao.NewSSOGormDAO(db)
 	ssoRepository := repository.NewSSOGormRepository(ssoGormDAO)
 	authUserService := service.NewAuthService(ssoRepository)
-	authServiceServer := grpc.NewSSOServiceServer(authUserService, info)
+	authService := service.NewJWTService(info)
+	cmdable := ioc.InitRedis(info)
+	redisCache := cache.NewRedisCache(cmdable)
+	ssoCache := repository.NewSSOCache(redisCache)
+	authServiceServer := grpc.NewSSOServiceServer(authUserService, authService, ssoCache)
 	server := ioc.InitGrpcSSOServer(authServiceServer)
 	app := &App{
 		server: server,

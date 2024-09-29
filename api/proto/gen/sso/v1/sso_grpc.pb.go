@@ -19,13 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_BindTotp_FullMethodName      = "/sso.v1.AuthService/BindTotp"
-	AuthService_Register_FullMethodName      = "/sso.v1.AuthService/Register"
-	AuthService_ValidateToken_FullMethodName = "/sso.v1.AuthService/ValidateToken"
-	AuthService_RefreshToken_FullMethodName  = "/sso.v1.AuthService/RefreshToken"
-	AuthService_Login_FullMethodName         = "/sso.v1.AuthService/Login"
-	AuthService_Logout_FullMethodName        = "/sso.v1.AuthService/Logout"
-	AuthService_UpdateInfo_FullMethodName    = "/sso.v1.AuthService/UpdateInfo"
+	AuthService_BindTotp_FullMethodName       = "/sso.v1.AuthService/BindTotp"
+	AuthService_Register_FullMethodName       = "/sso.v1.AuthService/Register"
+	AuthService_ValidateToken_FullMethodName  = "/sso.v1.AuthService/ValidateToken"
+	AuthService_RefreshToken_FullMethodName   = "/sso.v1.AuthService/RefreshToken"
+	AuthService_Login_FullMethodName          = "/sso.v1.AuthService/Login"
+	AuthService_Logout_FullMethodName         = "/sso.v1.AuthService/Logout"
+	AuthService_UpdatePassword_FullMethodName = "/sso.v1.AuthService/UpdatePassword"
+	AuthService_GetPublicKey_FullMethodName   = "/sso.v1.AuthService/GetPublicKey"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -38,7 +39,8 @@ type AuthServiceClient interface {
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
-	UpdateInfo(ctx context.Context, in *UpdateInfoRequest, opts ...grpc.CallOption) (*UpdateInfoResponse, error)
+	UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
+	GetPublicKey(ctx context.Context, in *PublicKeyRequest, opts ...grpc.CallOption) (*PublicKeyResponse, error)
 }
 
 type authServiceClient struct {
@@ -109,10 +111,20 @@ func (c *authServiceClient) Logout(ctx context.Context, in *LogoutRequest, opts 
 	return out, nil
 }
 
-func (c *authServiceClient) UpdateInfo(ctx context.Context, in *UpdateInfoRequest, opts ...grpc.CallOption) (*UpdateInfoResponse, error) {
+func (c *authServiceClient) UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateInfoResponse)
-	err := c.cc.Invoke(ctx, AuthService_UpdateInfo_FullMethodName, in, out, cOpts...)
+	out := new(UpdatePasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_UpdatePassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetPublicKey(ctx context.Context, in *PublicKeyRequest, opts ...grpc.CallOption) (*PublicKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PublicKeyResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetPublicKey_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +141,8 @@ type AuthServiceServer interface {
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-	UpdateInfo(context.Context, *UpdateInfoRequest) (*UpdateInfoResponse, error)
+	UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
+	GetPublicKey(context.Context, *PublicKeyRequest) (*PublicKeyResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -158,8 +171,11 @@ func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*Lo
 func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
 }
-func (UnimplementedAuthServiceServer) UpdateInfo(context.Context, *UpdateInfoRequest) (*UpdateInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateInfo not implemented")
+func (UnimplementedAuthServiceServer) UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePassword not implemented")
+}
+func (UnimplementedAuthServiceServer) GetPublicKey(context.Context, *PublicKeyRequest) (*PublicKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPublicKey not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -290,20 +306,38 @@ func _AuthService_Logout_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_UpdateInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateInfoRequest)
+func _AuthService_UpdatePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePasswordRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).UpdateInfo(ctx, in)
+		return srv.(AuthServiceServer).UpdatePassword(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_UpdateInfo_FullMethodName,
+		FullMethod: AuthService_UpdatePassword_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).UpdateInfo(ctx, req.(*UpdateInfoRequest))
+		return srv.(AuthServiceServer).UpdatePassword(ctx, req.(*UpdatePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublicKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetPublicKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetPublicKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetPublicKey(ctx, req.(*PublicKeyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -340,8 +374,12 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_Logout_Handler,
 		},
 		{
-			MethodName: "UpdateInfo",
-			Handler:    _AuthService_UpdateInfo_Handler,
+			MethodName: "UpdatePassword",
+			Handler:    _AuthService_UpdatePassword_Handler,
+		},
+		{
+			MethodName: "GetPublicKey",
+			Handler:    _AuthService_GetPublicKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

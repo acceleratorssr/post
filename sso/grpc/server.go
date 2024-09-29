@@ -25,7 +25,18 @@ type AuthServiceServer struct {
 	expiration int64 // 用户和TOTP绑定关系的缓存时间
 	svc        service.AuthUserService
 	cache      repository.SSOCache
+	jwtSvc     domain.AuthService
 	info       *config.Info
+}
+
+func (a *AuthServiceServer) GetPublicKey(ctx context.Context, request *ssov1.PublicKeyRequest) (*ssov1.PublicKeyResponse, error) {
+	key := a.jwtSvc.GetPublicKey(ctx)
+	if key == "" {
+		return nil, status.Errorf(codes.Internal, "SSO 读取公钥失败")
+	}
+	return &ssov1.PublicKeyResponse{
+		PublicKey: key,
+	}, nil
 }
 
 func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTotpRequest) (*ssov1.BindTotpResponse, error) {
@@ -72,16 +83,18 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 保存用户信息失败: %s", err))
 	}
 
-	jwtPayload := &domain.JwtPayload{
+	accessToken, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
 		Ctime:    now,
-	}
-	accessToken, err := a.generateAccessToken(jwtPayload)
+	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成 access token 失败: %s", err))
 	}
-	refreshToken, err := a.generateRefreshToken(jwtPayload)
+
+	refreshToken, err := a.jwtSvc.GenerateRefreshToken(ctx, &domain.JwtPayload{
+		Ctime: now,
+	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成 refresh token 失败: %s", err))
 	}
@@ -92,13 +105,10 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	}, nil
 }
 
-// UpdateInfo 注：SSO服务保存的用户数据是 凭证 + 必要用户信息（放入jwt），剩下的信息保存在user，将采用kafka异步消费更新数据
-// todo 将此处的存储逻辑改为消费者负责异步复制 数据；
-// todo 因为保证sso写入需要成功，故此处直接重新生成长短token返回给user
-func (a *AuthServiceServer) UpdateInfo(ctx context.Context, request *ssov1.UpdateInfoRequest) (*ssov1.UpdateInfoResponse, error) {
+func (a *AuthServiceServer) UpdatePassword(ctx context.Context, request *ssov1.UpdatePasswordRequest) (*ssov1.UpdatePasswordResponse, error) {
 	totpSecret, err := a.svc.GetTotpSecret(ctx, request.GetUsername())
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("SSO 查找失败: %s", err))
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("SSO 用户查找失败: %s", err))
 	}
 
 	if !a.validateTOTP(totpSecret, request.GetCode()) {
@@ -106,19 +116,18 @@ func (a *AuthServiceServer) UpdateInfo(ctx context.Context, request *ssov1.Updat
 	}
 
 	err = a.svc.SaveUser(ctx, &domain.User{
-		Username: request.GetUsername(),
-		Nickname: request.GetNickname(),
 		Password: request.GetPassword(),
 	}, time.Now().UnixMilli())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 更新用户信息失败: %s", err))
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 系统错误，更新密码失败: %s", err))
 	}
-	return &ssov1.UpdateInfoResponse{}, nil
+
+	return &ssov1.UpdatePasswordResponse{}, nil
 }
 
 func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
 	handleToken := func(tokenStr string, maxExpires int64) error {
-		token, err := a.ParseToken(tokenStr)
+		token, err := a.jwtSvc.ValidateToken(ctx, tokenStr)
 		if err != nil {
 			if errors.Is(err, jwt.ErrTokenExpired) {
 				return nil
@@ -137,12 +146,12 @@ func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutReq
 }
 
 func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
-	_, err := a.ParseToken(request.GetRefreshToken())
+	_, err := a.jwtSvc.ValidateToken(ctx, request.GetRefreshToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO token验证失败: %v", err))
+		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO refreshToken验证失败: %v", err))
 	}
 
-	token, err := a.generateAccessToken(&domain.JwtPayload{
+	token, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
 		Ctime:    time.Now().UnixMilli(),
@@ -156,8 +165,9 @@ func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.Ref
 	}, nil
 }
 
+// Login 当出现 UserAgent 不一致的情况，则会要求用户提交验证码
+// 正常逻辑下，当 UserAgent 不一致时，第一次调用没有验证码，第二次重复调用该方法即可
 func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
-	// todo 一次查库
 	user, err := a.svc.GetInfoByUsername(ctx, request.GetUsername())
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "SSO 未找到对应用户")
@@ -168,7 +178,12 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 	}
 
 	if user.UserAgent != request.UserAgent {
-
+		if request.GetCode() == "" {
+			return nil, status.Errorf(codes.Unauthenticated, "SSO 风险行为，请输入2FA验证码")
+		}
+		if !a.validateTOTP(user.TotpSecret, request.GetCode()) {
+			return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
+		}
 	}
 
 	jwtPayload := &domain.JwtPayload{
@@ -176,11 +191,11 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 		NickName: user.Nickname,
 		Ctime:    time.Now().UnixMilli(),
 	}
-	accessToken, err := a.generateAccessToken(jwtPayload)
+	accessToken, err := a.jwtSvc.GenerateAccessToken(ctx, jwtPayload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成短token失败: %v", err))
 	}
-	refreshToken, err := a.generateRefreshToken(jwtPayload)
+	refreshToken, err := a.jwtSvc.GenerateRefreshToken(ctx, jwtPayload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成长token失败: %v", err))
 	}
@@ -191,22 +206,26 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 	}, nil
 }
 
-func (a *AuthServiceServer) ValidateToken(ctx context.Context, request *ssov1.ValidateTokenRequest) (*ssov1.ValidateTokenResponse, error) {
-	token, err := a.ParseToken(request.GetToken())
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO token验证失败: %v", err))
-	}
-
-	return &ssov1.ValidateTokenResponse{
-		Valid: true,
-		JwtPayload: &ssov1.JwtPayload{
-			UserInfo: &ssov1.UserInfo{
-				Username: token.Username,
-				Nickname: token.NickName,
-			},
-		},
-	}, nil
-}
+// ValidateToken
+// <--！ 已弃用 ！-->
+// 为防止每次客户端访问其他服务时都要走 SSO 验证，
+// 故使用非对称加密的jwt token，由其他服务启动后自动请求SSO服务获取公钥后，自行验证；
+//func (a *AuthServiceServer) ValidateToken(ctx context.Context, request *ssov1.ValidateTokenRequest) (*ssov1.ValidateTokenResponse, error) {
+//	token, err := a.jwtSvc.ValidateToken(ctx, request.GetToken())
+//	if err != nil {
+//		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO token验证失败: %v", err))
+//	}
+//
+//	return &ssov1.ValidateTokenResponse{
+//		Valid: true,
+//		JwtPayload: &ssov1.JwtPayload{
+//			UserInfo: &ssov1.UserInfo{
+//				Username: token.Username,
+//				Nickname: token.NickName,
+//			},
+//		},
+//	}, nil
+//}
 
 func (a *AuthServiceServer) RegisterServer(server *grpc.Server) {
 	ssov1.RegisterAuthServiceServer(server, a)
@@ -224,22 +243,6 @@ func (a *AuthServiceServer) GenTotpSecret(issuer, username string) (string, stri
 
 	return secret.Secret(), secret.URL(), nil
 }
-
-//func (a *AuthServiceServer) generateQRCode(user *domain.User) error {
-//	url := user.QrcodeURL
-//	qrCode, err := qr.Encode(url, qr.M, qr.Auto)
-//	if err != nil {
-//		return err
-//	}
-//
-//	file, err := os.Create("qrcode.png")
-//	if err != nil {
-//		return err
-//	}
-//	defer file.Close()
-//
-//	return png.Encode(file, qrCode)
-//}
 
 func (a *AuthServiceServer) validateTOTP(totpSecret, code string) bool {
 	return totp.Validate(code, totpSecret)
@@ -265,52 +268,12 @@ func (a *AuthServiceServer) CheckPasswords(hashedPwd string, rePwd string) bool 
 	return true
 }
 
-func (a *AuthServiceServer) generateRefreshToken(user *domain.JwtPayload) (string, error) {
-	claims := &domain.Claims{
-		JwtPayload: user,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(a.info.Config.Jwt.LongExpires) * time.Hour)),
-			Issuer:    a.info.Config.Jwt.Issuer,
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(a.info.Config.Jwt.Secret))
-}
-
-func (a *AuthServiceServer) generateAccessToken(user *domain.JwtPayload) (string, error) {
-	claims := &domain.Claims{
-		JwtPayload: user,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(a.info.Config.Jwt.LongExpires) * time.Hour)),
-			Issuer:    a.info.Config.Jwt.Issuer,
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(a.info.Config.Jwt.Secret))
-}
-
-func (a *AuthServiceServer) ParseToken(tokenStr string) (*domain.Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &domain.Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(a.info.Config.Jwt.Secret), nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := token.Claims.(*domain.Claims); ok && token.Valid {
-		return claims, nil
-	}
-	return nil, errors.New("invalid token")
-}
-
-func NewSSOServiceServer(svc service.AuthUserService, info *config.Info, cache repository.SSOCache) *AuthServiceServer {
+func NewSSOServiceServer(svc service.AuthUserService, info *config.Info, jwtSvc domain.AuthService, cache repository.SSOCache) *AuthServiceServer {
 	return &AuthServiceServer{
 		issuer: "歪比八不",
 		svc:    svc,
-		info:   info,
+		jwtSvc: jwtSvc,
 		cache:  cache,
+		info:   info,
 	}
 }

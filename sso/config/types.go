@@ -9,7 +9,8 @@ type Config struct {
 type JwtConf struct {
 	Issuer       string `yaml:"issuer"`
 	LongExpires  int64  `yaml:"long_expires"`
-	Secret       string `yaml:"secret"`
+	PrivateKey   string `yaml:"private_key"`
+	PublicKey    string `yaml:"public_key"`
 	ShortExpires int64  `yaml:"short_expires"`
 }
 
