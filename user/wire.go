@@ -15,9 +15,12 @@ func InitApp() *App {
 	wire.Build(
 		ioc.InitDB,
 		ioc.InitGrpcServer,
+		ioc.InitGrpcSSOClient,
+
 		dao.NewUserGormDAO,
 		repository.NewUserRepository,
 		service.NewUserService,
+
 		grpc.NewUserServiceServer,
 
 		wire.Struct(new(App), "*"),

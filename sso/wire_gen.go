@@ -28,7 +28,7 @@ func InitApp() *App {
 	cmdable := ioc.InitRedis(info)
 	redisCache := cache.NewRedisCache(cmdable)
 	ssoCache := repository.NewSSOCache(redisCache)
-	authServiceServer := grpc.NewSSOServiceServer(authUserService, authService, ssoCache)
+	authServiceServer := grpc.NewSSOServiceServer(authUserService, info, authService, ssoCache)
 	server := ioc.InitGrpcSSOServer(authServiceServer)
 	app := &App{
 		server: server,

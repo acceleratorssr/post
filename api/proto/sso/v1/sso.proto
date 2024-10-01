@@ -6,15 +6,13 @@ option go_package="sso/v1;ssov1";
 import "common/common.proto";
 
 service AuthService {
-  rpc BindTotp(BindTotpRequest) returns (BindTotpResponse);
+  rpc BindTotp (BindTotpRequest) returns (BindTotpResponse);
   rpc Register (RegisterRequest) returns (RegisterResponse);
 
   rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenResponse);
 
   rpc Login (LoginRequest) returns (LoginResponse);
   rpc Logout (LogoutRequest) returns (LogoutResponse);
-
-  rpc UpdatePassword (UpdatePasswordRequest) returns (UpdatePasswordResponse);
 
   rpc GetPublicKey (PublicKeyRequest) returns (PublicKeyResponse);
 }
@@ -47,7 +45,6 @@ message RegisterResponse {
 }
 
 message LogoutRequest {
-  string access_token = 1;
   string refresh_token = 2;
 }
 
@@ -73,15 +70,6 @@ message RefreshTokenRequest {
 
 message RefreshTokenResponse {
   string access_token = 1;
-}
-
-message UpdatePasswordRequest{
-  string username = 1;
-  string password = 2;
-  string code = 3;
-}
-
-message UpdatePasswordResponse {
 }
 
 message JwtPayload  {

@@ -59,6 +59,7 @@ func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTot
 	}, nil
 }
 
+// Register redis内的string就不删了，十分钟就过期
 func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
 	now := time.Now().UnixMilli()
 	secretKey, err := a.cache.GetString(ctx, request.GetUserInfo().GetUsername())
@@ -72,10 +73,11 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 		return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
 	}
 
+	pwd := a.HashAndSalt(request.GetPassword())
 	err = a.svc.SaveUser(ctx, &domain.User{
 		Username:   request.GetUserInfo().GetUsername(),
 		Nickname:   request.GetUserInfo().GetNickname(),
-		Password:   request.GetPassword(),
+		Password:   pwd,
 		TotpSecret: secretKey,
 		UserAgent:  request.GetUserAgent(),
 	}, now)
@@ -105,26 +107,6 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	}, nil
 }
 
-func (a *AuthServiceServer) UpdatePassword(ctx context.Context, request *ssov1.UpdatePasswordRequest) (*ssov1.UpdatePasswordResponse, error) {
-	totpSecret, err := a.svc.GetTotpSecret(ctx, request.GetUsername())
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("SSO 用户查找失败: %s", err))
-	}
-
-	if !a.validateTOTP(totpSecret, request.GetCode()) {
-		return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
-	}
-
-	err = a.svc.SaveUser(ctx, &domain.User{
-		Password: request.GetPassword(),
-	}, time.Now().UnixMilli())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 系统错误，更新密码失败: %s", err))
-	}
-
-	return &ssov1.UpdatePasswordResponse{}, nil
-}
-
 func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
 	handleToken := func(tokenStr string, maxExpires int64) error {
 		token, err := a.jwtSvc.ValidateToken(ctx, tokenStr)
@@ -145,10 +127,11 @@ func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutReq
 	return &ssov1.LogoutResponse{}, nil
 }
 
+// RefreshToken 已在 web jwtAOP 校验token
 func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
-	_, err := a.jwtSvc.ValidateToken(ctx, request.GetRefreshToken())
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO refreshToken验证失败: %v", err))
+	_, err := a.cache.GetString(ctx, request.GetRefreshToken())
+	if err == nil {
+		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO 长token已被注销: %v", err))
 	}
 
 	token, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
@@ -205,27 +188,6 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 		RefreshToken: refreshToken,
 	}, nil
 }
-
-// ValidateToken
-// <--！ 已弃用 ！-->
-// 为防止每次客户端访问其他服务时都要走 SSO 验证，
-// 故使用非对称加密的jwt token，由其他服务启动后自动请求SSO服务获取公钥后，自行验证；
-//func (a *AuthServiceServer) ValidateToken(ctx context.Context, request *ssov1.ValidateTokenRequest) (*ssov1.ValidateTokenResponse, error) {
-//	token, err := a.jwtSvc.ValidateToken(ctx, request.GetToken())
-//	if err != nil {
-//		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO token验证失败: %v", err))
-//	}
-//
-//	return &ssov1.ValidateTokenResponse{
-//		Valid: true,
-//		JwtPayload: &ssov1.JwtPayload{
-//			UserInfo: &ssov1.UserInfo{
-//				Username: token.Username,
-//				Nickname: token.NickName,
-//			},
-//		},
-//	}, nil
-//}
 
 func (a *AuthServiceServer) RegisterServer(server *grpc.Server) {
 	ssov1.RegisterAuthServiceServer(server, a)

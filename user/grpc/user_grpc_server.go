@@ -77,8 +77,9 @@ func (u *UserServiceServer) ToDTO(user *domain.User) *userv1.User {
 	}
 }
 
-func NewUserServiceServer(svc service.UserService) *UserServiceServer {
+func NewUserServiceServer(svc service.UserService, ssoGrpcClient ssov1.AuthServiceClient) *UserServiceServer {
 	return &UserServiceServer{
-		svc: svc,
+		svc:           svc,
+		ssoGrpcClient: ssoGrpcClient,
 	}
 }

@@ -21,7 +21,8 @@ func InitApp() *App {
 	userGormDAO := dao.NewUserGormDAO(db)
 	userRepository := repository.NewUserRepository(userGormDAO)
 	userService := service.NewUserService(userRepository)
-	userServiceServer := grpc.NewUserServiceServer(userService)
+	authServiceClient := ioc.InitGrpcSSOClient()
+	userServiceServer := grpc.NewUserServiceServer(userService, authServiceClient)
 	server := ioc.InitGrpcServer(userServiceServer)
 	app := &App{
 		server: server,

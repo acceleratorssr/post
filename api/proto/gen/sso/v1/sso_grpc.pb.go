@@ -19,14 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_BindTotp_FullMethodName       = "/sso.v1.AuthService/BindTotp"
-	AuthService_Register_FullMethodName       = "/sso.v1.AuthService/Register"
-	AuthService_ValidateToken_FullMethodName  = "/sso.v1.AuthService/ValidateToken"
-	AuthService_RefreshToken_FullMethodName   = "/sso.v1.AuthService/RefreshToken"
-	AuthService_Login_FullMethodName          = "/sso.v1.AuthService/Login"
-	AuthService_Logout_FullMethodName         = "/sso.v1.AuthService/Logout"
-	AuthService_UpdatePassword_FullMethodName = "/sso.v1.AuthService/UpdatePassword"
-	AuthService_GetPublicKey_FullMethodName   = "/sso.v1.AuthService/GetPublicKey"
+	AuthService_BindTotp_FullMethodName     = "/sso.v1.AuthService/BindTotp"
+	AuthService_Register_FullMethodName     = "/sso.v1.AuthService/Register"
+	AuthService_RefreshToken_FullMethodName = "/sso.v1.AuthService/RefreshToken"
+	AuthService_Login_FullMethodName        = "/sso.v1.AuthService/Login"
+	AuthService_Logout_FullMethodName       = "/sso.v1.AuthService/Logout"
+	AuthService_GetPublicKey_FullMethodName = "/sso.v1.AuthService/GetPublicKey"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -35,11 +33,9 @@ const (
 type AuthServiceClient interface {
 	BindTotp(ctx context.Context, in *BindTotpRequest, opts ...grpc.CallOption) (*BindTotpResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
-	UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error)
 	GetPublicKey(ctx context.Context, in *PublicKeyRequest, opts ...grpc.CallOption) (*PublicKeyResponse, error)
 }
 
@@ -65,16 +61,6 @@ func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RegisterResponse)
 	err := c.cc.Invoke(ctx, AuthService_Register_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ValidateTokenResponse)
-	err := c.cc.Invoke(ctx, AuthService_ValidateToken_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,16 +97,6 @@ func (c *authServiceClient) Logout(ctx context.Context, in *LogoutRequest, opts 
 	return out, nil
 }
 
-func (c *authServiceClient) UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*UpdatePasswordResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdatePasswordResponse)
-	err := c.cc.Invoke(ctx, AuthService_UpdatePassword_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *authServiceClient) GetPublicKey(ctx context.Context, in *PublicKeyRequest, opts ...grpc.CallOption) (*PublicKeyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PublicKeyResponse)
@@ -137,11 +113,9 @@ func (c *authServiceClient) GetPublicKey(ctx context.Context, in *PublicKeyReque
 type AuthServiceServer interface {
 	BindTotp(context.Context, *BindTotpRequest) (*BindTotpResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
-	UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error)
 	GetPublicKey(context.Context, *PublicKeyRequest) (*PublicKeyResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
@@ -159,9 +133,6 @@ func (UnimplementedAuthServiceServer) BindTotp(context.Context, *BindTotpRequest
 func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedAuthServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
-}
 func (UnimplementedAuthServiceServer) RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshToken not implemented")
 }
@@ -170,9 +141,6 @@ func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*Lo
 }
 func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Logout not implemented")
-}
-func (UnimplementedAuthServiceServer) UpdatePassword(context.Context, *UpdatePasswordRequest) (*UpdatePasswordResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdatePassword not implemented")
 }
 func (UnimplementedAuthServiceServer) GetPublicKey(context.Context, *PublicKeyRequest) (*PublicKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPublicKey not implemented")
@@ -234,24 +202,6 @@ func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateTokenRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ValidateToken(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ValidateToken_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AuthService_RefreshToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RefreshTokenRequest)
 	if err := dec(in); err != nil {
@@ -306,24 +256,6 @@ func _AuthService_Logout_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_UpdatePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdatePasswordRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).UpdatePassword(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_UpdatePassword_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).UpdatePassword(ctx, req.(*UpdatePasswordRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AuthService_GetPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PublicKeyRequest)
 	if err := dec(in); err != nil {
@@ -358,10 +290,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_Register_Handler,
 		},
 		{
-			MethodName: "ValidateToken",
-			Handler:    _AuthService_ValidateToken_Handler,
-		},
-		{
 			MethodName: "RefreshToken",
 			Handler:    _AuthService_RefreshToken_Handler,
 		},
@@ -372,10 +300,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Logout",
 			Handler:    _AuthService_Logout_Handler,
-		},
-		{
-			MethodName: "UpdatePassword",
-			Handler:    _AuthService_UpdatePassword_Handler,
 		},
 		{
 			MethodName: "GetPublicKey",

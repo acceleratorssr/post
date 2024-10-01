@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
@@ -57,17 +58,22 @@ func (j *jwtTestSuite) TestJWTService() {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, err := j.svc.GenerateAccessToken(tc.user)
+			ctx := context.Background()
+			token, err := j.svc.GenerateAccessToken(ctx, tc.user)
 			require.NoError(t, err)
-			claims, err := j.svc.ValidateToken(token)
-			require.NoError(t, err)
+			claims, err := j.svc.ValidateToken(ctx, token)
+			if !tc.wantErr {
+				require.NoError(t, err)
+			}
 			claims.ExpiresAt = nil
 			require.Equal(t, tc.want, *claims)
 
-			token, err = j.svc.GenerateRefreshToken(tc.user)
+			token, err = j.svc.GenerateRefreshToken(ctx, tc.user)
 			require.NoError(t, err)
-			claims, err = j.svc.ValidateToken(token)
-			require.NoError(t, err)
+			claims, err = j.svc.ValidateToken(ctx, token)
+			if !tc.wantErr {
+				require.NoError(t, err)
+			}
 			claims.ExpiresAt = nil
 			require.Equal(t, tc.want, *claims)
 		})

@@ -15,6 +15,9 @@ func InitIntrGRPCClient(svc service.LikeService) intrv1.LikeServiceClient {
 	etcdClient, err := etcdv3.New(etcdv3.Config{
 		Endpoints: []string{"localhost:12379"},
 	})
+	if err != nil {
+		panic(err)
+	}
 	bd, err := resolver.NewBuilder(etcdClient)
 	c, err := grpc.NewClient("etcd:///service/like",
 		// 注：传入的是json串, https://github.com/grpc/grpc/blob/master/doc/service_config.md

@@ -71,7 +71,8 @@ func (a *authService) ValidateToken(ctx context.Context, tokenStr string) (*doma
 }
 
 func (a *authService) loadPrivateKey() *ecdsa.PrivateKey {
-	privPEM, err := os.ReadFile("../config/private_key.pem")
+	//privPEM, err := os.ReadFile("../config/private_key.pem")
+	privPEM, err := os.ReadFile("./sso/config/private_key.pem")
 	if err != nil {
 		return nil
 	}
@@ -90,7 +91,8 @@ func (a *authService) loadPrivateKey() *ecdsa.PrivateKey {
 }
 
 func (a *authService) loadPublicKey() *ecdsa.PublicKey {
-	pubPEM, err := os.ReadFile("../config/public_key.pem")
+	//pubPEM, err := os.ReadFile("../config/public_key.pem")
+	pubPEM, err := os.ReadFile("./sso/config/public_key.pem")
 	if err != nil {
 		return nil
 	}
