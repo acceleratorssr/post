@@ -5,12 +5,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
-	"post/internal/domain"
 	"reflect"
 )
 
 type Response struct {
-	Code int    `json:"code"`
+	Code Code   `json:"code"`
 	Data any    `json:"data"`
 	Msg  string `json:"msg"`
 }
@@ -20,53 +19,50 @@ type ListResponse[T any] struct {
 	List       T   `json:"list"`
 }
 
-func Result(code int, data any, msg string, c *gin.Context) {
-	c.JSON(http.StatusOK, Response{
+func Result(ctx *gin.Context, code Code, data any, msg string) {
+	ctx.JSON(http.StatusOK, Response{
 		Code: code,
 		Data: data,
 		Msg:  msg,
 	})
 }
 
-func OK(data any, msg string, c *gin.Context) {
-	Result(http.StatusOK, data, msg, c)
+func OKWithDataAndMsg(ctx *gin.Context, data any, msg string) {
+	Result(ctx, http.StatusOK, data, msg)
 }
 
-func OKWithData(data any, c *gin.Context) {
-	Result(http.StatusOK, data, "", c)
+func OKWithData(ctx *gin.Context, data any) {
+	Result(ctx, http.StatusOK, data, "")
 }
 
-func OKWithMessage(msg string, c *gin.Context) {
-	Result(http.StatusOK, nil, msg, c)
+func OKWithMessage(ctx *gin.Context, msg string) {
+	Result(ctx, http.StatusOK, nil, msg)
 }
 
-func OKWithList[T any](list T, totalCount int, c *gin.Context) {
-	OKWithData(ListResponse[T]{
+func OKWithList[T any](ctx *gin.Context, list T, totalCount int) {
+	OKWithData(ctx, ListResponse[T]{
 		List:       list,
 		TotalCount: totalCount,
-	}, c)
+	})
 }
 
-func Fail(code domain.StatusType, data any, msg string, c *gin.Context) {
-	Result(code.ToInt(), data, msg, c)
+func Fail(ctx *gin.Context, code Code, data any, msg string) {
+	Result(ctx, code, data, msg)
 }
 
-func FailWithCode(code domain.StatusType, c *gin.Context) {
-	msg, ok := domain.ErrorMap[code]
-	if !ok {
-		msg = "Unknown error"
-	}
-	Result(code.ToInt(), nil, msg, c)
+func FailWithCode(ctx *gin.Context, code Code) {
+	msg := canonicalString(code)
+	Result(ctx, code, nil, msg)
 }
 
-func FailWithMessage(c *gin.Context, code domain.StatusType, msg string) {
-	Result(code.ToInt(), nil, msg, c)
+func FailWithMessage(ctx *gin.Context, code Code, msg string) {
+	Result(ctx, code, nil, msg)
 }
 
 // FailWithError 从验证错误中提取字段的自定义错误消息，obj为对应结构体
-func FailWithError(err error, obj any, c *gin.Context) {
+func FailWithError(ctx *gin.Context, err error, obj any) {
 	msg := GetValidMsg(err, obj)
-	FailWithMessage(c, domain.TypeUnknown, msg)
+	FailWithMessage(ctx, Unknown, msg)
 }
 
 func GetValidMsg(err error, obj any) string {

@@ -1,4 +1,4 @@
-package domain
+package gin_ex
 
 type StatusType uint16
 
@@ -8,16 +8,6 @@ const (
 	TypePublished
 	TypeWithdraw
 	ErrPostArticle
-	ErrSystem StatusType = 555
-)
-
-var (
-	ErrorMap = map[StatusType]string{
-		TypeUnknown:    "TypeUnknown",
-		TypeSaved:      "文章已保存",
-		TypePublished:  "文章已发表",
-		ErrPostArticle: "发布文章失败",
-	}
 )
 
 func (e StatusType) string() string {

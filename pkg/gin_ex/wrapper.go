@@ -1,17 +1,15 @@
 package gin_ex
 
 import (
-	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
-	"post/internal/domain"
 	"post/internal/user"
-	"post/internal/utils"
 	"strconv"
 )
 
+// todo 干掉包变量
 var vector *prometheus.CounterVec
 
 func InitCounter(opt prometheus.CounterOpts) {
@@ -22,12 +20,12 @@ func InitCounter(opt prometheus.CounterOpts) {
 
 // WrapClaimsAndReq
 // TODO 除此之外还可以考虑单独解析claims或者req，解决全部post
-func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (Response, error)) gin.HandlerFunc {
+func WrapClaimsAndReq[Req any](fn func(*gin.Context, Req, user.ClaimsUser) (Response, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req Req
 		if err := ctx.Bind(&req); err != nil {
 			err = fmt.Errorf("解析请求参数失败%w", err)
-			FailWithMessage(ctx, domain.ErrSystem, err.Error())
+			FailWithMessage(ctx, Internal, err.Error())
 			return
 		}
 
@@ -35,7 +33,7 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (R
 		if !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			FailWithMessage(ctx, domain.ErrSystem, err.Error())
+			FailWithMessage(ctx, Internal, err.Error())
 			return
 		}
 
@@ -43,57 +41,58 @@ func WrapClaimsAndReq[Req any](fn func(context.Context, Req, user.ClaimsUser) (R
 		if !ok {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			FailWithMessage(ctx, domain.ErrSystem, err.Error())
+			FailWithMessage(ctx, Internal, err.Error())
 			return
 		}
 
-		res, err := fn(ctx.Request.Context(), req, *claims)
+		res, err := fn(ctx, req, *claims)
 
 		if err != nil {
 			err = fmt.Errorf("业务失败:%w", err)
-			FailWithMessage(ctx, domain.ErrSystem, err.Error())
+			FailWithMessage(ctx, Internal, err.Error())
+			return
 		}
 
-		OK(res.Data, res.Msg, ctx)
+		OKWithDataAndMsg(ctx, res.Data, res.Msg)
 	}
 }
 
-func WrapWithReq[Req any](fn func(context.Context, Req) (Response, error)) gin.HandlerFunc {
+func WrapWithReq[Req any](fn func(*gin.Context, Req) (*Response, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req Req
 		if err := ctx.Bind(&req); err != nil {
 			err = fmt.Errorf("解析请求参数失败%w", err)
-			FailWithMessage(ctx, domain.ErrSystem, err.Error())
+			FailWithMessage(ctx, InvalidArgument, err.Error())
 			return
 		}
 
-		res, err := fn(ctx.Request.Context(), req)
+		res, err := fn(ctx, req)
 
-		vector.WithLabelValues(strconv.Itoa(res.Code)).Inc()
+		vector.WithLabelValues(strconv.Itoa(int(res.Code))).Inc()
 
-		// utils.UserInvalidInput 为最小错误码
-		if err != nil || res.Code >= utils.UserInvalidInput {
+		// _maxCode 为最大错误码
+		if err != nil || res.Code < _maxCode {
 			err = fmt.Errorf("业务失败:%w", err)
-			FailWithMessage(ctx, domain.StatusType(res.Code), err.Error())
+			FailWithMessage(ctx, res.Code, res.Msg+"-"+err.Error())
+			return
 		}
 
-		OK(res.Data, res.Msg, ctx)
+		OKWithDataAndMsg(ctx, res.Data, res.Msg)
 	}
 }
 
-func WrapNilReq(fn func(context.Context) (Response, error)) gin.HandlerFunc {
+func WrapNilReq(fn func(*gin.Context) (*Response, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		res, err := fn(ctx)
 
-		res, err := fn(ctx.Request.Context())
+		vector.WithLabelValues(strconv.Itoa(int(res.Code))).Inc()
 
-		vector.WithLabelValues(strconv.Itoa(res.Code)).Inc()
-
-		// utils.UserInvalidInput 为最小错误码
-		if err != nil || res.Code >= utils.UserInvalidInput {
+		if err != nil {
 			err = fmt.Errorf("业务失败:%w", err)
-			FailWithMessage(ctx, domain.StatusType(res.Code), err.Error())
+			FailWithMessage(ctx, res.Code, err.Error())
+			return
 		}
 
-		OK(res.Data, res.Msg, ctx)
+		OKWithDataAndMsg(ctx, res.Data, res.Msg)
 	}
 }
