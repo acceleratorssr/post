@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	ssov1 "post/api/proto/gen/sso/v1"
 	"post/pkg/gin_ex"
@@ -27,20 +26,19 @@ type RefreshTokenReq struct {
 	Nickname string `json:"nickname"`
 }
 
-func (s *SSOHandler) RegisterRoutes(engine *gin.Engine, hf gin.HandlerFunc) {
+func (s *SSOHandler) RegisterRoutes(engine *gin.Engine, mw gin.HandlerFunc) {
 	ssoGroup := engine.Group("/sso")
 	ssoGroup.POST("/login", s.Login)
 
-	ssoGroup.POST("/refresh", hf, gin_ex.WrapWithReq[RefreshTokenReq](s.Refresh)) // 由 web jwtAOP 检查token
-	ssoGroup.POST("/logout", hf, gin_ex.WrapWithReq[LoginReq](s.Logout))
+	ssoGroup.POST("/refresh", mw, gin_ex.WrapWithReq[RefreshTokenReq](s.Refresh)) // 由 web jwtAOP 检查token
+	ssoGroup.POST("/logout", mw, gin_ex.WrapWithReq[LoginReq](s.Logout))
 }
 
 func (s *SSOHandler) Login(ctx *gin.Context) {
 	// todo 添加bloom，快速判断用户是否存在
 	var req LoginReq
 	if err := ctx.Bind(&req); err != nil {
-		err = fmt.Errorf("解析请求参数失败: %w", err)
-		gin_ex.FailWithMessage(ctx, gin_ex.ErrSystem, err.Error())
+		gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, err.Error())
 		return
 	}
 
@@ -51,7 +49,7 @@ func (s *SSOHandler) Login(ctx *gin.Context) {
 		Code:      req.Code,
 	})
 	if err != nil {
-		gin_ex.FailWithError(ctx, err, gin_ex.ErrCodeNotFound)
+		gin_ex.FailWithError(ctx, err, gin_ex.NotFound)
 	}
 
 	gin_ex.OKWithData(ctx, LoginResp{
@@ -70,8 +68,8 @@ func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_ex
 	})
 	if err != nil {
 		return &gin_ex.Response{
-			Code: gin_ex.ErrCodeUnauthorized,
-			Msg:  "请重新登录: ",
+			Code: gin_ex.Unauthenticated,
+			Msg:  "请重新登录",
 		}, err
 	}
 
@@ -87,8 +85,8 @@ func (s *SSOHandler) Logout(ctx *gin.Context, request LoginReq) (*gin_ex.Respons
 	})
 	if err != nil {
 		return &gin_ex.Response{
-			Code: gin_ex.ErrCodeUnauthorized,
-			Msg:  "退出失败: ",
+			Code: gin_ex.Unauthenticated,
+			Msg:  "退出失败",
 		}, err
 	}
 

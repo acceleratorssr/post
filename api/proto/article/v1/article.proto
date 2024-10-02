@@ -1,0 +1,89 @@
+syntax = "proto3";
+package article.v1;
+option go_package="article/v1;articlev1";
+
+message article{
+  int64   ID = 1;
+  string  Title = 2;
+  string  Content = 3;
+  Author  Author = 4;
+  int32   Status = 5;
+  int64   Ctime = 6;
+  int64   Utime = 7;
+}
+
+message Author{
+  int64     ID = 1;
+  string    Name = 2;
+}
+
+service ArticleService {
+  rpc GetAuthorArticle(GetAuthorArticleRequest) returns (GetAuthorArticleResponse);
+  rpc ListSelf(ListSelfRequest) returns (ListSelfResponse);
+
+  rpc Save(SaveRequest) returns (SaveResponse);
+  rpc Publish(PublishRequest) returns (PublishResponse);
+
+  rpc Withdraw(WithdrawRequest) returns (WithdrawResponse);
+
+  rpc GetPublishedByID(GetPublishedByIDRequest) returns (GetPublishedByIDResponse);
+  rpc GetPublishedByIDS(GetPublishedByIDSRequest) returns (GetPublishedByIDSResponse);
+}
+
+message GetAuthorArticleRequest{
+  int64 uid = 1;
+  int64 aid = 2;
+}
+
+message GetAuthorArticleResponse{
+  article data = 1;
+}
+
+message ListSelfRequest{
+  int64 uid = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+}
+
+message ListSelfResponse{
+  repeated article data = 1;
+}
+
+message SaveRequest{
+  article data = 1;
+}
+
+message SaveResponse{
+}
+
+message PublishRequest{
+  article data = 1;
+}
+
+message PublishResponse{
+}
+
+message WithdrawRequest{
+  article data = 1;
+}
+
+message WithdrawResponse{
+}
+
+message GetPublishedByIDRequest{
+  int64 aid = 1;
+  int64 uid = 2; // 计划用于阅读相关的审计日志，暂时没用到
+}
+
+message GetPublishedByIDResponse{
+  article data = 1;
+}
+
+message GetPublishedByIDSRequest{
+  repeated int64 aids = 1;
+}
+
+message GetPublishedByIDSResponse{
+  repeated article data = 1;
+}
+

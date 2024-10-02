@@ -14,11 +14,13 @@ func InitApp() *App {
 		ioc.InitEtcdClient,
 		ioc.InitUserClient,
 		ioc.InitSSOClient,
+		ioc.InitArticleClient,
 		ioc.NewJWTHandler,
 		ioc.InitGinServer,
 
 		web.NewUserHandler,
 		web.NewSSOHandler,
+		web.NewArticleHandler,
 
 		wire.Struct(new(App), "*"),
 	)

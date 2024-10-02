@@ -3,8 +3,6 @@ syntax = "proto3";
 package sso.v1;
 option go_package="sso/v1;ssov1";
 
-import "common/common.proto";
-
 service AuthService {
   rpc BindTotp (BindTotpRequest) returns (BindTotpResponse);
   rpc Register (RegisterRequest) returns (RegisterResponse);

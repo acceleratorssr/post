@@ -1,8 +1,6 @@
 package web
 
 import (
-	"context"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	ssov1 "post/api/proto/gen/sso/v1"
 	userv1 "post/api/proto/gen/user/v1"
@@ -30,7 +28,7 @@ type RegisterResp struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func (u *UserHandler) RegisterRoutes(ctx context.Context, engine *gin.Engine) {
+func (u *UserHandler) RegisterRoutes(engine *gin.Engine, mw gin.HandlerFunc) {
 	userGroup := engine.Group("/user")
 	userGroup.POST("/bind2FA", gin_ex.WrapWithReq[Bind2FAReq](u.Bind2FA))
 	userGroup.POST("/register", u.Register)
@@ -39,8 +37,7 @@ func (u *UserHandler) RegisterRoutes(ctx context.Context, engine *gin.Engine) {
 func (u *UserHandler) Register(ctx *gin.Context) {
 	var req RegisterReq
 	if err := ctx.Bind(&req); err != nil {
-		err = fmt.Errorf("解析请求参数失败%w", err)
-		gin_ex.FailWithMessage(ctx, gin_ex.ErrSystem, err.Error())
+		gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, err.Error())
 		return
 	}
 
@@ -55,11 +52,11 @@ func (u *UserHandler) Register(ctx *gin.Context) {
 		Code: req.Code,
 	})
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.ErrSystem, err.Error())
+		gin_ex.FailWithMessage(ctx, gin_ex.System, err.Error())
 		return
 	}
 
-	gin_ex.OK(ctx, RegisterResp{
+	gin_ex.OKWithDataAndMsg(ctx, RegisterResp{
 		AccessToken:  user.GetAccessToken(),
 		RefreshToken: user.GetRefreshToken(),
 	}, "注册成功")
@@ -73,7 +70,7 @@ func (u *UserHandler) Bind2FA(ctx *gin.Context, req Bind2FAReq) (*gin_ex.Respons
 	return &gin_ex.Response{
 		Data: totp.QRUrl,
 		Msg:  "请扫描二维码启用2FA，有效期为10分钟",
-		Code: gin_ex.Success,
+		Code: gin_ex.OK,
 	}, nil
 }
 

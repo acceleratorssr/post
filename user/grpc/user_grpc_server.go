@@ -2,7 +2,11 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gorm.io/gorm"
 	ssov1 "post/api/proto/gen/sso/v1"
 	userv1 "post/api/proto/gen/user/v1"
 	"post/user/domain"
@@ -48,7 +52,10 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.Crea
 func (u *UserServiceServer) GetUserInfoByUsername(ctx context.Context, request *userv1.GetUserInfoByUsernameRequest) (*userv1.GetUserInfoByUsernameResponse, error) {
 	data, err := u.svc.GetUserInfoByUsername(ctx, request.Username)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Errorf(codes.NotFound, "用户不存在")
+		}
+		return nil, status.Errorf(codes.Unknown, "未知错误")
 	}
 	return &userv1.GetUserInfoByUsernameResponse{
 		User: u.ToDTO(data),
@@ -56,7 +63,9 @@ func (u *UserServiceServer) GetUserInfoByUsername(ctx context.Context, request *
 }
 
 func (u *UserServiceServer) UpdateUser(ctx context.Context, request *userv1.UpdateUserRequest) (*userv1.UpdateUserResponse, error) {
-	err := u.svc.UpdateUser(ctx, u.ToDomain(request.GetUser()))
+	err := u.svc.UpdateUser(ctx, &domain.UserInfo{
+		Nickname: request.GetUserInfo().GetNickname(),
+	})
 	if err != nil {
 		return nil, err
 	}

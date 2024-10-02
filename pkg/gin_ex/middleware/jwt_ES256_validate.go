@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"post/pkg/gin_ex"
 	"post/sso/domain"
 	"strings"
 )
@@ -47,6 +48,7 @@ func (j *Jwt) Build() gin.HandlerFunc {
 		token := ctx.GetHeader("Authorization")
 		tokens := strings.Split(token, " ")
 		if len(tokens) != 2 {
+			gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, "token格式错误")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -54,12 +56,16 @@ func (j *Jwt) Build() gin.HandlerFunc {
 		claims, err := j.validateToken(ctx, tokens[1])
 		if err != nil {
 			// 部署到k8s内时，直接json格式日志到stdout即可；
+			gin_ex.FailWithMessage(ctx, gin_ex.Unauthenticated, "请重新登录")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
+		// userClaims 内的数据 ---
 		ctx.Set("username", claims.Username)
 		ctx.Set("nickname", claims.NickName)
+		// ---
+
 		ctx.Set("token", tokens[1]) // 懒得二次处理，所以此处暂时放到ctx中
 		//ctx.Set("userAgent", ctx.Request.UserAgent())
 

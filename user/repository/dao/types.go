@@ -8,3 +8,8 @@ type User struct {
 	Utime int64
 	Ctime int64
 }
+
+// UserInfo 可变用户信息
+type UserInfo struct {
+	Nickname string
+}

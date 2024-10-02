@@ -9,7 +9,7 @@ import (
 type UserService interface {
 	CreateUser(ctx context.Context, user *domain.User) error
 	GetUserInfoByUsername(ctx context.Context, username string) (*domain.User, error)
-	UpdateUser(ctx context.Context, user *domain.User) error
+	UpdateUser(ctx context.Context, userInfo *domain.UserInfo) error
 }
 
 type userService struct {
@@ -33,6 +33,6 @@ func (u *userService) GetUserInfoByUsername(ctx context.Context, username string
 }
 
 // UpdateUser 更新用户密码或昵称
-func (u *userService) UpdateUser(ctx context.Context, user *domain.User) error {
-	return u.userRepository.Update(ctx, user)
+func (u *userService) UpdateUser(ctx context.Context, userInfo *domain.UserInfo) error {
+	return u.userRepository.Update(ctx, userInfo)
 }

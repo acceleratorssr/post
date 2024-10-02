@@ -8,8 +8,8 @@ import (
 )
 
 func InitGrpcSSOServer(sso *grpc2.AuthServiceServer) *grpc_ex.Server {
-	interceptor := limit.NewInterceptorBuilder()
-	server := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.BuildServerInterceptor()))
+	limitInterceptor := limit.NewInterceptorBuilder()
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(limitInterceptor.BuildServerInterceptor()))
 	sso.RegisterServer(server)
 
 	port := "9203"

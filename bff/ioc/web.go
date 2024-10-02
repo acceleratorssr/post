@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"context"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
@@ -13,7 +14,9 @@ import (
 )
 
 func InitGinServer(l logger.Logger, jwt *Jwt,
-	user *web.UserHandler, sso *web.SSOHandler) *gin_ex.Server {
+	user *web.UserHandler, sso *web.SSOHandler,
+	article *web.ArticleHandler) *gin_ex.Server {
+
 	engine := gin.Default()
 	gin_ex.InitCounter(prometheus.CounterOpts{
 		Namespace: "garden",
@@ -26,11 +29,15 @@ func InitGinServer(l logger.Logger, jwt *Jwt,
 	jwt.InitJwtValidateToken(ctx)
 	cancel()
 
-	engine.Use()
+	mw := []gin.HandlerFunc{
+		corsHdl(),
+	}
+	engine.Use(mw...)
 
 	jwtAOP := middleware.NewJwt(jwt.publicKey).Build()
-	user.RegisterRoutes(ctx, engine)
+	user.RegisterRoutes(engine, jwtAOP)
 	sso.RegisterRoutes(engine, jwtAOP)
+	article.RegisterRoutes(engine, jwtAOP)
 
 	addr := viper.GetString("http.addr")
 
@@ -38,4 +45,16 @@ func InitGinServer(l logger.Logger, jwt *Jwt,
 		Engine: engine,
 		Addr:   addr,
 	}
+}
+
+func corsHdl() gin.HandlerFunc {
+	return cors.New(cors.Config{
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Authorization"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+
+		AllowOrigins: []string{"http://127.0.0.1"},
+		AllowMethods: []string{"GET", "POST"},
+	})
 }
