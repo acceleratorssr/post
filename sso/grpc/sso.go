@@ -2,9 +2,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -46,12 +43,12 @@ func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTot
 
 	key, url, err := a.GenTotpSecret(a.issuer, request.GetUsername())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO TOTP绑定失败: %s", err))
+		return nil, status.Errorf(codes.Internal, "SSO TOTP绑定失败: %s", err)
 	}
 
 	err = a.cache.SetString(ctx, request.GetUsername(), key, 10*time.Minute)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 缓存用户绑定关系失败: %s", err))
+		return nil, status.Errorf(codes.Internal, "SSO 缓存用户绑定关系失败: %s", err)
 	}
 
 	return &ssov1.BindTotpResponse{
@@ -64,9 +61,9 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	now := time.Now().UnixMilli()
 	secretKey, err := a.cache.GetString(ctx, request.GetUserInfo().GetUsername())
 	if err == redis.Nil {
-		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO 绑定密钥超时，请重新注册: %s", err))
+		return nil, status.Errorf(codes.Unauthenticated, "SSO 绑定密钥超时，请重新注册: %s", err)
 	} else if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 获取用户绑定关系失败: %s", err))
+		return nil, status.Errorf(codes.Internal, "SSO 获取用户绑定关系失败: %s", err)
 	}
 
 	if !a.validateTOTP(secretKey, request.GetCode()) {
@@ -83,24 +80,23 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	}
 	err = a.svc.SaveUser(ctx, user, now)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 保存用户信息失败: %s", err))
+		return nil, status.Errorf(codes.Internal, "SSO 保存用户信息失败: %s", err)
 	}
 
 	accessToken, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
 		UID:      user.UID, // 以 sso 的uid为用户的id标识
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
-		Ctime:    now,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成 access token 失败: %s", err))
+		return nil, status.Errorf(codes.Internal, "SSO 生成 access token 失败: %s", err)
 	}
 
 	refreshToken, err := a.jwtSvc.GenerateRefreshToken(ctx, &domain.JwtPayload{
-		Ctime: now,
+		UID: user.UID,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成 refresh token 失败: %s", err))
+		return nil, status.Errorf(codes.Internal, "SSO 生成 refresh token 失败: %s", err)
 	}
 
 	return &ssov1.RegisterResponse{
@@ -109,21 +105,15 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	}, nil
 }
 
+// Logout 已在 web jwtAOP 校验token
 func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutRequest) (*ssov1.LogoutResponse, error) {
-	handleToken := func(tokenStr string, maxExpires int64) error {
-		token, err := a.jwtSvc.ValidateToken(ctx, tokenStr)
-		if err != nil {
-			if errors.Is(err, jwt.ErrTokenExpired) {
-				return nil
-			}
-			return status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO token 验证失败: %v", err))
-		}
+	handleToken := func(tokenStr string) error {
 		return a.cache.SetString(ctx, tokenStr, "",
-			time.Duration(max(0, maxExpires-(time.Now().UnixMilli()-token.Ctime))))
+			time.Duration(max(0, request.ExpiredAt-time.Now().Unix())))
 	}
 
-	if err := handleToken(request.GetRefreshToken(), a.info.Config.Jwt.LongExpires); err != nil {
-		return nil, err
+	if err := handleToken(request.GetRefreshToken()); err != nil {
+		return nil, status.Errorf(codes.Internal, "SSO 登出失败: %s", err)
 	}
 
 	return &ssov1.LogoutResponse{}, nil
@@ -133,17 +123,16 @@ func (a *AuthServiceServer) Logout(ctx context.Context, request *ssov1.LogoutReq
 func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.RefreshTokenRequest) (*ssov1.RefreshTokenResponse, error) {
 	_, err := a.cache.GetString(ctx, request.GetRefreshToken())
 	if err == nil {
-		return nil, status.Errorf(codes.Unauthenticated, fmt.Sprintf("SSO 长token已被注销: %v", err))
+		return nil, status.Errorf(codes.Unauthenticated, "SSO 长token已被注销")
 	}
 
 	token, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
 		UID:      request.GetUserInfo().GetUid(),
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
-		Ctime:    time.Now().UnixMilli(),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成短token失败: %v", err))
+		return nil, status.Errorf(codes.Internal, "SSO 生成短token失败: %v", err)
 	}
 
 	return &ssov1.RefreshTokenResponse{
@@ -173,18 +162,18 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 	}
 
 	jwtPayload := &domain.JwtPayload{
-		UID:      user.UID,
-		Username: user.Username,
-		NickName: user.Nickname,
-		Ctime:    time.Now().UnixMilli(),
-	}
-	accessToken, err := a.jwtSvc.GenerateAccessToken(ctx, jwtPayload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成短token失败: %v", err))
+		UID: user.UID,
 	}
 	refreshToken, err := a.jwtSvc.GenerateRefreshToken(ctx, jwtPayload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 生成长token失败: %v", err))
+		return nil, status.Errorf(codes.Internal, "SSO 生成长token失败: %v", err)
+	}
+
+	jwtPayload.Username = user.Username
+	jwtPayload.NickName = user.Nickname
+	accessToken, err := a.jwtSvc.GenerateAccessToken(ctx, jwtPayload)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "SSO 生成短token失败: %v", err)
 	}
 
 	return &ssov1.LoginResponse{

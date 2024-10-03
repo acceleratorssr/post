@@ -37,7 +37,7 @@ func (b *BatchKafkaConsumer) Start(topic string) error {
 	return err
 }
 func (b *BatchKafkaConsumer) Consume(msg []*sarama.ConsumerMessage, t []ReadEvent) error {
-	artsID := make([]int64, 0, len(t))
+	artsID := make([]uint64, 0, len(t))
 	for _, v := range t {
 		artsID = append(artsID, v.Aid)
 	}

@@ -18,13 +18,13 @@ func NewGORMArticleLikeDao(db *gorm.DB) ArticleLikeDao {
 }
 
 // IncrReadCountMany todo 考虑到可以提前合并ObjIDs，在计数时可以直接+n
-func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error {
+func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, objType string, objIDs []uint64) error {
 	now := time.Now().UnixMilli()
-	likes := make([]Like, 0, len(ObjIDs))
-	for i := 0; i < len(ObjIDs); i++ {
+	likes := make([]Like, 0, len(objIDs))
+	for i := 0; i < len(objIDs); i++ {
 		likes = append(likes, Like{
-			ObjID:     ObjIDs[i],
-			ObjType:   ObjType,
+			ObjID:     objIDs[i],
+			ObjType:   objType,
 			ViewCount: 1,
 			Ctime:     now,
 			Utime:     now,
@@ -56,12 +56,12 @@ func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, ObjType st
 			"view_count": gorm.Expr("view_count + ?", 1),
 			"utime":      time.Now().UnixMilli(),
 		}),
-	}).CreateInBatches(likes, len(ObjIDs))
+	}).CreateInBatches(likes, len(objIDs))
 	// todo 怎么更新缓存？
 	return tx.Error
 }
 
-func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType string, ObjID, uid int64) error {
+func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, objType string, objID, uid uint64) error {
 	now := time.Now().UnixMilli()
 
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -71,8 +71,8 @@ func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType str
 				"utime":  time.Now().UnixMilli(),
 			}),
 		}).Create(&UserGiveCollect{
-			ObjID:   ObjID,
-			ObjType: ObjType,
+			ObjID:   objID,
+			ObjType: objType,
 			Uid:     uid,
 			Ctime:   now,
 			Utime:   now,
@@ -87,8 +87,8 @@ func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType str
 				"utime":         time.Now().UnixMilli(),
 			}),
 		}).Create(&Like{
-			ObjID:        ObjID,
-			ObjType:      ObjType,
+			ObjID:        objID,
+			ObjType:      objType,
 			CollectCount: 1,
 			Ctime:        now,
 			Utime:        now,
@@ -96,11 +96,11 @@ func (gad *GORMArticleLikeDao) InsertCollection(ctx context.Context, ObjType str
 	})
 }
 
-func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, id int64, uid int64) error {
+func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, objID, uid uint64) error {
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 此处where的顺序可以不用管，mysql会自动调整的
-		err := tx.Model(&Like{}).Where("obj_id = ? and obj_type = ?", id, objType).
+		err := tx.Model(&Like{}).Where("obj_id = ? and obj_type = ?", objID, objType).
 			Updates(map[string]any{
 				"like_count": gorm.Expr("like_count - ?", 1),
 				"utime":      now,
@@ -109,7 +109,7 @@ func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, i
 			return err
 		}
 
-		return tx.Model(&UserGiveLike{}).Where("obj_id = ? and obj_type = ? and uid = ?", id, objType, uid).
+		return tx.Model(&UserGiveLike{}).Where("obj_id = ? and obj_type = ? and uid = ?", objID, objType, uid).
 			Updates(map[string]any{
 				"status": 1,
 				"utime":  now,
@@ -117,7 +117,7 @@ func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, i
 	})
 }
 
-func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, id int64, uid int64) error {
+func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, objID, uid uint64) error {
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 前端校验重复点赞，暂时此处不做校验了
@@ -127,7 +127,7 @@ func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, i
 				"utime":  time.Now().UnixMilli(),
 			}),
 		}).Create(&UserGiveLike{ // 用户点赞表
-			ObjID:   id,
+			ObjID:   objID,
 			ObjType: objType,
 			Uid:     uid,
 			Ctime:   now,
@@ -143,7 +143,7 @@ func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, i
 				"utime":      time.Now().UnixMilli(),
 			}),
 		}).Create(&Like{
-			ObjID:     id,
+			ObjID:     objID,
 			ObjType:   objType,
 			LikeCount: 1,
 			Ctime:     now,
@@ -152,7 +152,7 @@ func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, i
 	})
 }
 
-func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
+func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, objType string, objID uint64) error {
 	// 这两种分别是one和many，但不考虑insert的情况
 	//return gad.db.WithContext(ctx).Where("obj_id = ? and obj_type = ?", ObjID, ObjType).
 	//	Update("view_count", gorm_ex.Expr("view_count + ?", 1)).Error
@@ -172,8 +172,8 @@ func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string
 		}),
 		Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}},
 	}).Create(&Like{
-		ObjID:     ObjID,
-		ObjType:   ObjType,
+		ObjID:     objID,
+		ObjType:   objType,
 		ViewCount: 1,
 		Ctime:     now,
 		Utime:     now,
@@ -185,8 +185,8 @@ func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, ObjType string
 	//return gad.db.WithContext(ctx).Exec(sql, ObjID, ObjType, 1).Error
 }
 
-func (gad *GORMArticleLikeDao) GetPublishedByBatch(ctx context.Context, ObjType string, offset, limit int, now int64) ([]Like, error) {
+func (gad *GORMArticleLikeDao) GetPublishedByBatch(ctx context.Context, objType string, offset, limit int, now int64) ([]Like, error) {
 	var res []Like
-	return res, gad.db.WithContext(ctx).Where("obj_type = ? and ctime < ?", ObjType, now).
+	return res, gad.db.WithContext(ctx).Where("obj_type = ? and ctime < ?", objType, now).
 		Offset(offset).Limit(limit).Find(&res).Error
 }

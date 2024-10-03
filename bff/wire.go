@@ -14,6 +14,7 @@ func InitApp() *App {
 		ioc.InitEtcdClient,
 		ioc.InitUserClient,
 		ioc.InitSSOClient,
+		ioc.InitInteractiveClient,
 		ioc.InitArticleClient,
 		ioc.NewJWTHandler,
 		ioc.InitGinServer,

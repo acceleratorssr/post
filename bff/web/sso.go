@@ -31,7 +31,7 @@ func (s *SSOHandler) RegisterRoutes(engine *gin.Engine, mw gin.HandlerFunc) {
 	ssoGroup.POST("/login", s.Login)
 
 	ssoGroup.POST("/refresh", mw, gin_ex.WrapWithReq[RefreshTokenReq](s.Refresh)) // 由 web jwtAOP 检查token
-	ssoGroup.POST("/logout", mw, gin_ex.WrapWithReq[LoginReq](s.Logout))
+	ssoGroup.POST("/logout", mw, gin_ex.WrapNilReq(s.Logout))
 }
 
 func (s *SSOHandler) Login(ctx *gin.Context) {
@@ -58,10 +58,12 @@ func (s *SSOHandler) Login(ctx *gin.Context) {
 	})
 }
 
+// Refresh 安全性：考虑同一token连续n次请求刷新，触发2fa验证
 func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_ex.Response, error) {
 	token, err := s.sso.RefreshToken(ctx, &ssov1.RefreshTokenRequest{
 		RefreshToken: ctx.Value("token").(string),
 		UserInfo: &ssov1.UserInfo{
+			Uid:      ctx.Value("uid").(uint64),
 			Username: request.Username,
 			Nickname: request.Nickname,
 		},
@@ -79,8 +81,20 @@ func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_ex
 	}, nil
 }
 
-func (s *SSOHandler) Logout(ctx *gin.Context, request LoginReq) (*gin_ex.Response, error) {
+func (s *SSOHandler) Logout(ctx *gin.Context) (*gin_ex.Response, error) {
 	_, err := s.sso.Logout(ctx, &ssov1.LogoutRequest{
+		ExpiredAt:    ctx.Value("x_exp").(int64),
+		RefreshToken: ctx.Value("x_token").(string),
+	})
+	if err != nil {
+		return &gin_ex.Response{
+			Code: gin_ex.Unauthenticated,
+			Msg:  "退出失败",
+		}, err
+	}
+
+	_, err = s.sso.Logout(ctx, &ssov1.LogoutRequest{
+		ExpiredAt:    ctx.Value("exp").(int64),
 		RefreshToken: ctx.Value("token").(string),
 	})
 	if err != nil {

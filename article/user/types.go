@@ -1,6 +1,6 @@
 package user
 
 type ClaimsUser struct {
-	Id   int64
+	Id   uint64
 	Name string
 }

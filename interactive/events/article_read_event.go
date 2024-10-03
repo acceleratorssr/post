@@ -1,7 +1,7 @@
 package events
 
 type ReadEvent struct {
-	ID  int64
-	Uid int64
-	Aid int64
+	ID  uint64
+	Uid uint64
+	Aid uint64
 }

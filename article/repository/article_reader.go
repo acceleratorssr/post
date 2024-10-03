@@ -9,9 +9,9 @@ import (
 
 type ArticleReaderRepository interface {
 	// Save 包含新建或者更新
-	Save(ctx context.Context, art *domain.Article) (int64, error)
+	Save(ctx context.Context, art *domain.Article) (uint64, error)
 	Sync(ctx context.Context, art *domain.Article) error
-	GetPublishedByID(ctx context.Context, id int64) (*domain.Article, error)
+	GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error)
 }
 
 type articleReaderRepository struct {
@@ -24,7 +24,7 @@ func NewArticleReaderRepository(dao dao.ArticleDao) ArticleReaderRepository {
 	return &articleReaderRepository{dao: dao}
 }
 
-func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id int64) (*domain.Article, error) {
+func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error) {
 	// 注意，如果帖子数据在OSS上时，需要从前端直接获取，因为考虑到内容不算太敏感
 	art, err := a.dao.GetPublishedByID(ctx, id)
 	if err != nil {
@@ -36,7 +36,7 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id int64
 	return temp[0], err
 }
 
-func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) (int64, error) {
+func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) (uint64, error) {
 	return a.dao.InsertReader(ctx, ToReaderEntity(art))
 }
 

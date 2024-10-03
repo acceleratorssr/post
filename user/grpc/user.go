@@ -40,10 +40,10 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.Crea
 
 	user := u.ToDomain(request.GetUser())
 	user.UID = resp.Uid
-	err = u.svc.CreateUser(ctx, user)
+	err = u.svc.CreateUser(ctx, user) // todo 考虑异步化
 
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "用户注册成功，保存信息失败")
 	}
 	return &userv1.CreateUserResponse{
 		AccessToken:  resp.AccessToken,
@@ -57,7 +57,7 @@ func (u *UserServiceServer) GetUserInfoByUsername(ctx context.Context, request *
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, status.Errorf(codes.NotFound, "用户不存在")
 		}
-		return nil, status.Errorf(codes.Unknown, "未知错误")
+		return nil, status.Errorf(codes.Unknown, "获取信息失败: %v", err)
 	}
 	return &userv1.GetUserInfoByUsernameResponse{
 		User: u.ToDTO(data),
@@ -69,7 +69,7 @@ func (u *UserServiceServer) UpdateUser(ctx context.Context, request *userv1.Upda
 		Nickname: request.GetUserInfo().GetNickname(),
 	})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "SSO 生成短token失败: %v", err)
 	}
 	return &userv1.UpdateUserResponse{}, nil
 }

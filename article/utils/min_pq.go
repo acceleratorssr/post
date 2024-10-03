@@ -1,7 +1,7 @@
 package utils
 
 type Like struct {
-	ID    int64
+	ID    uint64
 	Score float64
 }
 
@@ -15,7 +15,7 @@ func NewMinHeap() *MinHeap {
 	}
 }
 
-func (h *MinHeap) Insert(id int64, val float64) {
+func (h *MinHeap) Insert(id uint64, val float64) {
 	h.heap = append(h.heap, Like{ID: id, Score: val})
 	h.heapifyUp(len(h.heap) - 1)
 }

@@ -3,7 +3,7 @@ package article.v1;
 option go_package="article/v1;articlev1";
 
 message article{
-  int64   ID = 1;
+  uint64  ID = 1;
   string  Title = 2;
   string  Content = 3;
   Author  Author = 4;
@@ -13,7 +13,7 @@ message article{
 }
 
 message Author{
-  int64     ID = 1;
+  uint64    ID = 1;
   string    Name = 2;
 }
 
@@ -31,8 +31,8 @@ service ArticleService {
 }
 
 message GetAuthorArticleRequest{
-  int64 uid = 1;
-  int64 aid = 2;
+  uint64 uid = 1;
+  uint64 aid = 2;
 }
 
 message GetAuthorArticleResponse{
@@ -40,9 +40,9 @@ message GetAuthorArticleResponse{
 }
 
 message ListSelfRequest{
-  int64 uid = 1;
-  int32 offset = 2;
-  int32 limit = 3;
+  uint64 uid = 1;
+  int32  offset = 2;
+  int32  limit = 3;
 }
 
 message ListSelfResponse{
@@ -71,8 +71,8 @@ message WithdrawResponse{
 }
 
 message GetPublishedByIDRequest{
-  int64 aid = 1;
-  int64 uid = 2; // 计划用于阅读相关的审计日志，暂时没用到
+  uint64 aid = 1;
+  uint64 uid = 2; // 计划用于阅读相关的审计日志，暂时没用到
 }
 
 message GetPublishedByIDResponse{
@@ -80,7 +80,7 @@ message GetPublishedByIDResponse{
 }
 
 message GetPublishedByIDSRequest{
-  repeated int64 aids = 1;
+  repeated uint64 aids = 1;
 }
 
 message GetPublishedByIDSResponse{

@@ -8,16 +8,16 @@ import (
 )
 
 type ArticleService interface {
-	Save(ctx context.Context, art *domain.Article) (int64, error)
-	Publish(ctx context.Context, art *domain.Article) (int64, error)
+	Save(ctx context.Context, art *domain.Article) (uint64, error)
+	Publish(ctx context.Context, art *domain.Article) (uint64, error)
 	Withdraw(ctx context.Context, art *domain.Article) error
 
-	List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error)
+	List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error)
 
-	GetAuthorModelsByID(ctx context.Context, id int64) (*domain.Article, error)
+	GetAuthorModelsByID(ctx context.Context, id uint64) (*domain.Article, error)
 
-	GetPublishedByID(ctx context.Context, id, uid int64) (*domain.Article, error)
-	GetPublishedByIDS(ctx context.Context, ids []int64) ([]domain.Article, error)
+	GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error)
+	GetPublishedByIDS(ctx context.Context, ids []uint64) ([]domain.Article, error)
 }
 
 type articleService struct {
@@ -66,11 +66,11 @@ func NewArticleService(author repository.ArticleAuthorRepository,
 	}
 }
 
-func (svc *articleService) GetPublishedByIDS(ctx context.Context, ids []int64) ([]domain.Article, error) {
+func (svc *articleService) GetPublishedByIDS(ctx context.Context, ids []uint64) ([]domain.Article, error) {
 	panic("implement me")
 }
 
-func (svc *articleService) GetPublishedByID(ctx context.Context, id, uid int64) (*domain.Article, error) {
+func (svc *articleService) GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error) {
 	art, err := svc.reader.GetPublishedByID(ctx, id)
 	if err == nil {
 		go func() {
@@ -91,18 +91,18 @@ func (svc *articleService) GetPublishedByID(ctx context.Context, id, uid int64) 
 	return art, err
 }
 
-func (svc *articleService) GetAuthorModelsByID(ctx context.Context, id int64) (*domain.Article, error) {
+func (svc *articleService) GetAuthorModelsByID(ctx context.Context, id uint64) (*domain.Article, error) {
 	return svc.author.GetByID(ctx, id)
 }
 
-func (svc *articleService) List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error) {
+func (svc *articleService) List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error) {
 	return svc.author.List(ctx, uid, limit, offset)
 }
 
 // Save Author表保存
 // 此时reader的对应数据一定是不存在或者是过期状态
 // 草稿态
-func (svc *articleService) Save(ctx context.Context, art *domain.Article) (int64, error) {
+func (svc *articleService) Save(ctx context.Context, art *domain.Article) (uint64, error) {
 	art.Status = domain.TypeSaved
 	if art.ID != 0 {
 		return art.ID, svc.author.Update(ctx, art)
@@ -112,7 +112,7 @@ func (svc *articleService) Save(ctx context.Context, art *domain.Article) (int64
 
 // Publish
 // 草稿态 => 发布态
-func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (int64, error) {
+func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (uint64, error) {
 	var err error
 	art.Status = domain.TypePublished
 	if art.ID != 0 {
@@ -128,7 +128,7 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (in
 		return 0, err
 	}
 	// 线上库
-	var id int64
+	var id uint64
 	for i := 0; i < 5; i++ { //无脑重试
 		id, err = svc.reader.Save(ctx, art)
 		if err == nil {

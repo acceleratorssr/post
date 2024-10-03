@@ -19,13 +19,13 @@ func NewGORMArticleDao(db *gorm.DB) ArticleDao {
 	}
 }
 
-func (gad *GORMArticleDao) GetPublishedByID(ctx context.Context, id int64) (*ArticleReader, error) {
+func (gad *GORMArticleDao) GetPublishedByID(ctx context.Context, id uint64) (*ArticleReader, error) {
 	var art ArticleReader
 	err := gad.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
 	return &art, err
 }
 
-func (gad *GORMArticleDao) GetByID(ctx context.Context, id int64) (*ArticleAuthor, error) {
+func (gad *GORMArticleDao) GetByID(ctx context.Context, id uint64) (*ArticleAuthor, error) {
 	var art ArticleAuthor
 	err := gad.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
 	return &art, err
@@ -33,7 +33,7 @@ func (gad *GORMArticleDao) GetByID(ctx context.Context, id int64) (*ArticleAutho
 
 // GetListByAuthor 经典order加索引，此处authorid和utime可建立联合索引
 // TODO sql性能优化
-func (gad *GORMArticleDao) GetListByAuthor(ctx context.Context, uid int64, limit int, offset int) ([]ArticleAuthor, error) {
+func (gad *GORMArticleDao) GetListByAuthor(ctx context.Context, uid uint64, limit int, offset int) ([]ArticleAuthor, error) {
 	var arts []ArticleAuthor
 	err := gad.db.WithContext(ctx).
 		Where("authorid = ?", uid).
@@ -48,14 +48,14 @@ func (gad *GORMArticleDao) GetListByAuthor(ctx context.Context, uid int64, limit
 	return arts, err
 }
 
-func (gad *GORMArticleDao) Insert(ctx context.Context, art *ArticleAuthor) (int64, error) {
+func (gad *GORMArticleDao) Insert(ctx context.Context, art *ArticleAuthor) (uint64, error) {
 	art.Ctime = time.Now().UnixMilli()
 	art.Utime = art.Ctime
 	err := gad.db.WithContext(ctx).Create(art).Error
 	return art.Id, err
 }
 
-func (gad *GORMArticleDao) InsertReader(ctx context.Context, art *ArticleReader) (int64, error) {
+func (gad *GORMArticleDao) InsertReader(ctx context.Context, art *ArticleReader) (uint64, error) {
 	art.Ctime = time.Now().UnixMilli()
 	art.Utime = art.Ctime
 	err := gad.db.WithContext(ctx).Create(art).Error

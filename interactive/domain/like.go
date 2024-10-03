@@ -1,7 +1,7 @@
 package domain
 
 type Like struct {
-	ID        int64
+	ID        uint64
 	LikeCount int64
 	Ctime     int64
 }

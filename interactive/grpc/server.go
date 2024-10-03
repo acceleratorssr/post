@@ -13,7 +13,6 @@ import (
 // LikeServiceServer 将service包装为grpc暴露出去
 // 即此处不考虑调用方
 type LikeServiceServer struct {
-	// 继承
 	intrv1.UnimplementedLikeServiceServer
 	svc service.LikeService
 }
@@ -32,66 +31,51 @@ func (l *LikeServiceServer) Register(server *grpc.Server) {
 func (l *LikeServiceServer) IncrReadCount(ctx context.Context, request *intrv1.IncrReadCountRequest) (*intrv1.IncrReadCountResponse, error) {
 	err := l.svc.IncrReadCount(ctx, request.GetObjType(), request.GetObjID())
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "interactive 增长阅读数失败: %s", err)
 	}
-	return &intrv1.IncrReadCountResponse{
-		Code:    200,
-		Message: "success",
-	}, nil
+	return &intrv1.IncrReadCountResponse{}, nil
 }
 
 func (l *LikeServiceServer) Like(ctx context.Context, request *intrv1.LikeRequest) (*intrv1.LikeResponse, error) {
 	// 参数校验，有自动生成校验的grpc插件
 	if request.Uid <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "uid must be greater than 0")
+		return nil, status.Error(codes.InvalidArgument, "interactive 用户ID非法")
 	}
 	err := l.svc.Like(ctx, request.GetObjType(), request.GetObjID(), request.GetUid())
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "interactive 点赞失败: %s", err)
 	}
-	return &intrv1.LikeResponse{
-		Code:    200,
-		Message: "success",
-	}, nil
+	return &intrv1.LikeResponse{}, nil
 }
 
 func (l *LikeServiceServer) UnLike(ctx context.Context, request *intrv1.UnLikeRequest) (*intrv1.UnLikeResponse, error) {
 	err := l.svc.UnLike(ctx, request.GetObjType(), request.GetObjID(), request.GetUid())
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "interactive 取消点赞失败: %s", err)
 	}
-	return &intrv1.UnLikeResponse{
-		Code:    200,
-		Message: "success",
-	}, nil
+	return &intrv1.UnLikeResponse{}, nil
 }
 
 func (l *LikeServiceServer) Collect(ctx context.Context, request *intrv1.CollectRequest) (*intrv1.CollectResponse, error) {
 	err := l.svc.Collect(ctx, request.GetObjType(), request.GetObjID(), request.GetUid())
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "interactive 收藏失败: %s", err)
 	}
-	return &intrv1.CollectResponse{
-		Code:    200,
-		Message: "success",
-	}, nil
+	return &intrv1.CollectResponse{}, nil
 }
 
 func (l *LikeServiceServer) GetListBatchOfLikes(ctx context.Context, request *intrv1.GetListBatchOfLikesRequest) (*intrv1.GetListBatchOfLikesResponse, error) {
 	data, err := l.svc.GetListBatchOfLikes(ctx, request.GetObjType(), int(request.GetOffset()), int(request.GetLimit()), request.GetNow())
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "interactive 获取指定类型的一批数据的点赞数失败: %s", err)
 	}
 	return &intrv1.GetListBatchOfLikesResponse{
-		Code:    200,
-		Message: "success",
-		Data:    l.toDTO(data...),
+		Data: l.toDTO(data...),
 	}, nil
 }
 
 // data transfer object 数据传输对象
 func (l *LikeServiceServer) toDTO(intr ...domain.Like) []*intrv1.Like {
-	//var data []*intrv1.Like 		// 声明写法，为nil
 	data := make([]*intrv1.Like, 0) // 声明并初始化为空切片
 	for _, v := range intr {
 		data = append(data, &intrv1.Like{

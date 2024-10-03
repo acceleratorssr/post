@@ -51,13 +51,13 @@ func (k *KafkaSyncProducer) ProduceReadEvent(ctx context.Context, event *ReadEve
 }
 
 type ReadEvent struct {
-	ID  int64
-	Uid int64
-	Aid int64
+	ID  uint64
+	Uid uint64
+	Aid uint64
 }
 
 type ReadEventMany struct {
-	ID  int64
-	Uid []int64
-	Aid []int64
+	ID  uint64
+	Uid []uint64
+	Aid []uint64
 }

@@ -2,19 +2,18 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"post/interactive/domain"
 	"post/interactive/repository/cache"
 	"post/interactive/repository/dao"
 )
 
 type LikeRepository interface {
-	IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error
-	IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error
+	IncrReadCount(ctx context.Context, ObjType string, ObjID uint64) error
+	IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []uint64) error
 
-	IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
-	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error
-	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid int64) error
+	IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error
+	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error
+	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid uint64) error
 
 	GetListAllOfLikes(ctx context.Context, ObjType string, offset, limit int, now int64) ([]domain.Like, error)
 }
@@ -40,27 +39,27 @@ func (l *likeRepository) GetListAllOfLikes(ctx context.Context, ObjType string, 
 	return l.toDomain(likes...)
 }
 
-func (l *likeRepository) IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []int64) error {
+func (l *likeRepository) IncrReadCountMany(ctx context.Context, ObjType string, ObjIDs []uint64) error {
 	return l.dao.IncrReadCountMany(ctx, ObjType, ObjIDs)
 }
 
-func (l *likeRepository) IncrReadCount(ctx context.Context, ObjType string, ObjID int64) error {
+func (l *likeRepository) IncrReadCount(ctx context.Context, ObjType string, ObjID uint64) error {
 	go func() {
 		err := l.cache.IncrReadCount(ctx, ObjType, ObjID)
 		if err != nil {
-			fmt.Println("incr read count cache error:", err)
+			// log
 			return
 		}
 	}()
 	return l.dao.IncrReadCount(ctx, ObjType, ObjID)
 }
 
-func (l *likeRepository) AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid int64) error {
+func (l *likeRepository) AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid uint64) error {
 	// 收藏夹访问次数比较低频，不加缓存
 	return l.dao.InsertCollection(ctx, ObjType, ObjID, uid)
 }
 
-func (l *likeRepository) IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error {
+func (l *likeRepository) IncrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error {
 	go func() {
 		err := l.dao.InSertLike(ctx, ObjType, ObjID, uid)
 		if err != nil {
@@ -71,7 +70,7 @@ func (l *likeRepository) IncrLikeCount(ctx context.Context, ObjType string, ObjI
 	return l.cache.IncrLikeCount(ctx, ObjType, ObjID)
 }
 
-func (l *likeRepository) DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid int64) error {
+func (l *likeRepository) DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error {
 	go func() {
 		err := l.dao.DeleteLike(ctx, ObjType, ObjID, uid)
 		if err != nil {

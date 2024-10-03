@@ -28,7 +28,7 @@ func (a *ArticleServiceServer) GetAuthorArticle(ctx context.Context, request *ar
 	}
 
 	return &articlev1.GetAuthorArticleResponse{
-		Data: ToProtoArticle([]domain.Article{*article}...)[0],
+		Data: toDTO([]domain.Article{*article}...)[0],
 	}, nil
 }
 
@@ -39,7 +39,7 @@ func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.
 		return nil, status.Errorf(codes.Unknown, "未知错误")
 	}
 	return &articlev1.ListSelfResponse{
-		Data: ToProtoArticle(list...),
+		Data: toDTO(list...),
 	}, nil
 }
 
@@ -84,7 +84,7 @@ func (a *ArticleServiceServer) GetPublishedByID(ctx context.Context, request *ar
 	}
 
 	return &articlev1.GetPublishedByIDResponse{
-		Data: ToProtoArticle(*art)[0],
+		Data: toDTO(*art)[0],
 	}, nil
 }
 
@@ -96,7 +96,7 @@ func (a *ArticleServiceServer) GetPublishedByIDS(ctx context.Context, request *a
 	}
 
 	return &articlev1.GetPublishedByIDSResponse{
-		Data: ToProtoArticle(arts...),
+		Data: toDTO(arts...),
 	}, nil
 }
 
@@ -104,7 +104,7 @@ func (a *ArticleServiceServer) RegisterServer(server *grpc.Server) {
 	articlev1.RegisterArticleServiceServer(server, a)
 }
 
-func ToProtoArticle(articles ...domain.Article) []*articlev1.Article {
+func toDTO(articles ...domain.Article) []*articlev1.Article {
 	var protoArticles []*articlev1.Article
 
 	for _, article := range articles {
@@ -131,10 +131,10 @@ func ToDomainArticle(article *articlev1.Article) *domain.Article {
 			Id:   article.GetAuthor().GetID(),
 			Name: article.GetAuthor().GetName(),
 		},
-		Content: article.GetContent(),
-		Ctime:   article.GetCtime(),
-		Status:  domain.StatusType(article.Status),
 		Title:   article.GetTitle(),
+		Content: article.GetContent(),
+		Status:  domain.StatusType(article.Status),
+		Ctime:   article.GetCtime(),
 		Utime:   article.GetUtime(),
 	}
 }

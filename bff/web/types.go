@@ -10,13 +10,13 @@ type handler interface {
 }
 
 type Req struct {
-	ID      int64  `json:"id"`
+	ID      uint64 `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
 type ReqOnlyWithID struct {
-	ID int64 `json:"id"`
+	ID uint64 `json:"id"`
 }
 
 type ReqList struct {
@@ -25,21 +25,21 @@ type ReqList struct {
 }
 
 type LikeReq struct {
-	ObjID int64 `json:"obj_id"`
-	Liked bool  `json:"liked"`
+	ObjID uint64 `json:"obj_id"`
+	Liked bool   `json:"liked"`
 }
 
 type CollectReq struct {
-	Uid     int64  `json:"uid"`
-	ObjID   int64  `json:"obj_id"`
+	Uid     uint64 `json:"uid"`
+	ObjID   uint64 `json:"obj_id"`
 	ObjType string `json:"obj_type"`
 }
 
 type ArticleResp struct {
-	ID         int64  `json:"id"`
+	ID         uint64 `json:"id"`
 	Title      string `json:"title"`
 	Content    string `json:"content"`
-	AuthorID   int64  `json:"author_id"`
+	AuthorID   uint64 `json:"author_id"`
 	AuthorName string `json:"author_name"`
 	Status     uint8  `json:"status"`
 	Ctime      int64  `json:"ctime"`
@@ -51,7 +51,7 @@ type ArticleResp struct {
 }
 
 // Req 转换为 domain.Article
-func (r Req) toDomain(id int64, name string) *domain.Article {
+func (r Req) toDomain(id uint64, name string) *domain.Article {
 	return &domain.Article{
 		ID:      r.ID,
 		Title:   r.Title,
@@ -63,7 +63,7 @@ func (r Req) toDomain(id int64, name string) *domain.Article {
 	}
 }
 
-func (r ReqOnlyWithID) toDomain(id int64, name string) *domain.Article {
+func (r ReqOnlyWithID) toDomain(id uint64, name string) *domain.Article {
 	return &domain.Article{
 		ID: r.ID,
 		Author: domain.Author{

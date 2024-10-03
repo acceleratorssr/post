@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 func main() {
 	app := InitApp()
 	for _, c := range app.consumers {
@@ -9,6 +11,7 @@ func main() {
 		}
 	}
 	go func() {
+		fmt.Println("migrator start")
 		app.webAdmin.Start()
 	}()
 

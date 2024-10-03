@@ -14,7 +14,7 @@ type RedisArticleCache struct {
 }
 
 type PageCache struct {
-	ID     int64
+	ID     uint64
 	Title  string
 	Status uint8
 	Ctime  int64
@@ -22,12 +22,12 @@ type PageCache struct {
 }
 
 type ArticleCache interface {
-	GetFirstPage(ctx context.Context, id int64) ([]domain.Article, error)
-	SetFirstPage(ctx context.Context, id int64, arts []domain.Article) error
-	DeleteFirstPage(ctx context.Context, id int64) error
+	GetFirstPage(ctx context.Context, id uint64) ([]domain.Article, error)
+	SetFirstPage(ctx context.Context, id uint64, arts []domain.Article) error
+	DeleteFirstPage(ctx context.Context, id uint64) error
 
-	GetArticleDetail(ctx context.Context, id int64) (domain.Article, error)
-	SetArticleDetail(ctx context.Context, id int64, art domain.Article) error
+	GetArticleDetail(ctx context.Context, id uint64) (domain.Article, error)
+	SetArticleDetail(ctx context.Context, id uint64, art domain.Article) error
 }
 
 func NewRedisArticleCache(client redis.Cmdable) ArticleCache {
@@ -36,7 +36,7 @@ func NewRedisArticleCache(client redis.Cmdable) ArticleCache {
 	}
 }
 
-func (r *RedisArticleCache) GetArticleDetail(ctx context.Context, id int64) (domain.Article, error) {
+func (r *RedisArticleCache) GetArticleDetail(ctx context.Context, id uint64) (domain.Article, error) {
 	var art domain.Article
 	cmd, err := r.client.Get(ctx, r.keyArticleDetail(id)).Result()
 	if err != nil {
@@ -56,7 +56,7 @@ func (r *RedisArticleCache) GetArticleDetail(ctx context.Context, id int64) (dom
 	return art, nil
 }
 
-func (r *RedisArticleCache) SetArticleDetail(ctx context.Context, id int64, art domain.Article) error {
+func (r *RedisArticleCache) SetArticleDetail(ctx context.Context, id uint64, art domain.Article) error {
 	val, err := json.Marshal(r.ToPageCache(art))
 	if err != nil {
 		return err
@@ -64,11 +64,11 @@ func (r *RedisArticleCache) SetArticleDetail(ctx context.Context, id int64, art 
 	return r.client.Set(ctx, r.keyArticleDetail(id), val, time.Hour*1).Err()
 }
 
-func (r *RedisArticleCache) keyArticleDetail(id int64) string {
-	return "article_article_detail:" + strconv.FormatInt(id, 10)
+func (r *RedisArticleCache) keyArticleDetail(id uint64) string {
+	return "article_article_detail:" + strconv.FormatUint(id, 10)
 }
 
-func (r *RedisArticleCache) GetFirstPage(ctx context.Context, id int64) ([]domain.Article, error) {
+func (r *RedisArticleCache) GetFirstPage(ctx context.Context, id uint64) ([]domain.Article, error) {
 	var arts []domain.Article
 	cmd, err := r.client.Get(ctx, r.keyFirstPage(id)).Result()
 	if err != nil {
@@ -87,7 +87,7 @@ func (r *RedisArticleCache) GetFirstPage(ctx context.Context, id int64) ([]domai
 	}
 	return arts, nil
 }
-func (r *RedisArticleCache) SetFirstPage(ctx context.Context, id int64, arts []domain.Article) error {
+func (r *RedisArticleCache) SetFirstPage(ctx context.Context, id uint64, arts []domain.Article) error {
 	marshal, err := json.Marshal(r.ToPageCacheMany(arts))
 	if err != nil {
 		return err
@@ -95,10 +95,10 @@ func (r *RedisArticleCache) SetFirstPage(ctx context.Context, id int64, arts []d
 	return r.client.Set(ctx, r.keyFirstPage(id), marshal, time.Hour*1).Err()
 }
 
-func (r *RedisArticleCache) keyFirstPage(id int64) string {
-	return "article_first_page:" + strconv.FormatInt(id, 10)
+func (r *RedisArticleCache) keyFirstPage(id uint64) string {
+	return "article_first_page:" + strconv.FormatUint(id, 10)
 }
-func (r *RedisArticleCache) DeleteFirstPage(ctx context.Context, id int64) error {
+func (r *RedisArticleCache) DeleteFirstPage(ctx context.Context, id uint64) error {
 	return r.client.Del(ctx, r.keyFirstPage(id)).Err()
 }
 

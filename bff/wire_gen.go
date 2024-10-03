@@ -21,7 +21,10 @@ func InitApp() *App {
 	userServiceClient := ioc.InitUserClient(client)
 	userHandler := web.NewUserHandler(userServiceClient, authServiceClient)
 	ssoHandler := web.NewSSOHandler(authServiceClient)
-	server := ioc.InitGinServer(logger, jwt, userHandler, ssoHandler)
+	articleServiceClient := ioc.InitArticleClient(client)
+	likeServiceClient := ioc.InitInteractiveClient(client)
+	articleHandler := web.NewArticleHandler(articleServiceClient, likeServiceClient)
+	server := ioc.InitGinServer(logger, jwt, userHandler, ssoHandler, articleHandler)
 	app := &App{
 		WebServer: server,
 	}

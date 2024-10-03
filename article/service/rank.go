@@ -75,7 +75,7 @@ func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 		offset = offset + len(likes.Data)
 	}
 
-	res := make([]int64, pq.GetLen())
+	res := make([]uint64, pq.GetLen())
 	for i := pq.GetLen() - 1; i >= 0; i-- {
 		v := pq.ExtractMin()
 		res[i] = v.ID
@@ -102,9 +102,9 @@ func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 }
 
 // CountRank 计算排行榜公式（简化为只考虑时间和点赞）：Score = (P - 1) / ((T + 2) ^ G)
-func (svc *BatchRankService) CountRank(ds []domain.Like) ([]int64, []float64) {
+func (svc *BatchRankService) CountRank(ds []domain.Like) ([]uint64, []float64) {
 	now := time.Now().UnixMilli()
-	ids := make([]int64, 0, len(ds))
+	ids := make([]uint64, 0, len(ds))
 	scores := make([]float64, 0, len(ds))
 
 	for _, d := range ds {

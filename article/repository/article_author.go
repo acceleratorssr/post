@@ -8,10 +8,10 @@ import (
 )
 
 type ArticleAuthorRepository interface {
-	Create(ctx context.Context, art *domain.Article) (int64, error)
+	Create(ctx context.Context, art *domain.Article) (uint64, error)
 	Update(ctx context.Context, art *domain.Article) error
-	List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error)
-	GetByID(ctx context.Context, id int64) (*domain.Article, error)
+	List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error)
+	GetByID(ctx context.Context, id uint64) (*domain.Article, error)
 }
 
 type articleAuthorRepository struct {
@@ -26,7 +26,7 @@ func NewArticleAuthorRepository(dao dao.ArticleDao, cache cache.ArticleCache) Ar
 	}
 }
 
-func (a *articleAuthorRepository) GetByID(ctx context.Context, id int64) (*domain.Article, error) {
+func (a *articleAuthorRepository) GetByID(ctx context.Context, id uint64) (*domain.Article, error) {
 	res, err := a.dao.GetByID(ctx, id)
 	if err != nil {
 		return &domain.Article{}, err
@@ -38,7 +38,7 @@ func (a *articleAuthorRepository) GetByID(ctx context.Context, id int64) (*domai
 	}
 	return &art[0], err
 }
-func (a *articleAuthorRepository) List(ctx context.Context, uid int64, limit, offset int) ([]domain.Article, error) {
+func (a *articleAuthorRepository) List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error) {
 	if offset == 0 && limit <= 100 {
 		data, err := a.cache.GetFirstPage(ctx, uid)
 		if err == nil {
@@ -63,7 +63,7 @@ func (a *articleAuthorRepository) List(ctx context.Context, uid int64, limit, of
 	return data, err
 }
 
-func (a *articleAuthorRepository) Create(ctx context.Context, art *domain.Article) (int64, error) {
+func (a *articleAuthorRepository) Create(ctx context.Context, art *domain.Article) (uint64, error) {
 	defer a.cache.DeleteFirstPage(ctx, art.Author.Id)
 	return a.dao.Insert(ctx, ToAuthorEntity(art))
 }

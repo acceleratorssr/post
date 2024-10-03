@@ -67,10 +67,10 @@ func (r *RankRedisCache) SetTopN(ctx context.Context, arts []domain.Article) err
 	}
 	return nil
 }
-func (r *RankRedisCache) keyTopN(ObjType string, ObjID int64) string {
-	return ObjType + "_rank:" + strconv.FormatInt(ObjID, 10)
+func (r *RankRedisCache) keyTopN(ObjType string, ObjID uint64) string {
+	return ObjType + "_rank:" + strconv.FormatUint(ObjID, 10)
 }
 
-func (r *RankRedisCache) keyTopNBrief(ObjType string, ObjID int64) string {
-	return ObjType + "_rank_brief:" + strconv.FormatInt(ObjID, 10)
+func (r *RankRedisCache) keyTopNBrief(ObjType string, ObjID uint64) string {
+	return ObjType + "_rank_brief:" + strconv.FormatUint(ObjID, 10)
 }
