@@ -118,7 +118,7 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (ui
 	if art.ID != 0 {
 		err = svc.author.Update(ctx, art)
 	} else {
-		// 制作库
+		// 草稿库
 		art.ID, err = svc.author.Create(ctx, art)
 		if err != nil {
 			return 0, err

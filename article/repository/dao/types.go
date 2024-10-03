@@ -15,7 +15,7 @@ type ArticleDao interface {
 	GetPublishedByID(ctx context.Context, id uint64) (*ArticleReader, error)
 }
 
-// ArticleAuthor 为ing库，或者说草稿库，制作库
+// ArticleAuthor 为ing库，或者说草稿库
 type ArticleAuthor struct {
 	Id       uint64 `gorm:"primaryKey,autoIncrement"`
 	Title    string `gorm:"size:4096"`

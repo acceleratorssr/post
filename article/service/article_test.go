@@ -116,7 +116,7 @@ func TestArticleService_Publish(t *testing.T) {
 			wantId:  makingID,
 		},
 		{
-			name: "保存到制作库失败", // todo 新建&修改
+			name: "保存到草稿库失败", // todo 新建&修改
 			mock: func(ctrl *gomock.Controller) (
 				repository.ArticleAuthorRepository, repository.ArticleReaderRepository) {
 				author := articleRepoMock.NewMockArticleAuthorRepository(ctrl)
@@ -147,7 +147,7 @@ func TestArticleService_Publish(t *testing.T) {
 			wantId:  0,
 		},
 		{
-			name: "保存到制作库成功，线上库失败，即发表失败",
+			name: "保存到草稿库成功，线上库失败，即发表失败",
 			mock: func(ctrl *gomock.Controller) (
 				repository.ArticleAuthorRepository, repository.ArticleReaderRepository) {
 				author := articleRepoMock.NewMockArticleAuthorRepository(ctrl)
@@ -188,7 +188,7 @@ func TestArticleService_Publish(t *testing.T) {
 			wantId:  0,
 		},
 		{
-			name: "保存到制作库成功，线上库失败，即发表失败",
+			name: "保存到草稿库成功，线上库失败，即发表失败",
 			mock: func(ctrl *gomock.Controller) (
 				repository.ArticleAuthorRepository, repository.ArticleReaderRepository) {
 				author := articleRepoMock.NewMockArticleAuthorRepository(ctrl)
