@@ -48,6 +48,7 @@ func (s *ssoRepository) ToDao(user *domain.User, now int64) *dao.User {
 
 func (s *ssoRepository) ToDomain(user *dao.User) *domain.User {
 	return &domain.User{
+		UID:        user.ID,
 		Password:   user.Password,
 		Username:   user.Username,
 		TotpSecret: user.TotpSecret,

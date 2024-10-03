@@ -74,18 +74,20 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 	}
 
 	pwd := a.HashAndSalt(request.GetPassword())
-	err = a.svc.SaveUser(ctx, &domain.User{
+	user := &domain.User{
 		Username:   request.GetUserInfo().GetUsername(),
 		Nickname:   request.GetUserInfo().GetNickname(),
 		Password:   pwd,
 		TotpSecret: secretKey,
 		UserAgent:  request.GetUserAgent(),
-	}, now)
+	}
+	err = a.svc.SaveUser(ctx, user, now)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("SSO 保存用户信息失败: %s", err))
 	}
 
 	accessToken, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
+		UID:      user.UID, // 以 sso 的uid为用户的id标识
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
 		Ctime:    now,
@@ -135,6 +137,7 @@ func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.Ref
 	}
 
 	token, err := a.jwtSvc.GenerateAccessToken(ctx, &domain.JwtPayload{
+		UID:      request.GetUserInfo().GetUid(),
 		Username: request.GetUserInfo().GetUsername(),
 		NickName: request.GetUserInfo().GetNickname(),
 		Ctime:    time.Now().UnixMilli(),
@@ -170,6 +173,7 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 	}
 
 	jwtPayload := &domain.JwtPayload{
+		UID:      user.UID,
 		Username: user.Username,
 		NickName: user.Nickname,
 		Ctime:    time.Now().UnixMilli(),

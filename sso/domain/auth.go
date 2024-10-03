@@ -6,6 +6,7 @@ import (
 )
 
 type JwtPayload struct {
+	UID      uint64
 	Username string
 	NickName string
 	Ctime    int64

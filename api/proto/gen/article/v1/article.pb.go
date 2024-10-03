@@ -25,7 +25,7 @@ type Article struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID      int64   `protobuf:"varint,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID      int64   `protobuf:"varint,1,opt,name=UID,proto3" json:"UID,omitempty"`
 	Title   string  `protobuf:"bytes,2,opt,name=Title,proto3" json:"Title,omitempty"`
 	Content string  `protobuf:"bytes,3,opt,name=Content,proto3" json:"Content,omitempty"`
 	Author  *Author `protobuf:"bytes,4,opt,name=Author,proto3" json:"Author,omitempty"`
@@ -120,7 +120,7 @@ type Author struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID   int64  `protobuf:"varint,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID   int64  `protobuf:"varint,1,opt,name=UID,proto3" json:"UID,omitempty"`
 	Name string `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
 }
 

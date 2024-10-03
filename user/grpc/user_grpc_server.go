@@ -38,7 +38,9 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.Crea
 		return nil, err // 此处err为 SSO服务 返回的
 	}
 
-	err = u.svc.CreateUser(ctx, u.ToDomain(request.GetUser()))
+	user := u.ToDomain(request.GetUser())
+	user.UID = resp.Uid
+	err = u.svc.CreateUser(ctx, user)
 
 	if err != nil {
 		return nil, err
@@ -74,6 +76,7 @@ func (u *UserServiceServer) UpdateUser(ctx context.Context, request *userv1.Upda
 
 func (u *UserServiceServer) ToDomain(user *userv1.User) *domain.User {
 	return &domain.User{
+		UID:      user.Uid,
 		Username: user.Username,
 		Nickname: user.Nickname,
 	}
@@ -81,6 +84,7 @@ func (u *UserServiceServer) ToDomain(user *userv1.User) *domain.User {
 
 func (u *UserServiceServer) ToDTO(user *domain.User) *userv1.User {
 	return &userv1.User{
+		Uid:      user.UID,
 		Username: user.Username,
 		Nickname: user.Nickname,
 	}

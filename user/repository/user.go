@@ -40,7 +40,7 @@ func (u *userRepository) Update(ctx context.Context, userInfo *domain.UserInfo) 
 
 func (u *userRepository) toUserDomain(user *dao.User) *domain.User {
 	return &domain.User{
-		ID:       user.ID,
+		UID:      user.ID,
 		Nickname: user.Nickname,
 		Username: user.Username,
 	}
@@ -54,7 +54,7 @@ func (u *userRepository) toUserInfoDomain(user *dao.UserInfo) *domain.UserInfo {
 
 func (u *userRepository) toUserDao(user *domain.User) *dao.User {
 	return &dao.User{
-		ID:       user.ID,
+		ID:       user.UID,
 		Nickname: user.Nickname,
 		Username: user.Username,
 	}
