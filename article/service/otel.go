@@ -12,53 +12,53 @@ type OTELService struct {
 	tracer trace.Tracer
 }
 
-func (s *OTELService) GetPublishedByIDS(ctx context.Context, ids []uint64) ([]domain.Article, error) {
+func (O *OTELService) Publish(ctx context.Context, art *domain.Article) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (O *OTELService) Withdraw(ctx context.Context, aid, uid uint64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (O *OTELService) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (O *OTELService) GetAuthorModelsByID(ctx context.Context, aid, uid uint64) (*domain.Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (O *OTELService) GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (O *OTELService) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
 // Save 打点
-func (s *OTELService) Save(ctx context.Context, art *domain.Article) (uint64, error) {
+func (s *OTELService) Save(ctx context.Context, art *domain.Article) error {
 	ctx, span := s.tracer.Start(ctx, "articleService_save",
 		trace.WithSpanKind(trace.SpanKindServer), // ...
 	)
 	defer span.End()
 	span.AddEvent("save article")
 
-	id, err := s.svc.Save(ctx, art)
+	err := s.svc.Save(ctx, art)
 	if err != nil {
 		span.RecordError(err)
 	}
-	return id, nil
-}
-
-func (s *OTELService) Publish(ctx context.Context, art *domain.Article) (uint64, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *OTELService) Withdraw(ctx context.Context, art *domain.Article) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *OTELService) List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *OTELService) GetAuthorModelsByID(ctx context.Context, id uint64) (*domain.Article, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *OTELService) GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error) {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 // NewArticleServiceWithTracer 装饰器
-func NewArticleServiceWithTracer(svc articleService) *OTELService {
+func NewArticleServiceWithTracer(svc articleService) ArticleService {
 	tp := otel.GetTracerProvider()
 	tracer := tp.Tracer("internal/service/article.go")
 	return &OTELService{

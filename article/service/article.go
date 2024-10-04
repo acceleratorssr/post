@@ -9,8 +9,8 @@ import (
 )
 
 type ArticleService interface {
-	Save(ctx context.Context, art *domain.Article) (uint64, error)
-	Publish(ctx context.Context, art *domain.Article) (uint64, error)
+	Save(ctx context.Context, art *domain.Article) error
+	Publish(ctx context.Context, art *domain.Article) error
 	Withdraw(ctx context.Context, aid, uid uint64) error
 
 	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
@@ -22,49 +22,12 @@ type ArticleService interface {
 }
 
 type articleService struct {
-	author   repository.ArticleAuthorRepository
-	reader   repository.ArticleReaderRepository
-	producer events.Producer
+	author            repository.ArticleAuthorRepository
+	reader            repository.ArticleReaderRepository
+	readProducer      events.ReadProducer
+	publishedProducer events.PublishedProducer
 
 	ch chan events.ReadEvent
-}
-
-func NewArticleService(author repository.ArticleAuthorRepository,
-	reader repository.ArticleReaderRepository,
-	producer events.Producer) ArticleService {
-	// producer也可以批处理，要多写一个consumer
-	//ch := make(chan events.ReadEvent, 100)
-	//go func() {
-	//	for {
-	//		uids := make([]int64, 0, 100)
-	//		aids := make([]int64, 0, 100)
-	//		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	//		for i := 0; i < 100; i++ {
-	//			select {
-	//			case e, ok := <-ch:
-	//				if !ok {
-	//					break
-	//				}
-	//				uids = append(uids, e.Uid)
-	//				aids = append(aids, e.Aid)
-	//			case <-ctx.Done():
-	//				break
-	//			}
-	//		}
-	//		cancel()
-	//		ctx, cancel = context.WithTimeout(context.Background(), time.Second)
-	//		producer.ProduceReadEventMany(ctx, &events.ReadEventMany{
-	//			Aid: aids,
-	//			Uid: uids,
-	//		})
-	//		cancel()
-	//	}
-	//}()
-	return &articleService{
-		author:   author,
-		reader:   reader,
-		producer: producer,
-	}
 }
 
 func (svc *articleService) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
@@ -72,33 +35,7 @@ func (svc *articleService) ListPublished(ctx context.Context, list *domain.List)
 	if err != nil {
 		return nil, err
 	}
-	if err == nil { // 增加阅读数
-		go func() {
-			aid := make([]uint64, 0, len(published))
-			uid := make([]uint64, 0, len(published))
-			for _, art := range published {
-				aid = append(uid, art.ID)
-				uid = append(uid, art.Author.Id)
-			}
-			// todo 同时支持单/批消费
-			err := svc.producer.ProduceReadEventMany(ctx, &events.ReadEventMany{
-				Aid: aid,
-				Uid: uid,
-			})
-			if err != nil {
-				// log
-				return
-			}
-		}()
 
-		//// 批量
-		//go func() {
-		//	svc.ch <- events.ReadEvent{
-		//		Uid: uid,
-		//		Aid: id,
-		//	}
-		//}()
-	}
 	return published, nil
 }
 
@@ -106,7 +43,7 @@ func (svc *articleService) GetPublishedByID(ctx context.Context, aid, uid uint64
 	art, err := svc.reader.GetPublishedByID(ctx, aid)
 	if err == nil { // 增加阅读数
 		go func() {
-			svc.producer.ProduceReadEvent(ctx, &events.ReadEvent{
+			svc.readProducer.ProduceReadEvent(ctx, &events.ReadEvent{
 				Uid: uid,
 				Aid: aid,
 			})
@@ -157,39 +94,93 @@ func (svc *articleService) ListSelf(ctx context.Context, uid uint64, list *domai
 // Save Author表保存
 // 此时reader的对应数据一定是不存在或者是过期状态
 // 草稿态
-func (svc *articleService) Save(ctx context.Context, art *domain.Article) (uint64, error) {
+func (svc *articleService) Save(ctx context.Context, art *domain.Article) error {
 	if art.ID != 0 {
-		return art.ID, svc.author.Update(ctx, art)
+		return svc.author.Update(ctx, art)
 	}
 	return svc.author.Create(ctx, art)
 }
 
 // Publish 保存并发布
 // 草稿态 => 发布态
-func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (uint64, error) {
+func (svc *articleService) Publish(ctx context.Context, art *domain.Article) error {
 	var err error
 	if art.ID != 0 {
 		err = svc.author.Update(ctx, art)
 	} else {
 		// 新建编辑后，立刻发布
-		art.ID, err = svc.author.Create(ctx, art)
-		if err != nil {
-			return 0, err
-		}
+		err = svc.author.Create(ctx, art)
 	}
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	// 线上库
-	id, err := svc.reader.Save(ctx, art)
-	if err != nil {
-		// todo 可将其放到一个队列，定时重试，同步转异步
-		return 0, err // 保存成功发布失败
-	}
-	return id, err
+	go func() {
+		e := svc.publishedProducer.ProducePublishedEvent(ctx, &events.PublishEvent{
+			Article: svc.toMQ(art),
+		})
+		if e != nil {
+			// todo 记录mysql任务表，扫表重发
+		}
+	}()
+	return err
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, aid, uid uint64) error {
 	return svc.reader.Withdraw(ctx, aid, uid)
+}
+
+func (svc *articleService) toMQ(art *domain.Article) events.Article {
+	return events.Article{
+		ID:      art.ID,
+		Title:   art.Title,
+		Content: art.Content,
+		Author: events.Author{
+			Id:   art.Author.Id,
+			Name: art.Author.Name,
+		},
+		Utime: art.Utime,
+		Ctime: art.Ctime,
+	}
+}
+
+func NewArticleService(author repository.ArticleAuthorRepository,
+	reader repository.ArticleReaderRepository,
+	producer events.ReadProducer,
+	publishedProducer events.PublishedProducer) ArticleService {
+	// producer也可以批处理，要多写一个consumer
+	//ch := make(chan events.ReadEvent, 100)
+	//go func() {
+	//	for {
+	//		uids := make([]int64, 0, 100)
+	//		aids := make([]int64, 0, 100)
+	//		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	//		for i := 0; i < 100; i++ {
+	//			select {
+	//			case e, ok := <-ch:
+	//				if !ok {
+	//					break
+	//				}
+	//				uids = append(uids, e.Uid)
+	//				aids = append(aids, e.Aid)
+	//			case <-ctx.Done():
+	//				break
+	//			}
+	//		}
+	//		cancel()
+	//		ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+	//		producer.ProduceReadEventMany(ctx, &events.ReadEventMany{
+	//			Aid: aids,
+	//			Uid: uids,
+	//		})
+	//		cancel()
+	//	}
+	//}()
+	return &articleService{
+		author:            author,
+		reader:            reader,
+		readProducer:      producer,
+		publishedProducer: publishedProducer,
+	}
 }

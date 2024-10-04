@@ -26,7 +26,7 @@ func InitKafka() sarama.Client {
 	return client
 }
 
-func NewKafkaConsumer(consumer *events.KafkaConsumer,
+func NewKafkaConsumer(consumer *events.KafkaReadConsumer,
 	fix *fixer.Consumer[dao.Like]) []sarama_ex.Consumer {
 	return []sarama_ex.Consumer{consumer, fix}
 }

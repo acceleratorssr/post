@@ -40,7 +40,10 @@ func InitApp() *App {
 		ioc.NewKafkaSyncProducer,
 		ioc.InitRedis,
 		ioc.InitLikeClient,
-		events.NewKafkaProducer,
+		ioc.NewKafkaConsumer,
+		events.NewKafkaReadProducer,
+		events.NewKafkaPublishProducer,
+		events.NewKafkaPublishedConsumer,
 
 		rankingServiceSet,
 		jobServiceSet,

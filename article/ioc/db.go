@@ -29,8 +29,18 @@ func InitDB() *gorm.DB {
 	c := Config{
 		DSN: mysqlDSN,
 	}
-
-	db, err := gorm.Open(mysql.Open(c.DSN), &gorm.Config{})
+	//newLogger := logger.New(
+	//	log.New(os.Stdout, "\r\n", log.LstdFlags),
+	//	logger.Config{
+	//		LogLevel:                  logger.Info,
+	//		SlowThreshold:             time.Second,
+	//		IgnoreRecordNotFoundError: true,
+	//		Colorful:                  true,
+	//	},
+	//)
+	db, err := gorm.Open(mysql.Open(c.DSN), &gorm.Config{
+		//Logger: newLogger,
+	})
 	if err != nil {
 		panic(err)
 	}

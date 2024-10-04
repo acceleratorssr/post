@@ -19,6 +19,13 @@ func main() {
 
 	app.cron.Start()
 
+	for _, c := range app.consumers {
+		err := c.Start("")
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	err := app.server.Serve()
 	if err != nil {
 		panic(err)

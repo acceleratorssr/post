@@ -62,10 +62,10 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine, mw gin.HandlerFunc) {
 	articles.POST("/list_self", gin_ex.WrapWithReq[ReqList](a.ListSelf))      // 获取当前用户未发布文章列表
 	articles.GET("/detail/:id", a.DetailSelf)                                 // 获取未发布文章内容
 
-	reader := articles.Group("/reader")
+	reader := s.Group("/reader")
 	reader.Use(mw)
 	reader.GET("/:id", a.Detail) // 获取发布文章内容
-	reader.GET("/list_publish", gin_ex.WrapWithReq[ReqList](a.ListPublished))
+	reader.POST("/list_publish", gin_ex.WrapWithReq[ReqList](a.ListPublished))
 
 	reader.POST("/like", gin_ex.WrapWithReq[LikeReq](a.Like))          // 点赞
 	reader.POST("/collect", gin_ex.WrapWithReq[CollectReq](a.Collect)) //收藏

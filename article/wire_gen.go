@@ -30,10 +30,13 @@ func InitApp() *App {
 	articleReaderRepository := repository.NewArticleReaderRepository(articleDao)
 	client := ioc.InitKafka()
 	syncProducer := ioc.NewKafkaSyncProducer(client)
-	producer := events.NewKafkaProducer(syncProducer)
-	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, producer)
+	readProducer := events.NewKafkaReadProducer(syncProducer)
+	publishedProducer := events.NewKafkaPublishProducer(syncProducer)
+	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, readProducer, publishedProducer)
 	articleServiceServer := grpc.NewArticleServiceServer(articleService)
 	server := ioc.InitArticleService(articleServiceServer)
+	kafkaPublishedConsumer := events.NewKafkaPublishedConsumer(client, articleReaderRepository)
+	v := ioc.NewKafkaConsumer(kafkaPublishedConsumer)
 	likeServiceClient := ioc.InitLikeClient()
 	rankCache := cache.NewRankCache(cmdable)
 	localCacheForRank := cache.NewLocalCacheForRank()
@@ -49,6 +52,7 @@ func InitApp() *App {
 	scheduler := ioc.InitScheduler(jobService, localFuncExecutor)
 	app := &App{
 		server:         server,
+		consumers:      v,
 		cron:           cron,
 		cronJobService: jobService,
 		scheduler:      scheduler,

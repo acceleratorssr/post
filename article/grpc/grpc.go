@@ -45,7 +45,7 @@ func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.
 }
 
 func (a *ArticleServiceServer) Save(ctx context.Context, request *articlev1.SaveRequest) (*articlev1.SaveResponse, error) {
-	_, err := a.svc.Save(ctx, ToDomainArticleAuthor(request.GetData()))
+	err := a.svc.Save(ctx, ToDomainArticleAuthor(request.GetData()))
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")
@@ -55,7 +55,7 @@ func (a *ArticleServiceServer) Save(ctx context.Context, request *articlev1.Save
 }
 
 func (a *ArticleServiceServer) Publish(ctx context.Context, request *articlev1.PublishRequest) (*articlev1.PublishResponse, error) {
-	_, err := a.svc.Publish(ctx, ToDomainArticleAuthor(request.GetData()))
+	err := a.svc.Publish(ctx, ToDomainArticleAuthor(request.GetData()))
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")

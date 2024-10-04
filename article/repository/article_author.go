@@ -9,7 +9,7 @@ import (
 )
 
 type ArticleAuthorRepository interface {
-	Create(ctx context.Context, art *domain.Article) (uint64, error)
+	Create(ctx context.Context, art *domain.Article) error
 	Update(ctx context.Context, art *domain.Article) error
 	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
 	GetByID(ctx context.Context, aid, uid uint64) (*domain.Article, error)
@@ -66,7 +66,7 @@ func (a *articleAuthorRepository) ListSelf(ctx context.Context, uid uint64, list
 	return data, err
 }
 
-func (a *articleAuthorRepository) Create(ctx context.Context, art *domain.Article) (uint64, error) {
+func (a *articleAuthorRepository) Create(ctx context.Context, art *domain.Article) error {
 	art.ID = uint64(a.node.Generate().Int64())
 	defer a.cache.DeleteFirstPage(ctx, art.Author.Id)
 	return a.dao.Insert(ctx, ToAuthorEntity(art))

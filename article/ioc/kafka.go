@@ -3,6 +3,8 @@ package ioc
 import (
 	_ "embed"
 	"github.com/IBM/sarama"
+	"post/article/events"
+	"post/pkg/sarama_ex"
 )
 
 //go:embed kafka.yaml
@@ -28,6 +30,12 @@ func NewKafkaSyncProducer(client sarama.Client) sarama.SyncProducer {
 		panic(err)
 	}
 	return producer
+}
+
+func NewKafkaConsumer(consumer *events.KafkaPublishedConsumer) []sarama_ex.Consumer {
+	return []sarama_ex.Consumer{
+		consumer,
+	}
 }
 
 //func NewKafkaConsumer(consumer *events.KafkaConsumer) []events.Consumer {

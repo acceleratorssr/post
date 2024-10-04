@@ -9,7 +9,7 @@ import (
 
 type ArticleReaderRepository interface {
 	// Save 包含新建或者更新
-	Save(ctx context.Context, art *domain.Article) (uint64, error)
+	Save(ctx context.Context, art *domain.Article) error
 	Withdraw(ctx context.Context, aid, uid uint64) error
 	GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error)
 	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
@@ -59,7 +59,7 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint6
 	return &temp[0], err
 }
 
-func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) (uint64, error) {
+func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) error {
 	return a.dao.InsertReader(ctx, ToReaderEntity(art))
 }
 

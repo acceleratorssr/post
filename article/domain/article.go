@@ -17,7 +17,7 @@ type Author struct {
 type List struct {
 	Limit     int
 	LastValue int64 // 保存在客户端，用于翻页时防重复数据
-	Desc      bool  // 0为降序，1为升序
+	Desc      bool  // 0为升序，1为降序
 	OrderBy   string
 }
 

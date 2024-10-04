@@ -26,18 +26,20 @@ func (gad *GORMArticleDao) ListByID(ctx context.Context, uid uint64, list *List)
 
 func (gad *GORMArticleDao) ListPublished(ctx context.Context, list *List) ([]ArticleReader, error) {
 	var arts []ArticleReader
-	//// sql 优化
-	//gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
-	//	Omit("content", "id").Limit(list.Limit).
-	//	Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-	//		{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc},
-	//	}}).Find(&arts)
+	// sql 优化
+	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
+		Omit("content", "id").Limit(list.Limit).
+		Order("ctime desc").Find(&arts).Error
 
-	err := gad.db.WithContext(ctx).Omit("content", "id").
-		Offset(int(list.LastValue)).Limit(list.Limit).
-		Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-			{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc},
-		}}).Find(&arts).Error
+	//err := gad.db.WithContext(ctx).Omit("content", "id").
+	//	Offset(int(list.LastValue)).Limit(list.Limit).
+	//	Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+	//		{Column: clause.Column{Name: "ctime"}, Desc: true},
+	//	}}).Find(&arts).Error
+
+	//err := gad.db.WithContext(ctx).Omit("content", "id").
+	//	Offset(int(list.LastValue)).Limit(list.Limit).
+	//	Order("ctime desc").Find(&arts).Error
 
 	return arts, err
 }
@@ -79,18 +81,16 @@ func (gad *GORMArticleDao) GetListByAuthor(ctx context.Context, uid uint64, list
 	return arts, err
 }
 
-func (gad *GORMArticleDao) Insert(ctx context.Context, art *ArticleAuthor) (uint64, error) {
+func (gad *GORMArticleDao) Insert(ctx context.Context, art *ArticleAuthor) error {
 	art.Ctime = time.Now().UnixMilli()
 	art.Utime = art.Ctime
-	err := gad.db.WithContext(ctx).Create(art).Error
-	return art.SnowID, err
+	return gad.db.WithContext(ctx).Create(art).Error
 }
 
-func (gad *GORMArticleDao) InsertReader(ctx context.Context, art *ArticleReader) (uint64, error) {
+func (gad *GORMArticleDao) InsertReader(ctx context.Context, art *ArticleReader) error {
 	art.Ctime = time.Now().UnixMilli()
 	art.Utime = art.Ctime
-	err := gad.db.WithContext(ctx).Create(art).Error
-	return art.ID, err
+	return gad.db.WithContext(ctx).Create(art).Error
 }
 
 func (gad *GORMArticleDao) UpdateByID(ctx context.Context, art *ArticleAuthor) error {

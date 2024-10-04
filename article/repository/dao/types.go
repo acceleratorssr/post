@@ -5,8 +5,8 @@ import (
 )
 
 type ArticleDao interface {
-	Insert(ctx context.Context, art *ArticleAuthor) (uint64, error)
-	InsertReader(ctx context.Context, art *ArticleReader) (uint64, error)
+	Insert(ctx context.Context, art *ArticleAuthor) error
+	InsertReader(ctx context.Context, art *ArticleReader) error
 
 	UpdateByID(ctx context.Context, art *ArticleAuthor) error
 	DeleteReader(ctx context.Context, aid uint64, uid uint64) error
@@ -63,6 +63,6 @@ type ArticleReader struct {
 type List struct {
 	Limit     int
 	LastValue int64 // 保存在客户端，用于翻页时防重复数据
-	Desc      bool  // 0为降序，1为升序
+	Desc      bool  // 0为升序，1为降序
 	OrderBy   string
 }
