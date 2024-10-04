@@ -58,7 +58,7 @@ func (mr *MockArticleAuthorRepositoryMockRecorder) Create(ctx, art any) *gomock.
 // GetByID mocks base method.
 func (m *MockArticleAuthorRepository) GetByID(ctx context.Context, id int64) (domain.Article, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetAuthorByID", ctx, id)
 	ret0, _ := ret[0].(domain.Article)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -67,7 +67,7 @@ func (m *MockArticleAuthorRepository) GetByID(ctx context.Context, id int64) (do
 // GetByID indicates an expected call of GetByID.
 func (mr *MockArticleAuthorRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockArticleAuthorRepository)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthorByID", reflect.TypeOf((*MockArticleAuthorRepository)(nil).GetByID), ctx, id)
 }
 
 // List mocks base method.

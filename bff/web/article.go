@@ -8,7 +8,6 @@ import (
 	intrv1 "post/api/proto/gen/intr/v1"
 	"post/pkg/gin_ex"
 	"strconv"
-	"time"
 )
 
 type ArticleHandler struct {
@@ -57,15 +56,16 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine, mw gin.HandlerFunc) {
 		gin_ex.WrapNilReq(a.Test))
 	articles := s.Group("/articles")
 	articles.Use(mw)
-	articles.POST("/save", a.Save)                                       //保存文章
-	articles.POST("/publish", a.Publish)                                 // 发布文章
-	articles.POST("/withdraw", a.Withdraw)                               // 撤回已发布文章
-	articles.POST("/list", gin_ex.WrapClaimsAndReq[ReqList](a.ListSelf)) // 获取当前用户未发布文章列表
-	articles.GET("/detail/:id", a.DetailSelf)                            // 获取未发布文章内容
+	articles.POST("/save", gin_ex.WrapWithReq[Req](a.Save))                   //保存文章
+	articles.POST("/publish", gin_ex.WrapWithReq[Req](a.Publish))             // 发布文章
+	articles.POST("/withdraw", gin_ex.WrapWithReq[ReqOnlyWithID](a.Withdraw)) // 撤回已发布文章
+	articles.POST("/list_self", gin_ex.WrapWithReq[ReqList](a.ListSelf))      // 获取当前用户未发布文章列表
+	articles.GET("/detail/:id", a.DetailSelf)                                 // 获取未发布文章内容
 
 	reader := articles.Group("/reader")
 	reader.Use(mw)
 	reader.GET("/:id", a.Detail) // 获取发布文章内容
+	reader.GET("/list_publish", gin_ex.WrapWithReq[ReqList](a.ListPublished))
 
 	reader.POST("/like", gin_ex.WrapWithReq[LikeReq](a.Like))          // 点赞
 	reader.POST("/collect", gin_ex.WrapWithReq[CollectReq](a.Collect)) //收藏
@@ -140,21 +140,14 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 		return
 	}
 
-	gin_ex.OKWithDataAndMsg(ctx, ArticleResp{
-		Content: art.GetData().GetContent(),
-		ID:      art.GetData().GetID(),
-		Status:  uint8(art.GetData().GetStatus()),
-		Title:   art.GetData().GetTitle(),
-		Ctime:   art.GetData().GetCtime(),
-		Utime:   art.GetData().GetUtime(),
-	}, "成功")
+	gin_ex.OKWithDataAndMsg(ctx, a.toVO(art.Data), "成功")
 }
 
 func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 	id := ctx.Param("id")
 	artId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "id必须为数字")
+		gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, "id必须为数字")
 		//log
 		return
 	}
@@ -164,45 +157,54 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 		Aid: artId,
 	})
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, err.Error())
+		// log err.Error()
+		gin_ex.FailWithMessage(ctx, gin_ex.System, "查询失败")
 		return
 	}
 
-	// 高危，即查询他人私有文章
-	if a.getUserID(ctx) != art.GetData().GetAuthor().GetID() {
-		gin_ex.FailWithMessage(ctx, gin_ex.PermissionDenied, "无权限")
-		// 监控
-		return
-	}
-
-	gin_ex.OKWithDataAndMsg(ctx, a.toVO(art.GetData()), "success")
+	gin_ex.OKWithDataAndMsg(ctx, a.toVO(art.GetData()), "成功")
 }
 
-func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (gin_ex.Response, error) {
+func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_ex.Response, error) {
 	res, err := a.svc.ListSelf(ctx, &articlev1.ListSelfRequest{
-		Uid:    a.getUserID(ctx),
-		Limit:  int32(req.Limit),
-		Offset: int32(req.Offset),
+		Uid:       a.getUserID(ctx),
+		Limit:     req.Limit,
+		LastValue: req.LastValue,
+		OrderBy:   req.OrderBy,
+		Desc:      req.Desc,
 	})
 	if err != nil {
-		return gin_ex.Response{
+		return &gin_ex.Response{
 			Code: gin_ex.System,
 			Msg:  err.Error(),
 		}, nil
 	}
-	return gin_ex.Response{
+	return &gin_ex.Response{
 		Data: res,
 	}, nil
 }
 
-func (a *ArticleHandler) Publish(ctx *gin.Context) {
-	var req Req
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		return
+func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_ex.Response, error) {
+	res, err := a.svc.ListPublished(ctx, &articlev1.ListPublishedRequest{
+		Limit:     req.Limit,
+		LastValue: req.LastValue, // 上次查询的最小snow_id
+		OrderBy:   req.OrderBy,   // 支持创建时间、更新时间作为排序依据
+		Desc:      req.Desc,
+	})
+	if err != nil {
+		// log err.Error()
+		return &gin_ex.Response{
+			Code: gin_ex.System,
+			Msg:  "查询失败",
+		}, nil
 	}
-	// TODO 检查输入
 
-	now := time.Now().Unix()
+	return &gin_ex.Response{
+		Data: a.toVO(res.Data...),
+	}, nil
+}
+
+func (a *ArticleHandler) Publish(ctx *gin.Context, req Req) (*gin_ex.Response, error) {
 	id, err := a.svc.Publish(ctx, &articlev1.PublishRequest{
 		Data: &articlev1.Article{
 			ID: req.ID,
@@ -212,25 +214,23 @@ func (a *ArticleHandler) Publish(ctx *gin.Context) {
 			},
 			Title:   req.Title,
 			Content: req.Content,
-			Ctime:   now,
-			Utime:   now,
 		},
 	})
 	if err != nil {
-		gin_ex.Fail(ctx, gin_ex.System, err.Error(), "发布失败")
 		// log
-		return
+		return &gin_ex.Response{
+			Code: gin_ex.System,
+			Msg:  "发布失败",
+		}, err
 	}
-	gin_ex.OKWithDataAndMsg(ctx, id, "发布成功")
+	return &gin_ex.Response{
+		Data: id,
+		Msg:  "发布成功",
+	}, nil
 }
 
-func (a *ArticleHandler) Save(ctx *gin.Context) {
-	var req Req // 考虑压缩内容
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		return
-	} //需要使用ShouldBindJSON，如果使用bind则获取不到值
-	// TODO 检查输入
-
+func (a *ArticleHandler) Save(ctx *gin.Context, req Req) (*gin_ex.Response, error) {
+	// 考虑压缩内容
 	id, err := a.svc.Save(ctx, &articlev1.SaveRequest{
 		Data: &articlev1.Article{
 			ID: req.ID,
@@ -243,37 +243,39 @@ func (a *ArticleHandler) Save(ctx *gin.Context) {
 		},
 	})
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "系统错误")
 		// log
-		return
+		return &gin_ex.Response{
+			Code: gin_ex.System,
+			Msg:  "文章保存失败",
+		}, err
 	}
 
-	gin_ex.OKWithDataAndMsg(ctx, id, "success")
+	gin_ex.OKWithDataAndMsg(ctx, id, "保存成功")
+	return &gin_ex.Response{
+		Msg: "保存成功",
+	}, nil
 }
 
-// Withdraw 有问题
-func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
-	var req ReqOnlyWithID
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		return
-	} //需要使用ShouldBindJSON，如果使用bind则获取不到值
-	// TODO 检查输入
-
+func (a *ArticleHandler) Withdraw(ctx *gin.Context, req ReqOnlyWithID) (*gin_ex.Response, error) {
 	_, err := a.svc.Withdraw(ctx, &articlev1.WithdrawRequest{
-		Data: &articlev1.Article{
-			ID: req.ID,
-			Author: &articlev1.Author{
-				ID: a.getUserID(ctx),
-			},
-		},
+		Aid: req.ID,
+		Uid: a.getUserID(ctx),
 	})
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "系统错误")
 		// log
-		return
+		return &gin_ex.Response{
+			Code: gin_ex.System,
+			Msg:  "撤回文章失败",
+		}, err
 	}
 
-	gin_ex.OKWithMessage(ctx, "success")
+	return &gin_ex.Response{
+		Msg: "成功",
+	}, nil
+}
+
+func (a *ArticleHandler) Delete(ctx *gin.Context) {
+	// todo 调用草稿、发布、交互，删除相关数据
 }
 
 func (a *ArticleHandler) getUsername(ctx *gin.Context) string {
@@ -315,7 +317,6 @@ func (a *ArticleHandler) toVO(art ...*articlev1.Article) []ArticleResp {
 		artResp[i] = ArticleResp{
 			Content: v.GetContent(),
 			ID:      v.GetID(),
-			Status:  uint8(v.GetStatus()),
 			Title:   v.GetTitle(),
 			Ctime:   v.GetCtime(),
 			Utime:   v.GetUtime(),

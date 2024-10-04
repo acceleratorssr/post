@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"golang.org/x/sync/errgroup"
 	"post/article/domain"
 	"post/article/events"
 	"post/article/repository"
@@ -10,14 +11,14 @@ import (
 type ArticleService interface {
 	Save(ctx context.Context, art *domain.Article) (uint64, error)
 	Publish(ctx context.Context, art *domain.Article) (uint64, error)
-	Withdraw(ctx context.Context, art *domain.Article) error
+	Withdraw(ctx context.Context, aid, uid uint64) error
 
-	List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error)
+	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
 
-	GetAuthorModelsByID(ctx context.Context, id uint64) (*domain.Article, error)
+	GetAuthorModelsByID(ctx context.Context, aid, uid uint64) (*domain.Article, error)
 
 	GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error)
-	GetPublishedByIDS(ctx context.Context, ids []uint64) ([]domain.Article, error)
+	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
 }
 
 type articleService struct {
@@ -66,17 +67,48 @@ func NewArticleService(author repository.ArticleAuthorRepository,
 	}
 }
 
-func (svc *articleService) GetPublishedByIDS(ctx context.Context, ids []uint64) ([]domain.Article, error) {
-	panic("implement me")
+func (svc *articleService) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
+	published, err := svc.reader.ListPublished(ctx, list)
+	if err != nil {
+		return nil, err
+	}
+	if err == nil { // 增加阅读数
+		go func() {
+			aid := make([]uint64, 0, len(published))
+			uid := make([]uint64, 0, len(published))
+			for _, art := range published {
+				aid = append(uid, art.ID)
+				uid = append(uid, art.Author.Id)
+			}
+			// todo 同时支持单/批消费
+			err := svc.producer.ProduceReadEventMany(ctx, &events.ReadEventMany{
+				Aid: aid,
+				Uid: uid,
+			})
+			if err != nil {
+				// log
+				return
+			}
+		}()
+
+		//// 批量
+		//go func() {
+		//	svc.ch <- events.ReadEvent{
+		//		Uid: uid,
+		//		Aid: id,
+		//	}
+		//}()
+	}
+	return published, nil
 }
 
-func (svc *articleService) GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error) {
-	art, err := svc.reader.GetPublishedByID(ctx, id)
-	if err == nil {
+func (svc *articleService) GetPublishedByID(ctx context.Context, aid, uid uint64) (*domain.Article, error) {
+	art, err := svc.reader.GetPublishedByID(ctx, aid)
+	if err == nil { // 增加阅读数
 		go func() {
 			svc.producer.ProduceReadEvent(ctx, &events.ReadEvent{
 				Uid: uid,
-				Aid: id,
+				Aid: aid,
 			})
 		}()
 
@@ -91,34 +123,55 @@ func (svc *articleService) GetPublishedByID(ctx context.Context, id, uid uint64)
 	return art, err
 }
 
-func (svc *articleService) GetAuthorModelsByID(ctx context.Context, id uint64) (*domain.Article, error) {
-	return svc.author.GetByID(ctx, id)
+func (svc *articleService) GetAuthorModelsByID(ctx context.Context, aid, uid uint64) (*domain.Article, error) {
+	return svc.author.GetByID(ctx, aid, uid)
 }
 
-func (svc *articleService) List(ctx context.Context, uid uint64, limit, offset int) ([]domain.Article, error) {
-	return svc.author.List(ctx, uid, limit, offset)
+func (svc *articleService) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
+	var eg errgroup.Group
+	var authorList []domain.Article
+	var readerList []domain.Article
+	eg.Go(func() error {
+		aList, err := svc.author.ListSelf(ctx, uid, list)
+		authorList = aList
+		return err
+	})
+	eg.Go(func() error {
+		rList, err := svc.reader.ListSelf(ctx, uid, list)
+		readerList = rList
+		return err
+	})
+
+	err := eg.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	l := make([]domain.Article, 0, len(authorList)+len(readerList))
+	l = append(l, readerList...)
+	l = append(l, authorList...)
+
+	return list.Sort(list.Limit, list.OrderBy, list.Desc, authorList, readerList), nil
 }
 
 // Save Author表保存
 // 此时reader的对应数据一定是不存在或者是过期状态
 // 草稿态
 func (svc *articleService) Save(ctx context.Context, art *domain.Article) (uint64, error) {
-	art.Status = domain.TypeSaved
 	if art.ID != 0 {
 		return art.ID, svc.author.Update(ctx, art)
 	}
 	return svc.author.Create(ctx, art)
 }
 
-// Publish
+// Publish 保存并发布
 // 草稿态 => 发布态
 func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (uint64, error) {
 	var err error
-	art.Status = domain.TypePublished
 	if art.ID != 0 {
 		err = svc.author.Update(ctx, art)
 	} else {
-		// 草稿库
+		// 新建编辑后，立刻发布
 		art.ID, err = svc.author.Create(ctx, art)
 		if err != nil {
 			return 0, err
@@ -127,18 +180,16 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) (ui
 	if err != nil {
 		return 0, err
 	}
+
 	// 线上库
-	var id uint64
-	for i := 0; i < 5; i++ { //无脑重试
-		id, err = svc.reader.Save(ctx, art)
-		if err == nil {
-			break
-		}
+	id, err := svc.reader.Save(ctx, art)
+	if err != nil {
+		// todo 可将其放到一个队列，定时重试，同步转异步
+		return 0, err // 保存成功发布失败
 	}
 	return id, err
 }
 
-func (svc *articleService) Withdraw(ctx context.Context, art *domain.Article) error {
-	art.Status = domain.TypeWithdraw
-	return svc.reader.Sync(ctx, art)
+func (svc *articleService) Withdraw(ctx context.Context, aid, uid uint64) error {
+	return svc.reader.Withdraw(ctx, aid, uid)
 }

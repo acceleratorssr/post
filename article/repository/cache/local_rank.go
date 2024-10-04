@@ -32,7 +32,6 @@ func (l *LocalCacheForRank) SetTopNBrief(ctx context.Context, arts []domain.Arti
 		arts[i].ID = 0
 		arts[i].Content = ""
 		arts[i].Utime = 0
-		arts[i].Status = 0
 	}
 	l.topNBrief.Store(arts)
 	return nil

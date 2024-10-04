@@ -17,8 +17,9 @@ type ArticleServiceServer struct {
 	svc service.ArticleService
 }
 
+// GetAuthorArticle 获取个人未发布文章内容
 func (a *ArticleServiceServer) GetAuthorArticle(ctx context.Context, request *articlev1.GetAuthorArticleRequest) (*articlev1.GetAuthorArticleResponse, error) {
-	article, err := a.svc.GetAuthorModelsByID(ctx, request.GetAid())
+	article, err := a.svc.GetAuthorModelsByID(ctx, request.GetAid(), request.GetUid())
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, status.Errorf(codes.NotFound, "文章不存在")
@@ -33,7 +34,7 @@ func (a *ArticleServiceServer) GetAuthorArticle(ctx context.Context, request *ar
 }
 
 func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.ListSelfRequest) (*articlev1.ListSelfResponse, error) {
-	list, err := a.svc.List(ctx, request.GetUid(), int(request.GetLimit()), int(request.GetOffset()))
+	list, err := a.svc.ListSelf(ctx, request.GetUid(), nil)
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")
@@ -44,7 +45,7 @@ func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.
 }
 
 func (a *ArticleServiceServer) Save(ctx context.Context, request *articlev1.SaveRequest) (*articlev1.SaveResponse, error) {
-	_, err := a.svc.Save(ctx, ToDomainArticle(request.GetData()))
+	_, err := a.svc.Save(ctx, ToDomainArticleAuthor(request.GetData()))
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")
@@ -54,7 +55,7 @@ func (a *ArticleServiceServer) Save(ctx context.Context, request *articlev1.Save
 }
 
 func (a *ArticleServiceServer) Publish(ctx context.Context, request *articlev1.PublishRequest) (*articlev1.PublishResponse, error) {
-	_, err := a.svc.Publish(ctx, ToDomainArticle(request.GetData()))
+	_, err := a.svc.Publish(ctx, ToDomainArticleAuthor(request.GetData()))
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")
@@ -63,8 +64,9 @@ func (a *ArticleServiceServer) Publish(ctx context.Context, request *articlev1.P
 	return &articlev1.PublishResponse{}, nil
 }
 
+// Withdraw 撤回发布库的文章
 func (a *ArticleServiceServer) Withdraw(ctx context.Context, request *articlev1.WithdrawRequest) (*articlev1.WithdrawResponse, error) {
-	err := a.svc.Withdraw(ctx, ToDomainArticle(request.GetData()))
+	err := a.svc.Withdraw(ctx, request.GetAid(), request.GetUid())
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")
@@ -73,6 +75,7 @@ func (a *ArticleServiceServer) Withdraw(ctx context.Context, request *articlev1.
 	return &articlev1.WithdrawResponse{}, nil
 }
 
+// GetPublishedByID 获取已发布文章内容
 func (a *ArticleServiceServer) GetPublishedByID(ctx context.Context, request *articlev1.GetPublishedByIDRequest) (*articlev1.GetPublishedByIDResponse, error) {
 	art, err := a.svc.GetPublishedByID(ctx, request.GetAid(), request.GetUid())
 	if err != nil {
@@ -88,14 +91,20 @@ func (a *ArticleServiceServer) GetPublishedByID(ctx context.Context, request *ar
 	}, nil
 }
 
-func (a *ArticleServiceServer) GetPublishedByIDS(ctx context.Context, request *articlev1.GetPublishedByIDSRequest) (*articlev1.GetPublishedByIDSResponse, error) {
-	arts, err := a.svc.GetPublishedByIDS(ctx, request.GetAids())
+// ListPublished 获取发布文章列表，无文章内容
+func (a *ArticleServiceServer) ListPublished(ctx context.Context, request *articlev1.ListPublishedRequest) (*articlev1.ListPublishedResponse, error) {
+	arts, err := a.svc.ListPublished(ctx, &domain.List{
+		Limit:     int(request.GetLimit()),
+		LastValue: request.GetLastValue(),
+		OrderBy:   request.GetOrderBy(),
+		Desc:      request.GetDesc(),
+	})
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")
 	}
 
-	return &articlev1.GetPublishedByIDSResponse{
+	return &articlev1.ListPublishedResponse{
 		Data: toDTO(arts...),
 	}, nil
 }
@@ -109,13 +118,13 @@ func toDTO(articles ...domain.Article) []*articlev1.Article {
 
 	for _, article := range articles {
 		protoArticle := &articlev1.Article{
+			ID: article.ID,
 			Author: &articlev1.Author{
 				ID:   article.Author.Id,
 				Name: article.Author.Name,
 			},
 			Content: article.Content,
 			Ctime:   article.Ctime,
-			Status:  int32(article.Status),
 			Title:   article.Title,
 			Utime:   article.Utime,
 		}
@@ -125,15 +134,15 @@ func toDTO(articles ...domain.Article) []*articlev1.Article {
 	return protoArticles
 }
 
-func ToDomainArticle(article *articlev1.Article) *domain.Article {
+func ToDomainArticleAuthor(article *articlev1.Article) *domain.Article {
 	return &domain.Article{
+		ID: article.GetID(),
 		Author: domain.Author{
 			Id:   article.GetAuthor().GetID(),
 			Name: article.GetAuthor().GetName(),
 		},
 		Title:   article.GetTitle(),
 		Content: article.GetContent(),
-		Status:  domain.StatusType(article.Status),
 		Ctime:   article.GetCtime(),
 		Utime:   article.GetUtime(),
 	}

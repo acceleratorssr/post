@@ -81,7 +81,7 @@ func (svc *BatchRankService) SetRankTopN(ctx context.Context, n int) error {
 		res[i] = v.ID
 	}
 
-	arts, err := svc.artSvc.GetPublishedByIDS(ctx, res)
+	arts, err := svc.artSvc.ListPublished(ctx, nil)
 	if err != nil {
 		panic(err)
 	}

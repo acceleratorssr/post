@@ -10,18 +10,41 @@ import (
 type ArticleReaderRepository interface {
 	// Save 包含新建或者更新
 	Save(ctx context.Context, art *domain.Article) (uint64, error)
-	Sync(ctx context.Context, art *domain.Article) error
+	Withdraw(ctx context.Context, aid, uid uint64) error
 	GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error)
+	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
+	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
 }
 
 type articleReaderRepository struct {
 	dao   dao.ArticleDao
 	cache cache.RedisArticleCache
-	// userRepo
 }
 
-func NewArticleReaderRepository(dao dao.ArticleDao) ArticleReaderRepository {
-	return &articleReaderRepository{dao: dao}
+func (a *articleReaderRepository) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
+	if list.LastValue == 0 && list.Limit <= 100 {
+		//data, err := a.cache.GetFirstPage(ctx, uid)
+		//if err == nil {
+		//	return data, nil
+		//}
+	}
+
+	arts, err := a.dao.ListByID(ctx, uid, a.toDAOlist(list))
+	if err != nil {
+		return nil, err
+	}
+	return a.toDomain(arts...)
+}
+
+func (a *articleReaderRepository) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
+	if list.LastValue == 0 && list.Limit <= 100 {
+		//return a.cache.ListPublished(ctx, offset, limit, keyword, desc)
+	}
+	arts, err := a.dao.ListPublished(ctx, a.toDAOlist(list))
+	if err != nil {
+		return nil, err
+	}
+	return a.toDomain(arts...)
 }
 
 func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error) {
@@ -30,38 +53,53 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint6
 	if err != nil {
 		return &domain.Article{}, err
 	}
-	temp, err := a.toDomain(art)
+	temp, err := a.toDomain(*art)
 	temp[0].Author.Id = art.Authorid
-	//temp.Author.Name, err = a.userRepo.FindByID(ctx,temp.Author.Id)
-	return temp[0], err
+
+	return &temp[0], err
 }
 
 func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) (uint64, error) {
 	return a.dao.InsertReader(ctx, ToReaderEntity(art))
 }
 
-func (a *articleReaderRepository) Sync(ctx context.Context, art *domain.Article) error {
-	err := a.dao.SyncStatus(ctx, ToAuthorEntity(art))
-	// todo 同步删除likeRepo内的数据
+func (a *articleReaderRepository) Withdraw(ctx context.Context, aid, uid uint64) error {
+	err := a.dao.DeleteReader(ctx, aid, uid)
+
 	if err != nil { // 防止发布出现错误
-		a.cache.DeleteFirstPage(ctx, art.ID)
-		a.cache.SetArticleDetail(ctx, art.ID, *art) // ?
+		a.cache.DeleteFirstPage(ctx, aid)
 	}
 
 	return err
 }
 
-func (a *articleReaderRepository) toDomain(art ...*dao.ArticleReader) ([]*domain.Article, error) {
-	domainA := make([]*domain.Article, 0, len(art))
+func (a *articleReaderRepository) toDomain(art ...dao.ArticleReader) ([]domain.Article, error) {
+	domainA := make([]domain.Article, 0, len(art))
 	for i, _ := range art {
-		domainA = append(domainA, &domain.Article{
-			ID:      art[i].Id,
+		domainA = append(domainA, domain.Article{
+			ID:      uint64(art[i].SnowID),
 			Title:   art[i].Title,
 			Content: art[i].Content,
-			Status:  domain.StatusType(art[i].Status),
 			Ctime:   art[i].Ctime,
 			Utime:   art[i].Utime,
+			Author: domain.Author{
+				Id: art[i].Authorid,
+			},
 		})
 	}
 	return domainA, nil
+}
+
+func (a *articleReaderRepository) toDAOlist(list *domain.List) *dao.List {
+	return &dao.List{
+		Desc:      list.Desc,
+		LastValue: list.LastValue,
+		Limit:     list.Limit,
+		OrderBy:   list.OrderBy,
+	}
+}
+
+func NewArticleReaderRepository(dao dao.ArticleDao) ArticleReaderRepository {
+	return &articleReaderRepository{
+		dao: dao}
 }

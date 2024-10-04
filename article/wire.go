@@ -45,6 +45,7 @@ func InitApp() *App {
 		rankingServiceSet,
 		jobServiceSet,
 
+		dao.NewSnowflakeNode0,
 		dao.NewGORMArticleDao,
 		cache.NewRedisArticleCache,
 		repository.NewArticleAuthorRepository,

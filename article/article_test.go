@@ -49,7 +49,7 @@ func (s *ArticleTestSuite) SetupTest() {
 
 	//s.server.Use(func(ctx *gin.Context) {
 	//	ctx.Set("userClaims", &sso.ClaimsUser{
-	//		Id:   userId,
+	//		ID:   userId,
 	//		Name: "test",
 	//	})
 	//})

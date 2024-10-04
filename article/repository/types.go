@@ -7,20 +7,18 @@ import (
 
 func ToAuthorEntity(art *domain.Article) *dao.ArticleAuthor {
 	return &dao.ArticleAuthor{
-		Id:       art.ID,
+		SnowID:   art.ID,
 		Title:    art.Title,
 		Content:  art.Content,
 		Authorid: art.Author.Id,
-		Status:   art.Status.ToUint8(),
 	}
 }
 
 func ToReaderEntity(art *domain.Article) *dao.ArticleReader {
 	return &dao.ArticleReader{
-		Id:       art.ID,
+		SnowID:   int64(art.ID),
 		Title:    art.Title,
 		Content:  art.Content,
 		Authorid: art.Author.Id,
-		Status:   art.Status.ToUint8(),
 	}
 }

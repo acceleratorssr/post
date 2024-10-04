@@ -112,10 +112,9 @@ func (r *RedisArticleCache) ToPageCacheMany(arts []domain.Article) []PageCache {
 
 func (r *RedisArticleCache) ToPageCache(art domain.Article) PageCache {
 	return PageCache{
-		ID:     art.ID,
-		Title:  art.Title,
-		Status: art.Status.ToUint8(),
-		Ctime:  art.Ctime,
-		Utime:  art.Utime,
+		ID:    art.ID,
+		Title: art.Title,
+		Ctime: art.Ctime,
+		Utime: art.Utime,
 	}
 }

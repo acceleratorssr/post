@@ -44,7 +44,7 @@ func NewMongoDB(db *mongo.Database, node *snowflake.Node) ArticleDao {
 
 func (m *MongoDB) Insert(ctx context.Context, art ArticleAuthor) (int64, error) {
 	id := m.node.Generate().Int64()
-	art.Id = id
+	art.ID = id
 	now := time.Now().UnixMilli()
 	art.Ctime = now
 	art.Utime = now
@@ -57,7 +57,7 @@ func (m *MongoDB) Insert(ctx context.Context, art ArticleAuthor) (int64, error) 
 }
 
 func (m *MongoDB) UpdateByID(ctx context.Context, art ArticleAuthor) error {
-	filter := bson.M{"id": art.Id, "authorid": art.Authorid}
+	filter := bson.M{"id": art.ID, "authorid": art.Authorid}
 	u := bson.D{bson.E{Key: "$set", Value: bson.M{
 		"title":   art.Title,
 		"content": art.Content,
@@ -82,7 +82,7 @@ func (m *MongoDB) SyncStatus(ctx context.Context, art ArticleAuthor) error {
 	var err error
 	var id int64
 
-	if art.Id > 0 {
+	if art.ID > 0 {
 		err = m.UpdateByID(ctx, art)
 	} else {
 		id, err = m.Insert(ctx, art) //new
@@ -92,11 +92,11 @@ func (m *MongoDB) SyncStatus(ctx context.Context, art ArticleAuthor) error {
 		return err
 	}
 
-	art.Id = id
+	art.ID = id
 	now := time.Now().UnixMilli()
 	art.Utime = now
 
-	filter := bson.M{"id": art.Id}
+	filter := bson.M{"id": art.ID}
 	update := bson.E{Key: "$set", Value: art}
 	upsert := bson.E{Key: "$setOnInsert", Value: bson.D{
 		bson.E{Key: "ctime", Value: now}}}

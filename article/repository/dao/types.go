@@ -9,31 +9,34 @@ type ArticleDao interface {
 	InsertReader(ctx context.Context, art *ArticleReader) (uint64, error)
 
 	UpdateByID(ctx context.Context, art *ArticleAuthor) error
-	SyncStatus(ctx context.Context, art *ArticleAuthor) error
-	GetListByAuthor(ctx context.Context, uid uint64, limit int, offset int) ([]ArticleAuthor, error)
-	GetByID(ctx context.Context, id uint64) (*ArticleAuthor, error)
+	DeleteReader(ctx context.Context, aid uint64, uid uint64) error
+	GetListByAuthor(ctx context.Context, uid uint64, list *List) ([]ArticleAuthor, error)
+	GetAuthorByID(ctx context.Context, aid, uid uint64) (*ArticleAuthor, error)
 	GetPublishedByID(ctx context.Context, id uint64) (*ArticleReader, error)
+	ListPublished(ctx context.Context, list *List) ([]ArticleReader, error)
+	ListByID(ctx context.Context, uid uint64, list *List) ([]ArticleReader, error)
 }
 
 // ArticleAuthor 为ing库，或者说草稿库
 type ArticleAuthor struct {
-	Id       uint64 `gorm:"primaryKey,autoIncrement"`
-	Title    string `gorm:"size:4096"`
-	Content  string `gorm:"type=BLOB"`
-	Authorid uint64 `gorm:"index"`
-	Ctime    int64  `gorm:"index"`
-	Utime    int64
-	Status   uint8
+	SnowID     uint64 `gorm:"primaryKey"`
+	Title      string `gorm:"size:2048"`
+	Content    string `gorm:"type=BLOB"`
+	AuthorName string `gorm:"type:varchar(64);size:64"`
+	Authorid   uint64 `gorm:"index"`
+	Ctime      int64  `gorm:"index"`
+	Utime      int64
 }
 
 type ArticleReader struct {
-	Id       uint64 `gorm:"primaryKey,autoIncrement"`
-	Title    string `gorm:"size:4096"`
+	ID       uint64 `gorm:"primaryKey,autoIncrement"`
+	Title    string `gorm:"size:2048"`
 	Content  string `gorm:"type=BLOB"`
 	Authorid uint64 `gorm:"index"`
 	Ctime    int64  `gorm:"index"`
 	Utime    int64
-	Status   uint8
+
+	SnowID int64 `gorm:"index"`
 }
 
 // 使用callback代替hook
@@ -56,3 +59,10 @@ type ArticleReader struct {
 //	fmt.Println(time.Since(t))
 //	return
 //}
+
+type List struct {
+	Limit     int
+	LastValue int64 // 保存在客户端，用于翻页时防重复数据
+	Desc      bool  // 0为降序，1为升序
+	OrderBy   string
+}

@@ -19,13 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ArticleService_GetAuthorArticle_FullMethodName  = "/article.v1.ArticleService/GetAuthorArticle"
-	ArticleService_ListSelf_FullMethodName          = "/article.v1.ArticleService/ListSelf"
-	ArticleService_Save_FullMethodName              = "/article.v1.ArticleService/Save"
-	ArticleService_Publish_FullMethodName           = "/article.v1.ArticleService/Publish"
-	ArticleService_Withdraw_FullMethodName          = "/article.v1.ArticleService/Withdraw"
-	ArticleService_GetPublishedByID_FullMethodName  = "/article.v1.ArticleService/GetPublishedByID"
-	ArticleService_GetPublishedByIDS_FullMethodName = "/article.v1.ArticleService/GetPublishedByIDS"
+	ArticleService_GetAuthorArticle_FullMethodName = "/article.v1.ArticleService/GetAuthorArticle"
+	ArticleService_ListSelf_FullMethodName         = "/article.v1.ArticleService/ListSelf"
+	ArticleService_Save_FullMethodName             = "/article.v1.ArticleService/Save"
+	ArticleService_Publish_FullMethodName          = "/article.v1.ArticleService/Publish"
+	ArticleService_Withdraw_FullMethodName         = "/article.v1.ArticleService/DeleteReader"
+	ArticleService_GetPublishedByID_FullMethodName = "/article.v1.ArticleService/GetPublishedByID"
+	ArticleService_ListPublished_FullMethodName    = "/article.v1.ArticleService/ListPublished"
 )
 
 // ArticleServiceClient is the client API for ArticleService service.
@@ -38,7 +38,7 @@ type ArticleServiceClient interface {
 	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
 	Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error)
 	GetPublishedByID(ctx context.Context, in *GetPublishedByIDRequest, opts ...grpc.CallOption) (*GetPublishedByIDResponse, error)
-	GetPublishedByIDS(ctx context.Context, in *GetPublishedByIDSRequest, opts ...grpc.CallOption) (*GetPublishedByIDSResponse, error)
+	ListPublished(ctx context.Context, in *ListPublishedRequest, opts ...grpc.CallOption) (*ListPublishedResponse, error)
 }
 
 type articleServiceClient struct {
@@ -109,10 +109,10 @@ func (c *articleServiceClient) GetPublishedByID(ctx context.Context, in *GetPubl
 	return out, nil
 }
 
-func (c *articleServiceClient) GetPublishedByIDS(ctx context.Context, in *GetPublishedByIDSRequest, opts ...grpc.CallOption) (*GetPublishedByIDSResponse, error) {
+func (c *articleServiceClient) ListPublished(ctx context.Context, in *ListPublishedRequest, opts ...grpc.CallOption) (*ListPublishedResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetPublishedByIDSResponse)
-	err := c.cc.Invoke(ctx, ArticleService_GetPublishedByIDS_FullMethodName, in, out, cOpts...)
+	out := new(ListPublishedResponse)
+	err := c.cc.Invoke(ctx, ArticleService_ListPublished_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ type ArticleServiceServer interface {
 	Publish(context.Context, *PublishRequest) (*PublishResponse, error)
 	Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error)
 	GetPublishedByID(context.Context, *GetPublishedByIDRequest) (*GetPublishedByIDResponse, error)
-	GetPublishedByIDS(context.Context, *GetPublishedByIDSRequest) (*GetPublishedByIDSResponse, error)
+	ListPublished(context.Context, *ListPublishedRequest) (*ListPublishedResponse, error)
 	mustEmbedUnimplementedArticleServiceServer()
 }
 
@@ -153,13 +153,13 @@ func (UnimplementedArticleServiceServer) Publish(context.Context, *PublishReques
 	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
 func (UnimplementedArticleServiceServer) Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Withdraw not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteReader not implemented")
 }
 func (UnimplementedArticleServiceServer) GetPublishedByID(context.Context, *GetPublishedByIDRequest) (*GetPublishedByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPublishedByID not implemented")
 }
-func (UnimplementedArticleServiceServer) GetPublishedByIDS(context.Context, *GetPublishedByIDSRequest) (*GetPublishedByIDSResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPublishedByIDS not implemented")
+func (UnimplementedArticleServiceServer) ListPublished(context.Context, *ListPublishedRequest) (*ListPublishedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPublished not implemented")
 }
 func (UnimplementedArticleServiceServer) mustEmbedUnimplementedArticleServiceServer() {}
 func (UnimplementedArticleServiceServer) testEmbeddedByValue()                        {}
@@ -290,20 +290,20 @@ func _ArticleService_GetPublishedByID_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ArticleService_GetPublishedByIDS_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPublishedByIDSRequest)
+func _ArticleService_ListPublished_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPublishedRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ArticleServiceServer).GetPublishedByIDS(ctx, in)
+		return srv.(ArticleServiceServer).ListPublished(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ArticleService_GetPublishedByIDS_FullMethodName,
+		FullMethod: ArticleService_ListPublished_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArticleServiceServer).GetPublishedByIDS(ctx, req.(*GetPublishedByIDSRequest))
+		return srv.(ArticleServiceServer).ListPublished(ctx, req.(*ListPublishedRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -332,7 +332,7 @@ var ArticleService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ArticleService_Publish_Handler,
 		},
 		{
-			MethodName: "Withdraw",
+			MethodName: "DeleteReader",
 			Handler:    _ArticleService_Withdraw_Handler,
 		},
 		{
@@ -340,8 +340,8 @@ var ArticleService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ArticleService_GetPublishedByID_Handler,
 		},
 		{
-			MethodName: "GetPublishedByIDS",
-			Handler:    _ArticleService_GetPublishedByIDS_Handler,
+			MethodName: "ListPublished",
+			Handler:    _ArticleService_ListPublished_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

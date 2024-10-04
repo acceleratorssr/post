@@ -20,8 +20,10 @@ type ReqOnlyWithID struct {
 }
 
 type ReqList struct {
-	Limit  int `json:"limit"`
-	Offset int `json:"offset"`
+	Limit     int32  `json:"limit"`
+	LastValue int64  `json:"last_value"` // 保存在客户端，用于翻页时防重复数据
+	Desc      bool   `json:"desc"`       // 0为降序，1为升序
+	OrderBy   string `json:"order_by"`
 }
 
 type LikeReq struct {

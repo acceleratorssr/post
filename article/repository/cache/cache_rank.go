@@ -44,7 +44,6 @@ func (r *RankRedisCache) SetTopNBrief(ctx context.Context, arts []domain.Article
 		arts[i].ID = 0
 		arts[i].Content = ""
 		arts[i].Utime = 0
-		arts[i].Status = 0
 	}
 	val, err := json.Marshal(arts)
 	err = r.client.Set(ctx, r.keyTopNBrief("article", 0), val, 70*time.Minute).Err()
