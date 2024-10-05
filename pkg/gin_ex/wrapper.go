@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
-	"net/http"
-	"post/internal/user"
 	"strconv"
 )
 
@@ -20,7 +18,7 @@ func InitCounter(opt prometheus.CounterOpts) {
 
 // WrapClaimsAndReq
 // TODO 除此之外还可以考虑单独解析claims或者req，解决全部post
-func WrapClaimsAndReq[Req any](fn func(*gin.Context, Req, user.ClaimsUser) (Response, error)) gin.HandlerFunc {
+func WrapClaimsAndReq[Req any](fn func(*gin.Context, Req) (Response, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req Req
 		if err := ctx.Bind(&req); err != nil {
@@ -29,23 +27,23 @@ func WrapClaimsAndReq[Req any](fn func(*gin.Context, Req, user.ClaimsUser) (Resp
 			return
 		}
 
-		claim, ok := ctx.Get("userClaims")
-		if !ok {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			FailWithMessage(ctx, Internal, err.Error())
-			return
-		}
+		//claim, ok := ctx.Get("userClaims")
+		//if !ok {
+		//	ctx.AbortWithStatus(http.StatusUnauthorized)
+		//	err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
+		//	FailWithMessage(ctx, Internal, err.Error())
+		//	return
+		//}
+		//
+		//claims, ok := claim.(*user.ClaimsUser)
+		//if !ok {
+		//	ctx.AbortWithStatus(http.StatusUnauthorized)
+		//	err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
+		//	FailWithMessage(ctx, Internal, err.Error())
+		//	return
+		//}
 
-		claims, ok := claim.(*user.ClaimsUser)
-		if !ok {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			err := fmt.Errorf("无法获得 claims:%v", ctx.Request.URL.Path)
-			FailWithMessage(ctx, Internal, err.Error())
-			return
-		}
-
-		res, err := fn(ctx, req, *claims)
+		res, err := fn(ctx, req)
 
 		if err != nil {
 			err = fmt.Errorf("业务失败:%w", err)
@@ -71,7 +69,7 @@ func WrapWithReq[Req any](fn func(*gin.Context, Req) (*Response, error)) gin.Han
 		vector.WithLabelValues(strconv.Itoa(int(res.Code))).Inc()
 
 		// _maxCode 为最大错误码
-		if err != nil || res.Code < _maxCode {
+		if err != nil || (res.Code < _maxCode && res.Code > OK) {
 			err = fmt.Errorf("业务失败:%w", err)
 			FailWithMessage(ctx, res.Code, res.Msg+"-"+err.Error())
 			return

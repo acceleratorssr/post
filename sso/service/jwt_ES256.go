@@ -43,7 +43,7 @@ func (a *authService) GenerateAccessToken(ctx context.Context, user *domain.JwtP
 	claims := &domain.Claims{
 		JwtPayload: user,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(a.info.Config.Jwt.LongExpires) * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(a.info.Config.Jwt.ShortExpires) * time.Hour)),
 			Issuer:    a.info.Config.Jwt.Issuer,
 		},
 	}
