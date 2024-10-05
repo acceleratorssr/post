@@ -17,9 +17,7 @@ func (gad *GORMArticleDao) ListByID(ctx context.Context, uid uint64, list *List)
 	var arts []ArticleReader
 	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
 		Where("authorid = ?", uid).Omit("content", "id").Limit(list.Limit).
-		Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-			{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc},
-		}}).Find(&arts).Error
+		Order(clause.OrderByColumn{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc}).Find(&arts).Error
 
 	return arts, err
 }
@@ -28,15 +26,17 @@ func (gad *GORMArticleDao) ListPublished(ctx context.Context, list *List) ([]Art
 	var arts []ArticleReader
 	// sql 优化
 	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
-		Omit("content", "id").Limit(list.Limit).
-		Order("ctime desc").Find(&arts).Error
+		Limit(list.Limit).Omit("content", "id").
+		Order(clause.OrderByColumn{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc}).Find(&arts).Error // todo 到源码里看看
 
+	// 错误生成sql：
 	//err := gad.db.WithContext(ctx).Omit("content", "id").
 	//	Offset(int(list.LastValue)).Limit(list.Limit).
 	//	Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-	//		{Column: clause.Column{Name: "ctime"}, Desc: true},
+	//		{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc},
 	//	}}).Find(&arts).Error
 
+	// 未优化sql：
 	//err := gad.db.WithContext(ctx).Omit("content", "id").
 	//	Offset(int(list.LastValue)).Limit(list.Limit).
 	//	Order("ctime desc").Find(&arts).Error
@@ -66,17 +66,7 @@ func (gad *GORMArticleDao) GetListByAuthor(ctx context.Context, uid uint64, list
 	var arts []ArticleAuthor
 	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
 		Where("authorid = ?", uid).Omit("content", "id").Limit(list.Limit).
-		Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-			{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc},
-		}}).Find(&arts).Error
-
-	//err := gad.db.WithContext(ctx).
-	//	Where("authorid = ?", uid).
-	//	Limit(limit).Offset(offset).
-	//	//Order("utime DESC").
-	//	Order(clause.OrderBy{Columns: []clause.OrderByColumn{
-	//		{Column: clause.Column{Name: "utime"}, Desc: true},
-	//	}}).Find(&arts).Error
+		Order(clause.OrderByColumn{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc}).Find(&arts).Error
 
 	return arts, err
 }
@@ -87,10 +77,16 @@ func (gad *GORMArticleDao) Insert(ctx context.Context, art *ArticleAuthor) error
 	return gad.db.WithContext(ctx).Create(art).Error
 }
 
-func (gad *GORMArticleDao) InsertReader(ctx context.Context, art *ArticleReader) error {
+func (gad *GORMArticleDao) UpsertReader(ctx context.Context, art *ArticleReader) error {
 	art.Ctime = time.Now().UnixMilli()
 	art.Utime = art.Ctime
-	return gad.db.WithContext(ctx).Create(art).Error
+
+	return gad.db.WithContext(ctx).Clauses(
+		clause.OnConflict{
+			Columns:   []clause.Column{{Name: "snow_id"}},
+			DoUpdates: clause.AssignmentColumns([]string{"title", "content", "utime"}),
+		},
+	).Create(art).Error
 }
 
 func (gad *GORMArticleDao) UpdateByID(ctx context.Context, art *ArticleAuthor) error {

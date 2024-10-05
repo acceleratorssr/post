@@ -22,7 +22,7 @@ type ReqOnlyWithID struct {
 type ReqList struct {
 	Limit     int32  `json:"limit"`
 	LastValue int64  `json:"last_value"` // 保存在客户端，用于翻页时防重复数据
-	Desc      bool   `json:"desc"`       0为升序，1为降序
+	Desc      bool   `json:"desc"`       // 0为升序，1为降序
 	OrderBy   string `json:"order_by"`
 }
 

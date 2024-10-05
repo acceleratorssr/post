@@ -10,8 +10,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"gorm.io/plugin/opentelemetry/tracing"
 	prom "gorm.io/plugin/prometheus"
+	"log"
+	"os"
 	"post/article/repository/dao"
 	"time"
 )
@@ -29,17 +32,17 @@ func InitDB() *gorm.DB {
 	c := Config{
 		DSN: mysqlDSN,
 	}
-	//newLogger := logger.New(
-	//	log.New(os.Stdout, "\r\n", log.LstdFlags),
-	//	logger.Config{
-	//		LogLevel:                  logger.Info,
-	//		SlowThreshold:             time.Second,
-	//		IgnoreRecordNotFoundError: true,
-	//		Colorful:                  true,
-	//	},
-	//)
+	newLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			LogLevel:                  logger.Info,
+			SlowThreshold:             time.Second,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		},
+	)
 	db, err := gorm.Open(mysql.Open(c.DSN), &gorm.Config{
-		//Logger: newLogger,
+		Logger: newLogger,
 	})
 	if err != nil {
 		panic(err)

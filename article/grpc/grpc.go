@@ -33,6 +33,7 @@ func (a *ArticleServiceServer) GetAuthorArticle(ctx context.Context, request *ar
 	}, nil
 }
 
+// ListSelf 获取个人前一百条文章内容
 func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.ListSelfRequest) (*articlev1.ListSelfResponse, error) {
 	list, err := a.svc.ListSelf(ctx, request.GetUid(), nil)
 	if err != nil {

@@ -6,7 +6,7 @@ import (
 
 type ArticleDao interface {
 	Insert(ctx context.Context, art *ArticleAuthor) error
-	InsertReader(ctx context.Context, art *ArticleReader) error
+	UpsertReader(ctx context.Context, art *ArticleReader) error
 
 	UpdateByID(ctx context.Context, art *ArticleAuthor) error
 	DeleteReader(ctx context.Context, aid uint64, uid uint64) error
@@ -36,7 +36,7 @@ type ArticleReader struct {
 	Ctime    int64  `gorm:"index"`
 	Utime    int64
 
-	SnowID int64 `gorm:"index"`
+	SnowID int64 `gorm:"uniqueIndex"`
 }
 
 // 使用callback代替hook

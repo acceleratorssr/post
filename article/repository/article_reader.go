@@ -60,7 +60,7 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint6
 }
 
 func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) error {
-	return a.dao.InsertReader(ctx, ToReaderEntity(art))
+	return a.dao.UpsertReader(ctx, ToReaderEntity(art))
 }
 
 func (a *articleReaderRepository) Withdraw(ctx context.Context, aid, uid uint64) error {
