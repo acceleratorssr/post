@@ -43,14 +43,30 @@ func (O *OTELService) ListPublished(ctx context.Context, list *domain.List) ([]d
 }
 
 // Save 打点
-func (s *OTELService) Save(ctx context.Context, art *domain.Article) error {
-	ctx, span := s.tracer.Start(ctx, "articleService_save",
+func (O *OTELService) Save(ctx context.Context, art *domain.Article) error {
+	ctx, span := O.tracer.Start(ctx, "articleService_save",
 		trace.WithSpanKind(trace.SpanKindServer), // ...
 	)
 	defer span.End()
 	span.AddEvent("save article")
+	//// 从上下文中提取 Span
+	//span := trace.SpanFromContext(ctx)
 
-	err := s.svc.Save(ctx, art)
+	//// grpc客户端传递，将 SpanContext 注入到 gRPC metadata 中
+	//md := metadata.New(nil)
+	//trace.Inject(ctx, otel.GetTextMapPropagator(), metadata.NewWriter(md))
+	//ctx = metadata.NewOutgoingContext(ctx, md)
+
+	// grpc服务端提取
+	//if md, ok := metadata.FromIncomingContext(ctx); ok {
+	//            ctx = trace.Extract(ctx, otel.GetTextMapPropagator(), metadata.NewReader(md))
+	//        }
+	//
+	//        // 提取当前的 Span
+	//        span := trace.SpanFromContext(ctx)
+	//        defer span.End()
+
+	err := O.svc.Save(ctx, art)
 	if err != nil {
 		span.RecordError(err)
 	}

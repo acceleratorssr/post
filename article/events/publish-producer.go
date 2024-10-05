@@ -14,12 +14,6 @@ type KafkaSyncProducer struct {
 	producer sarama.SyncProducer
 }
 
-func NewKafkaPublishProducer(p sarama.SyncProducer) PublishedProducer {
-	return &KafkaSyncProducer{
-		producer: p,
-	}
-}
-
 func (k *KafkaSyncProducer) ProducePublishedEvent(ctx context.Context, event *PublishEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {

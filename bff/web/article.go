@@ -2,8 +2,6 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.opentelemetry.io/otel/trace"
-	"math/rand"
 	articlev1 "post/api/proto/gen/article/v1"
 	intrv1 "post/api/proto/gen/intr/v1"
 	"post/pkg/gin_ex"
@@ -24,36 +22,7 @@ func NewArticleHandler(art articlev1.ArticleServiceClient, like intrv1.LikeServi
 	}
 }
 
-func (a *ArticleHandler) Test(ctx *gin.Context) (*gin_ex.Response, error) {
-	_, err := a.svc.Save(ctx, &articlev1.SaveRequest{
-		Data: &articlev1.Article{
-			Title:   "test",
-			Content: "test",
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// 复用
-	span := trace.SpanFromContext(ctx)
-	span.AddEvent("---50%---")
-
-	if rand.Int31n(100)%2 == 0 {
-		return &gin_ex.Response{
-			Code: gin_ex.InvalidArgument,
-			Msg:  "fail",
-		}, nil
-	}
-	return &gin_ex.Response{
-		Code: gin_ex.OK,
-		Msg:  "ok",
-	}, nil
-}
-
 func (a *ArticleHandler) RegisterRoutes(s *gin.Engine, mw gin.HandlerFunc) {
-	s.POST("/test",
-		gin_ex.WrapNilReq(a.Test))
 	articles := s.Group("/articles")
 	articles.Use(mw)
 	articles.POST("/save", gin_ex.WrapWithReq[Req](a.Save))                   //保存文章

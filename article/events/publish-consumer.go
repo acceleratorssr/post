@@ -22,6 +22,7 @@ func NewKafkaPublishedConsumer(client sarama.Client,
 		repo:   repo,
 	}
 }
+
 func (k *KafkaPublishedConsumer) Start(topic string) error {
 	cg, err := sarama.NewConsumerGroupFromClient("t", k.client)
 	if err != nil {
@@ -44,6 +45,8 @@ func (k *KafkaPublishedConsumer) Consume(msg *sarama.ConsumerMessage, t PublishE
 	err := k.repo.Save(ctx, k.toDomain(t))
 	if err != nil {
 		return err
+	} else {
+		// 异步写入缓存
 	}
 	return err
 }

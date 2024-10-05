@@ -15,12 +15,6 @@ type KafkaReadSyncProducer struct {
 	producer sarama.SyncProducer
 }
 
-func NewKafkaReadProducer(p sarama.SyncProducer) ReadProducer {
-	return &KafkaReadSyncProducer{
-		producer: p,
-	}
-}
-
 func (k *KafkaReadSyncProducer) ProduceReadEventMany(ctx context.Context, event *ReadEventMany) error {
 	data, err := json.Marshal(event)
 	if err != nil {

@@ -29,14 +29,15 @@ func InitApp() *App {
 	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao, articleCache, node)
 	articleReaderRepository := repository.NewArticleReaderRepository(articleDao)
 	client := ioc.InitKafka()
-	syncProducer := ioc.NewKafkaSyncProducer(client)
-	readProducer := events.NewKafkaReadProducer(syncProducer)
-	publishedProducer := events.NewKafkaPublishProducer(syncProducer)
+	smallMessagesProducer := ioc.NewKafkaSyncProducerForSmallMessages(client)
+	readProducer := events.NewKafkaReadProducer(smallMessagesProducer)
+	largeMessagesProducer := ioc.NewKafkaSyncProducerForLargeMessages(client)
+	publishedProducer := events.NewKafkaPublishProducer(largeMessagesProducer)
 	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, readProducer, publishedProducer)
 	articleServiceServer := grpc.NewArticleServiceServer(articleService)
 	server := ioc.InitArticleService(articleServiceServer)
 	kafkaPublishedConsumer := events.NewKafkaPublishedConsumer(client, articleReaderRepository)
-	v := ioc.NewKafkaConsumer(kafkaPublishedConsumer)
+	v := events.NewKafkaConsumer(kafkaPublishedConsumer)
 	likeServiceClient := ioc.InitLikeClient()
 	rankCache := cache.NewRankCache(cmdable)
 	localCacheForRank := cache.NewLocalCacheForRank()
@@ -64,4 +65,10 @@ func InitApp() *App {
 
 var rankingServiceSet = wire.NewSet(cache.NewRankCache, cache.NewLocalCacheForRank, repository.NewBatchRankCache, service.NewBatchRankService)
 
-var jobServiceSet = wire.NewSet(dao.NewGORMJobDAO, repository.NewPreemptJobRepository, service.NewCronJobService, ioc.InitLocalFuncExecutor, ioc.InitScheduler, ioc.InitRankingJob, ioc.InitJobs)
+var schedulerServiceSet = wire.NewSet(dao.NewGORMJobDAO, repository.NewPreemptJobRepository, service.NewCronJobService, ioc.InitLocalFuncExecutor, ioc.InitScheduler)
+
+var jobServiceSet = wire.NewSet(ioc.InitRankingJob, ioc.InitJobs)
+
+var smallMessagesSet = wire.NewSet(ioc.NewKafkaSyncProducerForSmallMessages, events.NewKafkaReadProducer)
+
+var largeMessagesSet = wire.NewSet(ioc.NewKafkaSyncProducerForLargeMessages, events.NewKafkaPublishProducer)

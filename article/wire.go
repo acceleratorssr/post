@@ -18,17 +18,30 @@ var rankingServiceSet = wire.NewSet(
 	cache.NewRankCache,
 	cache.NewLocalCacheForRank,
 	repository.NewBatchRankCache,
-	service.NewBatchRankService)
+	service.NewBatchRankService,
+)
 
-var jobServiceSet = wire.NewSet(
+var schedulerServiceSet = wire.NewSet(
 	dao.NewGORMJobDAO,
 	repository.NewPreemptJobRepository,
 	service.NewCronJobService,
 	ioc.InitLocalFuncExecutor,
 	ioc.InitScheduler,
+)
 
+var jobServiceSet = wire.NewSet(
 	ioc.InitRankingJob,
 	ioc.InitJobs,
+)
+
+var smallMessagesSet = wire.NewSet(
+	ioc.NewKafkaSyncProducerForSmallMessages,
+	events.NewKafkaReadProducer,
+)
+
+var largeMessagesSet = wire.NewSet(
+	ioc.NewKafkaSyncProducerForLargeMessages,
+	events.NewKafkaPublishProducer,
 )
 
 func InitApp() *App {
@@ -37,16 +50,19 @@ func InitApp() *App {
 
 		ioc.InitDB,
 		ioc.InitKafka,
-		ioc.NewKafkaSyncProducer,
 		ioc.InitRedis,
 		ioc.InitLikeClient,
-		ioc.NewKafkaConsumer,
-		events.NewKafkaReadProducer,
-		events.NewKafkaPublishProducer,
+
 		events.NewKafkaPublishedConsumer,
+		events.NewKafkaConsumer,
 
 		rankingServiceSet,
+
+		schedulerServiceSet,
 		jobServiceSet,
+
+		smallMessagesSet,
+		largeMessagesSet,
 
 		dao.NewSnowflakeNode0,
 		dao.NewGORMArticleDao,

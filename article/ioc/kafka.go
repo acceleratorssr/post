@@ -3,8 +3,7 @@ package ioc
 import (
 	_ "embed"
 	"github.com/IBM/sarama"
-	"post/article/events"
-	"post/pkg/sarama_ex"
+	"post/article/bridge"
 )
 
 //go:embed kafka.yaml
@@ -24,7 +23,12 @@ func InitKafka() sarama.Client {
 	return client
 }
 
-func NewKafkaSyncProducer(client sarama.Client) sarama.SyncProducer {
+// NewKafkaSyncProducerForLargeMessages
+// 使用 ZSTD 压缩算法的生产者
+func NewKafkaSyncProducerForLargeMessages(client sarama.Client) bridge.LargeMessagesProducer {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Compression = sarama.CompressionZSTD // sarama.CompressionGZIP
+
 	producer, err := sarama.NewSyncProducerFromClient(client)
 	if err != nil {
 		panic(err)
@@ -32,16 +36,15 @@ func NewKafkaSyncProducer(client sarama.Client) sarama.SyncProducer {
 	return producer
 }
 
-func NewKafkaConsumer(consumer *events.KafkaPublishedConsumer) []sarama_ex.Consumer {
-	return []sarama_ex.Consumer{
-		consumer,
+// NewKafkaSyncProducerForSmallMessages
+// 使用 Snappy 压缩算法的消费者
+func NewKafkaSyncProducerForSmallMessages(client sarama.Client) bridge.SmallMessagesProducer {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Compression = sarama.CompressionSnappy // sarama.CompressionLZ4
+
+	producer, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		panic(err)
 	}
+	return producer
 }
-
-//func NewKafkaConsumer(consumer *events.KafkaConsumer) []events.Consumer {
-//	return []events.Consumer{consumer}
-//}
-
-//func NewKafkaConsumer(consumer *events2.BatchKafkaConsumer) []events2.Consumer {
-//	return []events2.Consumer{consumer}
-//}
