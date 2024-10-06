@@ -33,9 +33,14 @@ func (a *ArticleServiceServer) GetAuthorArticle(ctx context.Context, request *ar
 	}, nil
 }
 
-// ListSelf 获取个人前一百条文章内容
+// ListSelf 获取个人前一百条文章内容，第一页则 LastValue 为 -1；
 func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.ListSelfRequest) (*articlev1.ListSelfResponse, error) {
-	list, err := a.svc.ListSelf(ctx, request.GetUid(), nil)
+	list, err := a.svc.ListSelf(ctx, request.GetUid(), &domain.List{
+		Desc:      request.GetDesc(),
+		LastValue: request.GetLastValue(),
+		Limit:     int(request.GetLimit()),
+		OrderBy:   request.GetOrderBy(),
+	})
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")

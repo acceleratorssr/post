@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/IBM/sarama"
+	"strconv"
 )
 
 type PublishedProducer interface {
@@ -22,6 +23,7 @@ func (k *KafkaSyncProducer) ProducePublishedEvent(ctx context.Context, event *Pu
 
 	_, _, err = k.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: "article_published",
+		Key:   sarama.StringEncoder(strconv.FormatUint(event.Article.ID, 10)),
 		Value: sarama.ByteEncoder(data),
 	})
 	return err

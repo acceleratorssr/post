@@ -1037,14 +1037,14 @@ var file_article_v1_article_proto_depIdxs = []int32{
 	4,  // 8: article.v1.ArticleService.ListSelf:input_type -> article.v1.ListSelfRequest
 	6,  // 9: article.v1.ArticleService.Save:input_type -> article.v1.SaveRequest
 	8,  // 10: article.v1.ArticleService.Publish:input_type -> article.v1.PublishRequest
-	10, // 11: article.v1.ArticleService.DeleteReader:input_type -> article.v1.WithdrawRequest
+	10, // 11: article.v1.ArticleService.Withdraw:input_type -> article.v1.WithdrawRequest
 	12, // 12: article.v1.ArticleService.GetPublishedByID:input_type -> article.v1.GetPublishedByIDRequest
 	14, // 13: article.v1.ArticleService.ListPublished:input_type -> article.v1.ListPublishedRequest
 	3,  // 14: article.v1.ArticleService.GetAuthorArticle:output_type -> article.v1.GetAuthorArticleResponse
 	5,  // 15: article.v1.ArticleService.ListSelf:output_type -> article.v1.ListSelfResponse
 	7,  // 16: article.v1.ArticleService.Save:output_type -> article.v1.SaveResponse
 	9,  // 17: article.v1.ArticleService.Publish:output_type -> article.v1.PublishResponse
-	11, // 18: article.v1.ArticleService.DeleteReader:output_type -> article.v1.WithdrawResponse
+	11, // 18: article.v1.ArticleService.Withdraw:output_type -> article.v1.WithdrawResponse
 	13, // 19: article.v1.ArticleService.GetPublishedByID:output_type -> article.v1.GetPublishedByIDResponse
 	15, // 20: article.v1.ArticleService.ListPublished:output_type -> article.v1.ListPublishedResponse
 	14, // [14:21] is the sub-list for method output_type

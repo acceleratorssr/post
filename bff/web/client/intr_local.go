@@ -67,7 +67,7 @@ func (l *LikeServiceAdapter) Collect(ctx context.Context, in *intrv1.CollectRequ
 }
 
 func (l *LikeServiceAdapter) GetListBatchOfLikes(ctx context.Context, in *intrv1.GetListBatchOfLikesRequest, opts ...grpc.CallOption) (*intrv1.GetListBatchOfLikesResponse, error) {
-	data, err := l.svc.GetListBatchOfLikes(ctx, in.GetObjType(), int(in.GetOffset()), int(in.GetLimit()), in.GetNow())
+	data, err := l.svc.GetListBatchOfLikes(ctx, in.GetObjType(), nil)
 	if err != nil {
 		return nil, err
 	}

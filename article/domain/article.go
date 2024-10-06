@@ -1,24 +1,26 @@
 package domain
 
+import "strconv"
+
 type Article struct {
-	ID      uint64 // 唯一标识
-	Title   string
-	Content string
-	Author  Author
-	Ctime   int64
-	Utime   int64
+	ID      uint64 `json:"id"` // 唯一标识
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Author  Author `json:"author"`
+	Ctime   int64  `json:"ctime"`
+	Utime   int64  `json:"utime"`
 }
 
 type Author struct {
-	Id   uint64
-	Name string
+	Id   uint64 `json:"id"`
+	Name string `json:"name"`
 }
 
 type List struct {
-	Limit     int
-	LastValue int64 // 保存在客户端，用于翻页时防重复数据
-	Desc      bool  // 0为升序，1为降序
-	OrderBy   string
+	Limit     int    `json:"Limit"`
+	LastValue int64  `json:"last_value"` // 保存在客户端，用于翻页时防重复数据
+	Desc      bool   `json:"desc"`       // 0为升序，1为降序
+	OrderBy   string `json:"order_by"`
 }
 
 func (l *List) Sort(limit int, orderBy string, desc bool, a []Article, b []Article) []Article {
@@ -59,4 +61,12 @@ func (l *List) Sort(limit int, orderBy string, desc bool, a []Article, b []Artic
 	}
 
 	return result
+}
+
+func GetArtCacheKey(aid uint64) string {
+	return "article:" + strconv.FormatUint(aid, 10)
+}
+
+func KeyArtTopNBrief() string {
+	return "article_rank_brief"
 }

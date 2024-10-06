@@ -14,7 +14,7 @@ type ArticleLikeDao interface {
 
 	InsertCollection(ctx context.Context, objType string, objID, uid uint64) error
 
-	GetPublishedByBatch(ctx context.Context, objType string, offset, limit int, now int64) ([]Like, error)
+	GetLikeByBatch(ctx context.Context, objType string, limit int, lastValue int64, orderBy string, desc bool) ([]Like, error)
 }
 
 // TODO 找TOPn，超大规模数据情况下，归并

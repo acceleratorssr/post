@@ -12,6 +12,7 @@ type ArticleReaderRepository interface {
 	Save(ctx context.Context, art *domain.Article) error
 	Withdraw(ctx context.Context, aid, uid uint64) error
 	GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error)
+	GetPublishedByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error)
 	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
 	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
 }
@@ -21,18 +22,21 @@ type articleReaderRepository struct {
 	cache cache.RedisArticleCache
 }
 
-func (a *articleReaderRepository) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
-	if list.LastValue == 0 && list.Limit <= 100 {
-		//data, err := a.cache.GetFirstPage(ctx, uid)
-		//if err == nil {
-		//	return data, nil
-		//}
+func (a *articleReaderRepository) GetPublishedByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error) {
+	arts, err := a.dao.GetPublishedByIDs(ctx, aids)
+	if err != nil {
+		return nil, err
 	}
 
+	return a.toDomain(arts...)
+}
+
+func (a *articleReaderRepository) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
 	arts, err := a.dao.ListByID(ctx, uid, a.toDAOlist(list))
 	if err != nil {
 		return nil, err
 	}
+
 	return a.toDomain(arts...)
 }
 
@@ -44,6 +48,7 @@ func (a *articleReaderRepository) ListPublished(ctx context.Context, list *domai
 	if err != nil {
 		return nil, err
 	}
+
 	return a.toDomain(arts...)
 }
 
@@ -60,15 +65,11 @@ func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint6
 }
 
 func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) error {
-	return a.dao.UpsertReader(ctx, ToReaderEntity(art))
+	return a.dao.UpsertReader(ctx, &a.ToReaderEntity([]domain.Article{*art}...)[0])
 }
 
 func (a *articleReaderRepository) Withdraw(ctx context.Context, aid, uid uint64) error {
 	err := a.dao.DeleteReader(ctx, aid, uid)
-
-	if err != nil { // 防止发布出现错误
-		a.cache.DeleteFirstPage(ctx, aid)
-	}
 
 	return err
 }
@@ -97,6 +98,19 @@ func (a *articleReaderRepository) toDAOlist(list *domain.List) *dao.List {
 		Limit:     list.Limit,
 		OrderBy:   list.OrderBy,
 	}
+}
+
+func (a *articleReaderRepository) ToReaderEntity(art ...domain.Article) []dao.ArticleReader {
+	var ans = make([]dao.ArticleReader, 0, len(art))
+	for i, _ := range art {
+		ans[i] = dao.ArticleReader{
+			SnowID:   int64(art[i].ID),
+			Title:    art[i].Title,
+			Content:  art[i].Content,
+			Authorid: art[i].Author.Id,
+		}
+	}
+	return ans
 }
 
 func NewArticleReaderRepository(dao dao.ArticleDao) ArticleReaderRepository {

@@ -13,7 +13,7 @@ type LikeService interface {
 	UnLike(ctx context.Context, objType string, objID, uid uint64) error
 	Collect(ctx context.Context, objType string, objID, uid uint64) error
 
-	GetListBatchOfLikes(ctx context.Context, objType string, offset, limit int, now int64) ([]domain.Like, error)
+	GetListBatchOfLikes(ctx context.Context, objType string, list *domain.List) ([]domain.Like, error)
 }
 
 type likeService struct {
@@ -26,9 +26,9 @@ func NewLikeService(repo repository.LikeRepository) LikeService {
 	}
 }
 
-func (l *likeService) GetListBatchOfLikes(ctx context.Context, objType string, offset, limit int, now int64) ([]domain.Like, error) {
+func (l *likeService) GetListBatchOfLikes(ctx context.Context, objType string, list *domain.List) ([]domain.Like, error) {
 	// TODO 可考虑排除老旧的数据，提高速度
-	return l.repo.GetListAllOfLikes(ctx, objType, offset, limit, now)
+	return l.repo.GetPublishedByBatch(ctx, objType, nil)
 }
 
 func (l *likeService) IncrReadCount(ctx context.Context, objType string, objID uint64) error {

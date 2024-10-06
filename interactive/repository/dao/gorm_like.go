@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -185,8 +186,11 @@ func (gad *GORMArticleLikeDao) IncrReadCount(ctx context.Context, objType string
 	//return gad.db.WithContext(ctx).Exec(sql, ObjID, ObjType, 1).Error
 }
 
-func (gad *GORMArticleLikeDao) GetPublishedByBatch(ctx context.Context, objType string, offset, limit int, now int64) ([]Like, error) {
+func (gad *GORMArticleLikeDao) GetLikeByBatch(ctx context.Context, objType string, limit int, lastValue int64, orderBy string, desc bool) ([]Like, error) {
 	var res []Like
-	return res, gad.db.WithContext(ctx).Where("obj_type = ? and ctime < ?", objType, now).
-		Offset(offset).Limit(limit).Find(&res).Error
+	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", orderBy), Vars: []interface{}{lastValue}}).
+		Where("obj_type = ?", objType).Limit(limit).
+		Order(clause.OrderByColumn{Column: clause.Column{Name: orderBy}, Desc: desc}).Find(&res).Error
+
+	return res, err
 }

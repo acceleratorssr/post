@@ -2,6 +2,7 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
+	"math"
 	articlev1 "post/api/proto/gen/article/v1"
 	intrv1 "post/api/proto/gen/intr/v1"
 	"post/pkg/gin_ex"
@@ -135,6 +136,9 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 }
 
 func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_ex.Response, error) {
+	if req.LastValue == 0 { // 第一次查询
+		req.LastValue = math.MaxInt64
+	}
 	res, err := a.svc.ListSelf(ctx, &articlev1.ListSelfRequest{
 		Uid:       a.getUserID(ctx),
 		Limit:     req.Limit,

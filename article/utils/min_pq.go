@@ -1,23 +1,46 @@
 package utils
 
+import "math"
+
 type Like struct {
 	ID    uint64
 	Score float64
 }
 
-type MinHeap struct {
-	heap []Like
-}
+type Option func(*MinHeap)
 
-func NewMinHeap() *MinHeap {
-	return &MinHeap{
-		heap: []Like{},
+func WithLimit(limit int) Option {
+	return func(h *MinHeap) {
+		h.limit = limit
 	}
 }
 
+type MinHeap struct {
+	heap  []Like
+	limit int
+}
+
+func NewMinHeap(opts ...Option) *MinHeap {
+	mh := &MinHeap{
+		heap:  []Like{},
+		limit: math.MaxInt,
+	}
+
+	for _, opt := range opts {
+		opt(mh)
+	}
+
+	return mh
+}
+
 func (h *MinHeap) Insert(id uint64, val float64) {
-	h.heap = append(h.heap, Like{ID: id, Score: val})
-	h.heapifyUp(len(h.heap) - 1)
+	if len(h.heap) < h.limit {
+		h.heap = append(h.heap, Like{ID: id, Score: val})
+		h.heapifyUp(len(h.heap) - 1)
+	} else if val > h.heap[0].Score {
+		h.heap[0] = Like{ID: id, Score: val}
+		h.heapifyDown(0)
+	}
 }
 
 // ExtractMin 删除并返回堆中的最小元素

@@ -23,7 +23,7 @@ const (
 	ArticleService_ListSelf_FullMethodName         = "/article.v1.ArticleService/ListSelf"
 	ArticleService_Save_FullMethodName             = "/article.v1.ArticleService/Save"
 	ArticleService_Publish_FullMethodName          = "/article.v1.ArticleService/Publish"
-	ArticleService_Withdraw_FullMethodName         = "/article.v1.ArticleService/DeleteReader"
+	ArticleService_Withdraw_FullMethodName         = "/article.v1.ArticleService/Withdraw"
 	ArticleService_GetPublishedByID_FullMethodName = "/article.v1.ArticleService/GetPublishedByID"
 	ArticleService_ListPublished_FullMethodName    = "/article.v1.ArticleService/ListPublished"
 )
@@ -153,7 +153,7 @@ func (UnimplementedArticleServiceServer) Publish(context.Context, *PublishReques
 	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
 func (UnimplementedArticleServiceServer) Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteReader not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method Withdraw not implemented")
 }
 func (UnimplementedArticleServiceServer) GetPublishedByID(context.Context, *GetPublishedByIDRequest) (*GetPublishedByIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPublishedByID not implemented")
@@ -332,7 +332,7 @@ var ArticleService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ArticleService_Publish_Handler,
 		},
 		{
-			MethodName: "DeleteReader",
+			MethodName: "Withdraw",
 			Handler:    _ArticleService_Withdraw_Handler,
 		},
 		{

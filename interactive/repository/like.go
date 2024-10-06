@@ -15,7 +15,7 @@ type LikeRepository interface {
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error
 	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid uint64) error
 
-	GetListAllOfLikes(ctx context.Context, ObjType string, offset, limit int, now int64) ([]domain.Like, error)
+	GetPublishedByBatch(ctx context.Context, ObjType string, list *domain.List) ([]domain.Like, error)
 }
 
 type likeRepository struct {
@@ -30,8 +30,8 @@ func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.ArticleLikeCache) Lik
 	}
 }
 
-func (l *likeRepository) GetListAllOfLikes(ctx context.Context, ObjType string, offset, limit int, now int64) ([]domain.Like, error) {
-	likes, err := l.dao.GetPublishedByBatch(ctx, ObjType, offset, limit, now)
+func (l *likeRepository) GetPublishedByBatch(ctx context.Context, ObjType string, list *domain.List) ([]domain.Like, error) {
+	likes, err := l.dao.GetLikeByBatch(ctx, ObjType, list.Limit, list.LastValue, list.OrderBy, list.Desc)
 	if err != nil {
 		// log
 		return nil, err

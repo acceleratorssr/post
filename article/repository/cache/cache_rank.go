@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
 	"post/article/domain"
-	"strconv"
 	"time"
 )
 
@@ -25,7 +24,7 @@ func NewRankCache(client redis.Cmdable) RankCache {
 	}
 }
 func (r *RankRedisCache) GetTopNBrief(ctx context.Context) ([]domain.Article, error) {
-	val, err := r.client.Get(ctx, r.keyTopNBrief("article", 0)).Result()
+	val, err := r.client.Get(ctx, domain.KeyArtTopNBrief()).Result()
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +45,7 @@ func (r *RankRedisCache) SetTopNBrief(ctx context.Context, arts []domain.Article
 		arts[i].Utime = 0
 	}
 	val, err := json.Marshal(arts)
-	err = r.client.Set(ctx, r.keyTopNBrief("article", 0), val, 70*time.Minute).Err()
+	err = r.client.Set(ctx, domain.KeyArtTopNBrief(), val, 70*time.Minute).Err()
 	if err != nil {
 		// log
 	}
@@ -59,17 +58,10 @@ func (r *RankRedisCache) SetTopNBrief(ctx context.Context, arts []domain.Article
 func (r *RankRedisCache) SetTopN(ctx context.Context, arts []domain.Article) error {
 	for i, _ := range arts {
 		val, err := json.Marshal(arts[i])
-		err = r.client.Set(ctx, r.keyTopN("article", arts[i].ID), val, 70*time.Minute).Err()
+		err = r.client.Set(ctx, domain.GetArtCacheKey(arts[i].ID), val, 70*time.Minute).Err()
 		if err != nil {
 			// log
 		}
 	}
 	return nil
-}
-func (r *RankRedisCache) keyTopN(ObjType string, ObjID uint64) string {
-	return ObjType + "_rank:" + strconv.FormatUint(ObjID, 10)
-}
-
-func (r *RankRedisCache) keyTopNBrief(ObjType string, ObjID uint64) string {
-	return ObjType + "_rank_brief:" + strconv.FormatUint(ObjID, 10)
 }

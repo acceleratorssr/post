@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"golang.org/x/sync/errgroup"
 	"post/article/domain"
 	"post/article/events"
 	"post/article/repository"
@@ -19,6 +18,8 @@ type ArticleService interface {
 
 	GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error)
 	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
+
+	GetArtByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error)
 }
 
 type articleService struct {
@@ -28,6 +29,10 @@ type articleService struct {
 	publishedProducer events.PublishedProducer
 
 	ch chan events.ReadEvent
+}
+
+func (svc *articleService) GetArtByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error) {
+	return svc.reader.GetPublishedByIDs(ctx, aids)
 }
 
 func (svc *articleService) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
@@ -64,31 +69,16 @@ func (svc *articleService) GetAuthorModelsByID(ctx context.Context, aid, uid uin
 	return svc.author.GetByID(ctx, aid, uid)
 }
 
+// ListSelf 仅缓存符合 LastValue 的前 limit 条数据
 func (svc *articleService) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
-	var eg errgroup.Group
 	var authorList []domain.Article
-	var readerList []domain.Article
-	eg.Go(func() error {
-		aList, err := svc.author.ListSelf(ctx, uid, list)
-		authorList = aList
-		return err
-	})
-	eg.Go(func() error {
-		rList, err := svc.reader.ListSelf(ctx, uid, list)
-		readerList = rList
-		return err
-	})
-
-	err := eg.Wait()
+	aList, err := svc.author.ListSelf(ctx, uid, list)
+	authorList = aList
 	if err != nil {
 		return nil, err
 	}
 
-	l := make([]domain.Article, 0, len(authorList)+len(readerList))
-	l = append(l, readerList...)
-	l = append(l, authorList...)
-
-	return list.Sort(list.Limit, list.OrderBy, list.Desc, authorList, readerList), nil
+	return authorList, nil
 }
 
 // Save Author表保存

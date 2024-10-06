@@ -54,10 +54,11 @@ message CollectResponse {
 }
 
 message GetListBatchOfLikesRequest {
-  string  ObjType = 1;
-  int32   offset = 2;
-  int32   limit = 3;
-  int64   now = 4;
+  int32   limit = 1;
+  string  order_by = 2;
+  bool    desc = 3;
+  int64   lastValue = 4;
+  string  ObjType = 5;
 }
 
 message GetListBatchOfLikesResponse {

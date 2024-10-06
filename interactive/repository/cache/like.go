@@ -52,6 +52,6 @@ func (r *RedisArticleLikeCache) keyIncrReadCount(ObjType string, ObjID uint64) s
 	return "article_incr_read_count:" + ObjType + ":" + strconv.FormatUint(ObjID, 10)
 }
 
-func (r *RedisArticleLikeCache) keyIncrLikeCount(ObjType string, ObjID uint64) string {
-	return "article_incr_Like_count:" + ObjType + ":" + strconv.FormatUint(ObjID, 10)
+func (r *RedisArticleLikeCache) keyIncrLikeCount(objType string, objID uint64) string {
+	return "article_incr_Like_count:" + objType + ":" + strconv.FormatUint(objID, 10)
 }

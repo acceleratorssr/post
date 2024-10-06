@@ -65,7 +65,12 @@ func (l *LikeServiceServer) Collect(ctx context.Context, request *intrv1.Collect
 }
 
 func (l *LikeServiceServer) GetListBatchOfLikes(ctx context.Context, request *intrv1.GetListBatchOfLikesRequest) (*intrv1.GetListBatchOfLikesResponse, error) {
-	data, err := l.svc.GetListBatchOfLikes(ctx, request.GetObjType(), int(request.GetOffset()), int(request.GetLimit()), request.GetNow())
+	data, err := l.svc.GetListBatchOfLikes(ctx, request.GetObjType(), &domain.List{
+		Desc:      request.GetDesc(),
+		LastValue: request.GetLastValue(),
+		Limit:     int(request.GetLimit()),
+		OrderBy:   request.GetOrderBy(),
+	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "interactive 获取指定类型的一批数据的点赞数失败: %s", err)
 	}

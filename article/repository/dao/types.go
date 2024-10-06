@@ -10,11 +10,15 @@ type ArticleDao interface {
 
 	UpdateByID(ctx context.Context, art *ArticleAuthor) error
 	DeleteReader(ctx context.Context, aid uint64, uid uint64) error
+
 	GetListByAuthor(ctx context.Context, uid uint64, list *List) ([]ArticleAuthor, error)
-	GetAuthorByID(ctx context.Context, aid, uid uint64) (*ArticleAuthor, error)
-	GetPublishedByID(ctx context.Context, id uint64) (*ArticleReader, error)
 	ListPublished(ctx context.Context, list *List) ([]ArticleReader, error)
 	ListByID(ctx context.Context, uid uint64, list *List) ([]ArticleReader, error)
+
+	GetAuthorByID(ctx context.Context, aid, uid uint64) (*ArticleAuthor, error)
+	GetPublishedByID(ctx context.Context, aid uint64) (*ArticleReader, error)
+
+	GetPublishedByIDs(ctx context.Context, aids []uint64) ([]ArticleReader, error)
 }
 
 // ArticleAuthor 为ing库，或者说草稿库

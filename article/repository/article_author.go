@@ -41,40 +41,30 @@ func (a *articleAuthorRepository) GetByID(ctx context.Context, aid, uid uint64) 
 	}
 	return &art[0], err
 }
-func (a *articleAuthorRepository) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
-	if list.LastValue == 0 && list.Limit <= 100 {
-		data, err := a.cache.GetFirstPage(ctx, uid)
-		if err == nil {
-			return data, nil
-		}
-	}
 
+// ListSelf
+// 顺序性：两次刷新缓存时，如果中间用户保存数据，且第一次缓存先于第二次缓存构建完成，则会出现数据不一致的情况
+// 故需要通过 kafka ，而不是 goroutine 构建缓存保证顺序性；
+func (a *articleAuthorRepository) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
 	res, err := a.dao.GetListByAuthor(ctx, uid, a.toDAOlist(list))
 	if err != nil {
 		return nil, err
 	}
 	data, err := a.toDomain(res...)
 
-	// 回源
-	go func() {
-		err = a.cache.SetFirstPage(ctx, uid, data)
-		if err != nil {
-			//log
-		}
-	}()
+	// todo kafka producer 写入缓存
 
 	return data, err
 }
 
 func (a *articleAuthorRepository) Create(ctx context.Context, art *domain.Article) error {
 	art.ID = uint64(a.node.Generate().Int64())
-	defer a.cache.DeleteFirstPage(ctx, art.Author.Id)
-	return a.dao.Insert(ctx, ToAuthorEntity(art))
+
+	return a.dao.Insert(ctx, a.ToAuthorEntity(art))
 }
 
 func (a *articleAuthorRepository) Update(ctx context.Context, art *domain.Article) error {
-	defer a.cache.DeleteFirstPage(ctx, art.Author.Id)
-	return a.dao.UpdateByID(ctx, ToAuthorEntity(art))
+	return a.dao.UpdateByID(ctx, a.ToAuthorEntity(art))
 }
 
 func (a *articleAuthorRepository) toDAOlist(list *domain.List) *dao.List {
@@ -101,4 +91,13 @@ func (a *articleAuthorRepository) toDomain(art ...dao.ArticleAuthor) ([]domain.A
 		})
 	}
 	return domainA, nil
+}
+
+func (a *articleAuthorRepository) ToAuthorEntity(art *domain.Article) *dao.ArticleAuthor {
+	return &dao.ArticleAuthor{
+		SnowID:   art.ID,
+		Title:    art.Title,
+		Content:  art.Content,
+		Authorid: art.Author.Id,
+	}
 }
