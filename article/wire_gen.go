@@ -13,6 +13,7 @@ import (
 	"post/article/ioc"
 	"post/article/repository"
 	"post/article/repository/cache"
+	"post/article/repository/cache/compression"
 	"post/article/repository/dao"
 	"post/article/service"
 	"post/pkg/redis_ex/distributed_lock"
@@ -24,19 +25,20 @@ func InitApp() *App {
 	db := ioc.InitDB()
 	articleDao := dao.NewGORMArticleDao(db)
 	cmdable := ioc.InitRedis()
-	articleCache := cache.NewRedisArticleCache(cmdable)
+	compressionCompression := compression.NewArticleCompressionByGZIP()
+	articleCache := cache.NewRedisArticleCache(cmdable, compressionCompression)
 	node := dao.NewSnowflakeNode0()
 	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao, articleCache, node)
-	articleReaderRepository := repository.NewArticleReaderRepository(articleDao)
 	client := ioc.InitKafka()
-	smallMessagesProducer := ioc.NewKafkaSyncProducerForSmallMessages(client)
-	readProducer := events.NewKafkaReadProducer(smallMessagesProducer)
 	largeMessagesProducer := ioc.NewKafkaSyncProducerForLargeMessages(client)
 	publishedProducer := events.NewKafkaPublishProducer(largeMessagesProducer)
+	articleReaderRepository := repository.NewArticleReaderRepository(articleDao, articleCache, publishedProducer)
+	smallMessagesProducer := ioc.NewKafkaSyncProducerForSmallMessages(client)
+	readProducer := events.NewKafkaReadProducer(smallMessagesProducer)
 	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, readProducer, publishedProducer)
 	articleServiceServer := grpc.NewArticleServiceServer(articleService)
 	server := ioc.InitArticleService(articleServiceServer)
-	kafkaPublishedConsumer := events.NewKafkaPublishedConsumer(client, articleReaderRepository)
+	kafkaPublishedConsumer := events.NewKafkaPublishedConsumer(client, articleDao, articleCache)
 	v := events.NewKafkaConsumer(kafkaPublishedConsumer)
 	likeServiceClient := ioc.InitLikeClient()
 	rankCache := cache.NewRankCache(cmdable)

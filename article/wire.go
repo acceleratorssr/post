@@ -9,6 +9,7 @@ import (
 	"post/article/ioc"
 	"post/article/repository"
 	"post/article/repository/cache"
+	"post/article/repository/cache/compression"
 	"post/article/repository/dao"
 	"post/article/service"
 	distLock "post/pkg/redis_ex/distributed_lock"
@@ -66,6 +67,7 @@ func InitApp() *App {
 
 		dao.NewSnowflakeNode0,
 		dao.NewGORMArticleDao,
+		compression.NewArticleCompressionByGZIP,
 		cache.NewRedisArticleCache,
 		repository.NewArticleAuthorRepository,
 		repository.NewArticleReaderRepository,

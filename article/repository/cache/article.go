@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
 	"post/article/domain"
+	"post/article/repository/cache/compression"
 	"strconv"
 	"time"
 )
@@ -15,10 +16,10 @@ type ArticleCache interface {
 	DeleteListInfo(ctx context.Context, id uint64) error
 
 	SetListDetailByHashKey(ctx context.Context, arts []domain.Article, key string)
-	GetListDetailByHashKey(ctx context.Context, id uint64, key string) *domain.Article
+	GetListDetailByHashKey(ctx context.Context, id uint64, key string) (*domain.Article, error)
 
 	GetArticleDetail(ctx context.Context, id uint64) (*domain.Article, error)
-	SetArticleDetail(ctx context.Context, id uint64, art *domain.Article) error
+	SetArticleDetail(ctx context.Context, art *domain.Article) error
 }
 
 type PageCache struct {
@@ -30,73 +31,87 @@ type PageCache struct {
 }
 
 type RedisArticleCache struct {
-	client redis.Cmdable
+	client      redis.Cmdable
+	compression compression.Compression
 }
 
-// todo 压缩+pipline优化性能
+// todo 考虑延迟读写超时时间，避免pipline因为超时挂掉
+// todo 缓存没设计好，hash应该用在频繁变动字段的对象上，文章其实可以直接分id全存string
 
-// SetListDetailByHashKey 以用户为hash表单位，过期时间为30min，保存文章；
+// SetListDetailByHashKey 以 用户的uid 为hash表分表依据，过期时间为30min，保存文章；（可改为一类用户）
 // 可以是个性化推荐的列表，个人文章列表等
 // 因为全错误不会造成数据不一致，所以有问题打日志就好
-// key: 业务信息+uid
 func (r *RedisArticleCache) SetListDetailByHashKey(ctx context.Context, arts []domain.Article, key string) {
-	errs := make([]error, 0, len(arts))
+	// 创建 pipeline
+	pipe := r.client.Pipeline()
+
 	for _, art := range arts {
-		val, err := json.Marshal(r.ToPageCache(art)[0])
-		err = r.client.HSet(ctx, key, strconv.FormatUint(art.ID, 10), val).Err()
-		errs = append(errs, err)
-	}
-	expireErr := r.client.Expire(ctx, key, 30*time.Minute).Err()
-	if expireErr != nil {
-		// log
+		compress, err := r.compression.Compressed(&art)
+		if err != nil {
+			// log，机器出错
+			return
+		}
+		// 使用 pipeline 的 HSet
+		pipe.HSet(ctx, key, strconv.FormatUint(art.ID, 10), compress)
 	}
 
+	// 设置过期时间
+	pipe.Expire(ctx, key, 30*time.Minute)
+
+	// 执行 pipeline
+	cmders, err := pipe.Exec(ctx)
+	if err != nil {
+		// log，pipeline 出错
+	}
 	go func() {
-		for _, err := range errs {
-			if err != nil {
-				//log
+		// 记录每个命令的错误
+		for _, cmdErr := range cmders {
+			if cmdErr.Err() != nil {
+				// log 错误
 			}
 		}
 	}()
 }
 
-func (r *RedisArticleCache) GetListDetailByHashKey(ctx context.Context, id uint64, key string) *domain.Article {
-	result, err := r.client.HGet(ctx, key, strconv.FormatUint(id, 10)).Result()
+func (r *RedisArticleCache) GetListDetailByHashKey(ctx context.Context, aid uint64, key string) (*domain.Article, error) {
+	result, err := r.client.HGet(ctx, key, strconv.FormatUint(aid, 10)).Result()
 	if err != nil {
-		return nil
-	}
-	var art domain.Article
-	err = json.Unmarshal([]byte(result), &art)
-	if err != nil {
-		// log
-		return nil
+		return nil, err
 	}
 
-	return &art
+	var art *domain.Article
+	err = r.compression.Decompress([]byte(result), art)
+	if err != nil {
+		// log
+		return nil, err
+	}
+
+	return art, nil
 }
 
 func (r *RedisArticleCache) GetArticleDetail(ctx context.Context, id uint64) (*domain.Article, error) {
-	var art domain.Article
 	cmd, err := r.client.Get(ctx, r.keyArticleDetail(id)).Result()
 	if err != nil {
 		//log
 		return nil, err
 	}
 
-	err = json.Unmarshal([]byte(cmd), &art)
+	var art *domain.Article
+	err = r.compression.Decompress([]byte(cmd), art)
 	if err != nil {
-		//log
+		//log，机器错误
 		return nil, err
 	}
-	return &art, nil
+
+	return art, nil
 }
 
-func (r *RedisArticleCache) SetArticleDetail(ctx context.Context, id uint64, art *domain.Article) error {
-	val, err := json.Marshal(r.ToPageCache(*art)[0])
+func (r *RedisArticleCache) SetArticleDetail(ctx context.Context, art *domain.Article) error {
+	compressed, err := r.compression.Compressed(art)
 	if err != nil {
 		return err
 	}
-	return r.client.Set(ctx, r.keyArticleDetail(id), val, time.Hour*1).Err()
+	return r.client.Set(ctx, r.keyArticleDetail(art.ID), compressed, time.Hour*1).Err()
 }
 
 func (r *RedisArticleCache) keyArticleDetail(id uint64) string {
@@ -153,8 +168,9 @@ func (r *RedisArticleCache) ToPageCache(arts ...domain.Article) []PageCache {
 	return page
 }
 
-func NewRedisArticleCache(client redis.Cmdable) ArticleCache {
+func NewRedisArticleCache(client redis.Cmdable, compression compression.Compression) ArticleCache {
 	return &RedisArticleCache{
-		client: client,
+		client:      client,
+		compression: compression,
 	}
 }

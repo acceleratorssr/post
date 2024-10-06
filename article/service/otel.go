@@ -12,6 +12,16 @@ type OTELService struct {
 	tracer trace.Tracer
 }
 
+func (O *OTELService) ListPublished(ctx context.Context, list *domain.List, uid uint64) ([]domain.Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (O *OTELService) GetArtByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (O *OTELService) Publish(ctx context.Context, art *domain.Article) error {
 	//TODO implement me
 	panic("implement me")
@@ -33,11 +43,6 @@ func (O *OTELService) GetAuthorModelsByID(ctx context.Context, aid, uid uint64) 
 }
 
 func (O *OTELService) GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (O *OTELService) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
 	//TODO implement me
 	panic("implement me")
 }

@@ -2,24 +2,28 @@ package repository
 
 import (
 	"context"
+	"math"
 	"post/article/domain"
+	"post/article/events"
 	"post/article/repository/cache"
 	"post/article/repository/dao"
+	"strconv"
 )
 
 type ArticleReaderRepository interface {
 	// Save 包含新建或者更新
 	Save(ctx context.Context, art *domain.Article) error
 	Withdraw(ctx context.Context, aid, uid uint64) error
-	GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error)
+	GetPublishedByID(ctx context.Context, aid, uid uint64) (*domain.Article, error)
 	GetPublishedByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error)
-	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
+	ListPublished(ctx context.Context, list *domain.List, uid uint64) ([]domain.Article, error)
 	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
 }
 
 type articleReaderRepository struct {
-	dao   dao.ArticleDao
-	cache cache.RedisArticleCache
+	dao               dao.ArticleDao
+	cache             cache.ArticleCache
+	publishedProducer events.PublishedProducer
 }
 
 func (a *articleReaderRepository) GetPublishedByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error) {
@@ -28,7 +32,7 @@ func (a *articleReaderRepository) GetPublishedByIDs(ctx context.Context, aids []
 		return nil, err
 	}
 
-	return a.toDomain(arts...)
+	return a.toDomain(arts...), nil
 }
 
 func (a *articleReaderRepository) ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error) {
@@ -37,31 +41,53 @@ func (a *articleReaderRepository) ListSelf(ctx context.Context, uid uint64, list
 		return nil, err
 	}
 
-	return a.toDomain(arts...)
+	return a.toDomain(arts...), nil
 }
 
-func (a *articleReaderRepository) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
-	if list.LastValue == 0 && list.Limit <= 100 {
-		//return a.cache.ListPublished(ctx, offset, limit, keyword, desc)
-	}
+func (a *articleReaderRepository) ListPublished(ctx context.Context, list *domain.List, uid uint64) ([]domain.Article, error) {
 	arts, err := a.dao.ListPublished(ctx, a.toDAOlist(list))
 	if err != nil {
 		return nil, err
 	}
 
-	return a.toDomain(arts...)
+	res := a.toDomain(arts...)
+
+	if list.LastValue == math.MaxInt && list.Limit <= 100 {
+		go func() {
+			for i := 0; i < len(res); i++ {
+				e := a.publishedProducer.ProducePublishedEvent(ctx, &events.PublishEvent{
+					Article:   a.toMQ(res[i]),
+					OnlyCache: true,
+					Uid:       uid,
+				})
+				if e != nil {
+					// todo 记录mysql任务表，扫表重发
+				}
+			}
+		}()
+	}
+
+	return res, nil
 }
 
-func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, id uint64) (*domain.Article, error) {
+func (a *articleReaderRepository) GetPublishedByID(ctx context.Context, aid, uid uint64) (*domain.Article, error) {
 	// 注意，如果帖子数据在OSS上时，需要从前端直接获取，因为考虑到内容不算太敏感
-	art, err := a.dao.GetPublishedByID(ctx, id)
+	ans, err := a.cache.GetListDetailByHashKey(ctx, aid, strconv.FormatUint(uid, 10))
+	if err != nil {
+		ans, err = a.cache.GetArticleDetail(ctx, aid)
+	}
+	if err == nil {
+		return ans, nil
+	}
+
+	art, err := a.dao.GetPublishedByID(ctx, aid)
 	if err != nil {
 		return &domain.Article{}, err
 	}
-	temp, err := a.toDomain(*art)
+	temp := a.toDomain(*art)
 	temp[0].Author.Id = art.Authorid
 
-	return &temp[0], err
+	return &temp[0], nil
 }
 
 func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article) error {
@@ -70,11 +96,19 @@ func (a *articleReaderRepository) Save(ctx context.Context, art *domain.Article)
 
 func (a *articleReaderRepository) Withdraw(ctx context.Context, aid, uid uint64) error {
 	err := a.dao.DeleteReader(ctx, aid, uid)
+	if err != nil {
+		// log
+		return err
+	}
 
+	err = a.cache.DeleteListInfo(ctx, aid)
+	if err != nil {
+		// log
+	}
 	return err
 }
 
-func (a *articleReaderRepository) toDomain(art ...dao.ArticleReader) ([]domain.Article, error) {
+func (a *articleReaderRepository) toDomain(art ...dao.ArticleReader) []domain.Article {
 	domainA := make([]domain.Article, 0, len(art))
 	for i, _ := range art {
 		domainA = append(domainA, domain.Article{
@@ -88,7 +122,7 @@ func (a *articleReaderRepository) toDomain(art ...dao.ArticleReader) ([]domain.A
 			},
 		})
 	}
-	return domainA, nil
+	return domainA
 }
 
 func (a *articleReaderRepository) toDAOlist(list *domain.List) *dao.List {
@@ -113,7 +147,26 @@ func (a *articleReaderRepository) ToReaderEntity(art ...domain.Article) []dao.Ar
 	return ans
 }
 
-func NewArticleReaderRepository(dao dao.ArticleDao) ArticleReaderRepository {
+func (a *articleReaderRepository) toMQ(art domain.Article) *events.Article {
+	return &events.Article{
+		ID:      art.ID,
+		Title:   art.Title,
+		Content: art.Content,
+		Author: events.Author{
+			Id:   art.Author.Id,
+			Name: art.Author.Name,
+		},
+		Utime: art.Utime,
+		Ctime: art.Ctime,
+	}
+}
+
+func NewArticleReaderRepository(dao dao.ArticleDao,
+	cache cache.ArticleCache,
+	publishedProducer events.PublishedProducer) ArticleReaderRepository {
 	return &articleReaderRepository{
-		dao: dao}
+		dao:               dao,
+		cache:             cache,
+		publishedProducer: publishedProducer,
+	}
 }

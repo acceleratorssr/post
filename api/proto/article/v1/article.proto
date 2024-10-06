@@ -82,10 +82,11 @@ message GetPublishedByIDResponse{
 }
 
 message ListPublishedRequest{
-  int32   limit = 1;
-  string  order_by = 2;
-  bool    desc = 3;
-  int64   lastValue = 4;
+  uint64  uid = 1;
+  int32   limit = 2;
+  string  order_by = 3;
+  bool    desc = 4;
+  int64   lastValue = 5;
 }
 
 message ListPublishedResponse{

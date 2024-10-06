@@ -13,11 +13,6 @@ type GORMArticleDao struct {
 	db *gorm.DB
 }
 
-func (gad *GORMArticleDao) GetPublishedByID(ctx context.Context, aid uint64) (*ArticleReader, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (gad *GORMArticleDao) ListByID(ctx context.Context, uid uint64, list *List) ([]ArticleReader, error) {
 	var arts []ArticleReader
 	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
@@ -31,7 +26,7 @@ func (gad *GORMArticleDao) ListPublished(ctx context.Context, list *List) ([]Art
 	var arts []ArticleReader
 	// sql 优化
 	err := gad.db.WithContext(ctx).Where(clause.Expr{SQL: fmt.Sprintf("%s < ?", list.OrderBy), Vars: []interface{}{list.LastValue}}).
-		Limit(list.Limit).Omit("content", "id").
+		Limit(list.Limit).Omit("id").
 		Order(clause.OrderByColumn{Column: clause.Column{Name: list.OrderBy}, Desc: list.Desc}).Find(&arts).Error // todo 到源码里看看
 
 	// 错误生成sql：
@@ -65,6 +60,12 @@ func (gad *GORMArticleDao) GetAuthorByID(ctx context.Context, aid, uid uint64) (
 		// 监控，uid用户非法查询他人文章
 		return nil, gorm.ErrRecordNotFound
 	}
+	return &art, err
+}
+
+func (gad *GORMArticleDao) GetPublishedByID(ctx context.Context, aid uint64) (*ArticleReader, error) {
+	var art ArticleReader
+	err := gad.db.WithContext(ctx).Where("snow_id = ?", aid).First(&art).Error
 	return &art, err
 }
 

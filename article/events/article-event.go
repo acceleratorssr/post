@@ -15,5 +15,7 @@ type Article struct {
 }
 
 type PublishEvent struct {
-	Article Article
+	Article   *Article
+	OnlyCache bool
+	Uid       uint64
 }

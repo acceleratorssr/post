@@ -17,7 +17,7 @@ type ArticleService interface {
 	GetAuthorModelsByID(ctx context.Context, aid, uid uint64) (*domain.Article, error)
 
 	GetPublishedByID(ctx context.Context, id, uid uint64) (*domain.Article, error)
-	ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error)
+	ListPublished(ctx context.Context, list *domain.List, uid uint64) ([]domain.Article, error)
 
 	GetArtByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error)
 }
@@ -35,8 +35,8 @@ func (svc *articleService) GetArtByIDs(ctx context.Context, aids []uint64) ([]do
 	return svc.reader.GetPublishedByIDs(ctx, aids)
 }
 
-func (svc *articleService) ListPublished(ctx context.Context, list *domain.List) ([]domain.Article, error) {
-	published, err := svc.reader.ListPublished(ctx, list)
+func (svc *articleService) ListPublished(ctx context.Context, list *domain.List, uid uint64) ([]domain.Article, error) {
+	published, err := svc.reader.ListPublished(ctx, list, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (svc *articleService) ListPublished(ctx context.Context, list *domain.List)
 }
 
 func (svc *articleService) GetPublishedByID(ctx context.Context, aid, uid uint64) (*domain.Article, error) {
-	art, err := svc.reader.GetPublishedByID(ctx, aid)
+	art, err := svc.reader.GetPublishedByID(ctx, aid, uid)
 	if err == nil { // 增加阅读数
 		go func() {
 			svc.readProducer.ProduceReadEvent(ctx, &events.ReadEvent{
@@ -108,7 +108,8 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) err
 	// 线上库
 	go func() {
 		e := svc.publishedProducer.ProducePublishedEvent(ctx, &events.PublishEvent{
-			Article: svc.toMQ(art),
+			Article:   svc.toMQ(art),
+			OnlyCache: false,
 		})
 		if e != nil {
 			// todo 记录mysql任务表，扫表重发
@@ -121,8 +122,8 @@ func (svc *articleService) Withdraw(ctx context.Context, aid, uid uint64) error 
 	return svc.reader.Withdraw(ctx, aid, uid)
 }
 
-func (svc *articleService) toMQ(art *domain.Article) events.Article {
-	return events.Article{
+func (svc *articleService) toMQ(art *domain.Article) *events.Article {
+	return &events.Article{
 		ID:      art.ID,
 		Title:   art.Title,
 		Content: art.Content,

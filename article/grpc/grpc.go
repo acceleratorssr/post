@@ -33,7 +33,7 @@ func (a *ArticleServiceServer) GetAuthorArticle(ctx context.Context, request *ar
 	}, nil
 }
 
-// ListSelf 获取个人前一百条文章内容，第一页则 LastValue 为 -1；
+// ListSelf 获取个人前一百条文章
 func (a *ArticleServiceServer) ListSelf(ctx context.Context, request *articlev1.ListSelfRequest) (*articlev1.ListSelfResponse, error) {
 	list, err := a.svc.ListSelf(ctx, request.GetUid(), &domain.List{
 		Desc:      request.GetDesc(),
@@ -98,13 +98,14 @@ func (a *ArticleServiceServer) GetPublishedByID(ctx context.Context, request *ar
 }
 
 // ListPublished 获取发布文章列表，无文章内容
+// 可通过uid，区分不同用户的推荐搜索列表
 func (a *ArticleServiceServer) ListPublished(ctx context.Context, request *articlev1.ListPublishedRequest) (*articlev1.ListPublishedResponse, error) {
 	arts, err := a.svc.ListPublished(ctx, &domain.List{
 		Limit:     int(request.GetLimit()),
 		LastValue: request.GetLastValue(),
 		OrderBy:   request.GetOrderBy(),
 		Desc:      request.GetDesc(),
-	})
+	}, request.GetUid())
 	if err != nil {
 		// log
 		return nil, status.Errorf(codes.Unknown, "未知错误")

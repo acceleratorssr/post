@@ -158,6 +158,9 @@ func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_ex.Respon
 }
 
 func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_ex.Response, error) {
+	if req.LastValue == 0 { // 第一次查询
+		req.LastValue = math.MaxInt64
+	}
 	res, err := a.svc.ListPublished(ctx, &articlev1.ListPublishedRequest{
 		Limit:     req.Limit,
 		LastValue: req.LastValue, // 上次查询的最小snow_id
