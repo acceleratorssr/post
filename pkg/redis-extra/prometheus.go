@@ -1,4 +1,4 @@
-package redis_ex
+package redis_extra
 
 import (
 	"context"

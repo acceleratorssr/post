@@ -40,6 +40,7 @@ func (ec *etcdClient) initIp() {
 func (ec *etcdClient) initService() {
 	ec.key = "service"
 }
+
 func (ec *etcdClient) initEtcdClient() {
 	client, err := etcdv3.New(etcdv3.Config{
 		Endpoints: ec.EtcdAddr,

@@ -39,7 +39,7 @@ func (d *DoubleWritePool) UpdatePatten(patten string) {
 
 // PrepareContext prepare进入此方法
 func (d *DoubleWritePool) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	panic("不支持 ")
+	panic("不支持")
 }
 
 // ExecContext 非查询语句进入此方法

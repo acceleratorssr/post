@@ -80,11 +80,12 @@ func (b *OTELInterceptorBuilder) BuildUnaryServerInterceptor() grpc.UnaryServerI
 	}
 }
 
+// BuildUnaryClientInterceptor 客户端拦截器包裹了整个 gRPC 调用过程，包括发送请求和接收响应
 func (b *OTELInterceptorBuilder) BuildUnaryClientInterceptor() grpc.UnaryClientInterceptor {
 	tracer := b.tracer
 	if tracer == nil {
 		tracer = otel.GetTracerProvider().
-			Tracer("post/pkg/grpcx")
+			Tracer("post/pkg/grpc_ex")
 	}
 
 	propagator := b.propagator

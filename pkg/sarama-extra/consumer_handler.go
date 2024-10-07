@@ -34,7 +34,7 @@ func (h *Handler[T]) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 
 		err = h.fn(msg, t)
 		if err != nil {
-			// 记录消费失败消息，重试fn
+			// todo 记录消费失败消息，重试fn
 		} else {
 			session.MarkMessage(msg, "")
 		}

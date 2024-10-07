@@ -24,10 +24,8 @@ var (
 	//go:embed script/lock.lua
 	luaLock string
 
-	ErrFailedToGetLock = errors.New("distLock: 抢锁失败")
-
 	// ErrLockNotHold 预期持有锁，但实际没有持有锁，即用户直接操作redis了
-	ErrLockNotHold = errors.New("distLock: 未持有锁")
+	ErrLockNotHold = errors.New("redsync: 未持有锁")
 )
 
 type Client struct {
@@ -78,7 +76,6 @@ func (c *Client) SingleflightLock(ctx context.Context, key string, expiration ti
 // - 如果 errors.Is(err, context.DeadlineExceeded) 那么最终有没有加锁成功，谁也不知道
 // - 如果 errors.Is(err, ErrFailedToGetLock) 说明肯定没成功，而且超过了重试次数
 // - 否则，和 Redis 通信出了问题
-// todo 改为opts形式
 func (c *Client) Lock(ctx context.Context, key string, expiration time.Duration, retry RetryStrategy, timeout time.Duration) (*Lock, error) {
 	val := c.valuer()
 	var timer *time.Timer

@@ -1,6 +1,11 @@
 package distributed_lock
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var ErrFailedToGetLock = errors.New("抢锁失败")
 
 type RetryStrategy interface {
 	// Next 返回下一次重试的间隔，如果不需要继续重试，那么第二参数发挥 false

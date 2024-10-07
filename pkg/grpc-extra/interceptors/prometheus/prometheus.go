@@ -17,7 +17,6 @@ type InterceptorBuilder struct {
 }
 
 func (b *InterceptorBuilder) buildUnaryServerInterceptor() grpc.UnaryServerInterceptor {
-	// ServerHandleHistogram ...
 	summary := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Namespace: b.Namespace,
@@ -50,7 +49,7 @@ func (b *InterceptorBuilder) buildUnaryServerInterceptor() grpc.UnaryServerInter
 }
 
 func (b *InterceptorBuilder) splitMethodName(fullMethodName string) (string, string) {
-	fullMethodName = strings.TrimPrefix(fullMethodName, "/") // remove leading slash
+	fullMethodName = strings.TrimPrefix(fullMethodName, "/")
 	if i := strings.Index(fullMethodName, "/"); i >= 0 {
 		return fullMethodName[:i], fullMethodName[i+1:]
 	}

@@ -17,6 +17,8 @@ func InitDB(mysqlDSN string) *gorm.DB {
 	promCB := NewCallbacks()
 	prometheus.MustRegister(promCB.vector)
 
+	// *代表优先级最高/低
+	// 可以传递一个特定的回调名称，以指定该回调在特定回调之前执行(Register注册的name)
 	err = db.Callback().Query().Before("*").
 		Register("prometheus_query_before", promCB.before())
 	err = db.Callback().Query().After("*").
@@ -33,14 +35,16 @@ func InitDB(mysqlDSN string) *gorm.DB {
 		Register("prometheus_delete_before", promCB.before())
 	err = db.Callback().Delete().After("*").
 		Register("prometheus_delete_after", promCB.after("delete"))
+	// 处理原始 SQL 查询的操作
 	err = db.Callback().Raw().Before("*").
 		Register("prometheus_raw_before", promCB.before())
 	err = db.Callback().Raw().After("*").
 		Register("prometheus_raw_after", promCB.after("raw"))
-	err = db.Callback().Row().Before("*").
-		Register("prometheus_row_before", promCB.before())
-	err = db.Callback().Row().After("*").
-		Register("prometheus_row_after", promCB.after("row"))
+	// 处理返回单行结果的操作
+	//err = db.Callback().Row().Before("*").
+	//	Register("prometheus_row_before", promCB.before())
+	//err = db.Callback().Row().After("*").
+	//	Register("prometheus_row_after", promCB.after("row"))
 
 	if err != nil {
 		panic(err)
@@ -94,9 +98,14 @@ func NewCallbacks(opts ...Option) *Callbacks {
 		},
 	}, []string{"type", "table"})
 
-	return &Callbacks{
+	callbacks := &Callbacks{
 		vector: vector,
 	}
+	for _, opt := range opts {
+		opt(callbacks)
+	}
+
+	return callbacks
 }
 func (c *Callbacks) before() func(db *gorm.DB) {
 	return func(db *gorm.DB) {

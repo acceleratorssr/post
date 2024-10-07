@@ -58,42 +58,42 @@ func TestExample(t *testing.T) {
 func createUser(db *gorm.DB, name string, age int) {
 	newUser := User{Name: name, Age: age}
 	if err := db.Create(&newUser).Error; err != nil {
-		log.Fatalf("failed to create user: %v", err)
+		log.Fatalf("failed to create sso: %v", err)
 	}
-	fmt.Printf("Created user: %+v\n", newUser)
+	fmt.Printf("Created sso: %+v\n", newUser)
 }
 
 func queryUser(db *gorm.DB, id uint) {
 	var user User
 	if err := db.First(&user, id).Error; err != nil {
-		log.Printf("failed to find user with ID %d: %v\n", id, err)
+		log.Printf("failed to find sso with UID %d: %v\n", id, err)
 		return
 	}
-	fmt.Printf("Found user: %+v\n", user)
+	fmt.Printf("Found sso: %+v\n", user)
 }
 
 func updateUser(db *gorm.DB, id uint, newName string, newAge int) {
 	var user User
 	if err := db.First(&user, id).Error; err != nil {
-		log.Printf("failed to find user with ID %d for update: %v\n", id, err)
+		log.Printf("failed to find sso with UID %d for update: %v\n", id, err)
 		return
 	}
 
 	user.Name = newName
 	user.Age = newAge
 	if err := db.Save(&user).Error; err != nil {
-		log.Printf("failed to update user: %v\n", err)
+		log.Printf("failed to update sso: %v\n", err)
 		return
 	}
-	fmt.Printf("Updated user: %+v\n", user)
+	fmt.Printf("Updated sso: %+v\n", user)
 }
 
 func deleteUser(db *gorm.DB, id uint) {
 	if err := db.Delete(&User{}, id).Error; err != nil {
-		log.Printf("failed to delete user with ID %d: %v\n", id, err)
+		log.Printf("failed to delete sso with UID %d: %v\n", id, err)
 		return
 	}
-	fmt.Printf("Deleted user with ID %d\n", id)
+	fmt.Printf("Deleted sso with UID %d\n", id)
 }
 
 func listAllUsers(db *gorm.DB) {

@@ -72,7 +72,7 @@ func GetValidMsg(err error, obj any) string {
 	if errors.As(err, &errs) {
 		for _, e := range errs {
 			if f, exits := getObj.FieldByName(e.Field()); exits {
-				//如果字段存在，通过 Tag.GetFirstPage("msg") 获取字段的自定义错误消息，并将其作为函数的返回值。
+				//如果字段存在，通过 Tag.GetListInfo("msg") 获取字段的自定义错误消息，并将其作为函数的返回值。
 				return f.Tag.Get("msg")
 			}
 		}
