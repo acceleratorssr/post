@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"post/interactive/repository"
-	"post/pkg/sarama_ex"
+	"post/pkg/sarama-extra"
 	"time"
 )
 
@@ -29,7 +29,7 @@ func (b *BatchKafkaConsumer) Start(topic string) error {
 		err := cg.Consume(context.Background(),
 			//[]string{topic},
 			[]string{"article_read"},
-			sarama_ex.NewConsumerBatchHandler[ReadEvent](b.Consume))
+			sarama_extra.NewConsumerBatchHandler[ReadEvent](b.Consume))
 		if err != nil {
 			panic(err)
 		}

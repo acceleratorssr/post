@@ -6,18 +6,18 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	ssov1 "post/api/proto/gen/sso/v1"
-	"post/pkg/grpc_ex"
-	"post/pkg/grpc_ex/interceptors/limit"
+	"post/pkg/grpc-extra"
+	"post/pkg/grpc-extra/interceptors/limit"
 	grpc2 "post/user/grpc"
 )
 
-func InitGrpcServer(user *grpc2.UserServiceServer) *grpc_ex.Server {
+func InitGrpcServer(user *grpc2.UserServiceServer) *grpc_extra.Server {
 	interceptor := limit.NewInterceptorBuilder()
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.BuildServerInterceptor()))
 	user.Register(server)
 
 	port := "9202"
-	return grpc_ex.NewServer(server, grpc_ex.InitEtcdClient(port, "user"), port)
+	return grpc_extra.NewServer(server, grpc_extra.InitEtcdClient(port, "user"), port)
 }
 
 func InitGrpcSSOClient() ssov1.AuthServiceClient {

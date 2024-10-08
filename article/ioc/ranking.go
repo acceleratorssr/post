@@ -4,7 +4,7 @@ import (
 	"github.com/robfig/cron/v3"
 	"post/article/job"
 	"post/article/service"
-	distLock "post/pkg/redis_ex/distributed_lock"
+	distLock "post/pkg/redis-extra/distributed_lock"
 )
 
 func InitRankingJob(svc service.RankService, client *distLock.Client) *job.RankingJob {

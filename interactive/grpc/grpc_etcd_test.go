@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"net"
 	intrv1 "post/api/proto/gen/intr/v1"
-	"post/pkg/net_ex"
+	"post/pkg/net-extra"
 	"testing"
 	"time"
 )
@@ -51,7 +51,7 @@ func (s *EtcdTestSuite) TestClient() {
 }
 
 func (s *EtcdTestSuite) TestServer() {
-	addr := net_ex.GetOutboundIP()
+	addr := net_extra.GetOutboundIP()
 	key := "service/test"
 
 	l, err := net.Listen("tcp", ":9400")

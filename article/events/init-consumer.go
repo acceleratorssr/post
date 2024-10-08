@@ -1,9 +1,9 @@
 package events
 
-import "post/pkg/sarama_ex"
+import "post/pkg/sarama-extra"
 
-func NewKafkaConsumer(consumer *KafkaPublishedConsumer) []sarama_ex.Consumer {
-	return []sarama_ex.Consumer{
+func NewKafkaConsumer(consumer *KafkaPublishedConsumer) []sarama_extra.Consumer {
+	return []sarama_extra.Consumer{
 		consumer,
 	}
 }

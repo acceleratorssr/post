@@ -6,7 +6,7 @@ import (
 	"post/interactive/events"
 	"post/interactive/repository/dao"
 	"post/migrator/events/fixer"
-	"post/pkg/sarama_ex"
+	"post/pkg/sarama-extra"
 )
 
 //go:embed kafka.yaml
@@ -27,8 +27,8 @@ func InitKafka() sarama.Client {
 }
 
 func NewKafkaConsumer(consumer *events.KafkaReadConsumer,
-	fix *fixer.Consumer[dao.Like]) []sarama_ex.Consumer {
-	return []sarama_ex.Consumer{consumer, fix}
+	fix *fixer.Consumer[dao.Like]) []sarama_extra.Consumer {
+	return []sarama_extra.Consumer{consumer, fix}
 }
 
 //func NewKafkaConsumer(consumer *events2.BatchKafkaConsumer) []events2.Consumer {

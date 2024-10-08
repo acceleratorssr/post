@@ -45,13 +45,13 @@ type ArticleReader struct {
 
 // 使用callback代替hook
 // https://gorm.io/zh_CN/docs/write_plugins.html
-//func (aa *ArticleAuthor) BeforeCreate(tx *gorm_ex.DB) (err error) {
+//func (aa *ArticleAuthor) BeforeCreate(tx *gorm-extra.DB) (err error) {
 //	start := time.Now()
 //	tx.Set("start", start)
 //	return
 //}
 //
-//func (aa *ArticleAuthor) AfterCreate(tx *gorm_ex.DB) (err error) {
+//func (aa *ArticleAuthor) AfterCreate(tx *gorm-extra.DB) (err error) {
 //	start, ok := tx.Statement.Get("start")
 //	if !ok {
 //		return

@@ -29,7 +29,7 @@ func Init() *App {
 	syncServiceServer := grpc.NewSyncServiceServer(syncService)
 	searchService := service.NewSearchService(articleRepository)
 	searchServiceServer := grpc.NewSearchService(searchService)
-	server := ioc.InitGRPCxServer(syncServiceServer, searchServiceServer)
+	server := ioc.InitGRPCexServer(syncServiceServer, searchServiceServer)
 	saramaClient := ioc.InitKafka()
 	logger := ioc.InitLogger()
 	articleConsumer := events.NewArticleConsumer(saramaClient, logger, syncService)

@@ -10,7 +10,7 @@ import (
 // InitESClient 读取配置文件，进行初始化ES客户端
 func InitESClient() *elastic.Client {
 	type Config struct {
-		Url   string `yaml:"url"`
+		Urls  string `yaml:"urls"`
 		Sniff bool   `yaml:"sniff"`
 	}
 	var cfg Config
@@ -19,15 +19,17 @@ func InitESClient() *elastic.Client {
 		panic(err)
 	}
 
-	const timeout = 100 * time.Second
+	const timeout = 10 * time.Second
 	opts := []elastic.ClientOptionFunc{
-		elastic.SetURL(cfg.Url),
+		elastic.SetURL(cfg.Urls),
+		elastic.SetSniff(cfg.Sniff),
 		elastic.SetHealthcheckTimeoutStartup(timeout),
 	}
 	client, err := elastic.NewClient(opts...)
 	if err != nil {
 		panic(err)
 	}
+
 	err = dao.InitES(client)
 	if err != nil {
 		panic(err)

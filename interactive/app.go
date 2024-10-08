@@ -1,14 +1,14 @@
 package main
 
 import (
-	"post/pkg/gin_ex"
-	"post/pkg/grpc_ex"
-	"post/pkg/sarama_ex"
+	"post/pkg/gin-extra"
+	"post/pkg/grpc-extra"
+	"post/pkg/sarama-extra"
 )
 
 // App 控制main中的方法的启用，控制生命周期
 type App struct {
-	server    *grpc_ex.Server
-	consumers []sarama_ex.Consumer
-	webAdmin  *gin_ex.Server
+	server    *grpc_extra.Server
+	consumers []sarama_extra.Consumer
+	webAdmin  *gin_extra.Server
 }

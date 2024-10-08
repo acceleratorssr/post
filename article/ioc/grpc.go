@@ -8,17 +8,17 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	intrv1 "post/api/proto/gen/intr/v1"
 	grpc2 "post/article/grpc"
-	"post/pkg/grpc_ex"
-	"post/pkg/grpc_ex/interceptors/limit"
+	"post/pkg/grpc-extra"
+	"post/pkg/grpc-extra/interceptors/limit"
 )
 
-func InitArticleService(article *grpc2.ArticleServiceServer) *grpc_ex.Server {
+func InitArticleService(article *grpc2.ArticleServiceServer) *grpc_extra.Server {
 	limitInterceptor := limit.NewInterceptorBuilder()
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(limitInterceptor.BuildServerInterceptor()))
 	article.RegisterServer(server)
 
 	port := "9204"
-	return grpc_ex.NewServer(server, grpc_ex.InitEtcdClient(port, "article"), port)
+	return grpc_extra.NewServer(server, grpc_extra.InitEtcdClient(port, "article"), port)
 }
 
 func InitLikeClient() intrv1.LikeServiceClient {

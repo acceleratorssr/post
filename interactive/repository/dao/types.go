@@ -80,7 +80,7 @@ type UserGiveCollect struct {
 }
 
 type UserGiveRead struct {
-	ID uint64 `gorm_ex:"primaryKey,autoIncrement"`
+	ID uint64 `gorm-extra:"primaryKey,autoIncrement"`
 
 	Uid     uint64 `gorm:"uniqueIndex:idx_uid_objid_objtype"`
 	ObjID   uint64 `gorm:"uniqueIndex:idx_uid_objid_objtype"`

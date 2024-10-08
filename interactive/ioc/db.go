@@ -8,7 +8,7 @@ import (
 	"gorm.io/plugin/opentelemetry/tracing"
 	prom "gorm.io/plugin/prometheus"
 	dao2 "post/interactive/repository/dao"
-	"post/pkg/gorm_ex/connpool"
+	"post/pkg/gorm-extra/connpool"
 	"time"
 )
 

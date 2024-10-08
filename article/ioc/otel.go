@@ -22,7 +22,6 @@ func InitOTEL() func(ctx context.Context) {
 	prop := newPropagator()
 	// 在客户端和服务端之间传递 tracing 的相关信息
 	otel.SetTextMapPropagator(prop)
-
 	// 初始化跟踪提供者（trace provider）
 	// 这个 provider 就是用来在打点的时候构建 trace 的
 	//tracer := otel.Tracer("example-tracer")
@@ -30,7 +29,6 @@ func InitOTEL() func(ctx context.Context) {
 	//time.Sleep(100 * time.Millisecond) // 模拟一些操作
 	//span.End()
 	tp, err := newTraceProvider(res)
-
 	if err != nil {
 		panic(err)
 	}

@@ -1,7 +1,7 @@
 package main
 
-import "post/pkg/grpc_ex"
+import "post/pkg/grpc-extra"
 
 type App struct {
-	server *grpc_ex.Server
+	server *grpc_extra.Server
 }

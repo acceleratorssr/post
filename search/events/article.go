@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"post/pkg/logger"
-	"post/pkg/sarama_ex"
+	"post/pkg/sarama-extra"
 	"post/search/domain"
 	"post/search/service"
 	"time"
@@ -44,7 +44,7 @@ func (a *ArticleConsumer) Start() error {
 	go func() {
 		err := cg.Consume(context.Background(),
 			[]string{topicSyncArticle},
-			sarama_ex.NewHandler[ArticleEvent](a.Consume))
+			sarama_extra.NewHandler[ArticleEvent](a.Consume))
 		if err != nil {
 			a.l.Error("发生错误，退出消费循环 ", logger.Error(err))
 		}

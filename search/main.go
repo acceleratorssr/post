@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"post/pkg/grpc_ex"
+	"post/pkg/grpc-extra"
 	"post/search/events"
 )
 
@@ -22,7 +22,7 @@ func main() {
 
 func initViperWatch() {
 	cfile := pflag.String("config",
-		"config/dev.yaml", "配置文件路径")
+		"../search/config/dev.yaml", "配置文件路径")
 	pflag.Parse()
 	// 直接指定文件路径
 	viper.SetConfigFile(*cfile)
@@ -34,6 +34,6 @@ func initViperWatch() {
 }
 
 type App struct {
-	server    *grpc_ex.Server
+	server    *grpc_extra.Server
 	consumers []events.Consumer
 }

@@ -34,7 +34,7 @@ func Init() *App {
 		grpc.NewSyncServiceServer,
 		grpc.NewSearchService,
 		events.NewArticleConsumer,
-		ioc.InitGRPCxServer,
+		ioc.InitGRPCexServer,
 		ioc.NewConsumers,
 		wire.Struct(new(App), "*"),
 	)

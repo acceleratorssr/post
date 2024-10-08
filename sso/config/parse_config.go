@@ -13,7 +13,7 @@ type Info struct {
 
 func FindFirstYAMLFile() (string, error) {
 	var yamlFile string
-	err := filepath.Walk("./sso/config", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk("../sso/config", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

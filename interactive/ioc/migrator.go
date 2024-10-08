@@ -7,18 +7,18 @@ import (
 	"post/migrator/events"
 	"post/migrator/events/fixer"
 	"post/migrator/scheduler"
-	"post/pkg/gin_ex"
-	"post/pkg/gorm_ex/connpool"
+	"post/pkg/gin-extra"
+	"post/pkg/gorm-extra/connpool"
 )
 
 func InitMigratorServer(base BaseDB, target TargetDB,
-	pool *connpool.DoubleWritePool, producer events.InconsistentProducer) *gin_ex.Server {
+	pool *connpool.DoubleWritePool, producer events.InconsistentProducer) *gin_extra.Server {
 	intrScheduler := scheduler.NewScheduler[dao.Like](base, target, pool, producer)
 
 	engine := gin.Default()
 	intrScheduler.RegisterRoutes(engine.Group("/migrator/like"))
 
-	return &gin_ex.Server{
+	return &gin_extra.Server{
 		Addr:   ":9300",
 		Engine: engine,
 	}

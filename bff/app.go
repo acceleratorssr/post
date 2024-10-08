@@ -1,9 +1,9 @@
 package main
 
 import (
-	"post/pkg/gin_ex"
+	"post/pkg/gin-extra"
 )
 
 type App struct {
-	WebServer *gin_ex.Server
+	WebServer *gin_extra.Server
 }

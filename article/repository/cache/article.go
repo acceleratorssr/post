@@ -90,7 +90,7 @@ func (r *RedisArticleCache) GetListDetailByHashKey(ctx context.Context, aid uint
 }
 
 func (r *RedisArticleCache) GetArticleDetail(ctx context.Context, id uint64) (*domain.Article, error) {
-	cmd, err := r.client.Get(ctx, r.keyArticleDetail(id)).Result()
+	cmd, err := r.client.Get(ctx, domain.GetArtCacheKey(id)).Result()
 	if err != nil {
 		//log
 		return nil, err
@@ -111,11 +111,7 @@ func (r *RedisArticleCache) SetArticleDetail(ctx context.Context, art *domain.Ar
 	if err != nil {
 		return err
 	}
-	return r.client.Set(ctx, r.keyArticleDetail(art.ID), compressed, time.Hour*1).Err()
-}
-
-func (r *RedisArticleCache) keyArticleDetail(id uint64) string {
-	return "article_article_detail:" + strconv.FormatUint(id, 10)
+	return r.client.Set(ctx, domain.GetArtCacheKey(art.ID), compressed, time.Hour*1).Err()
 }
 
 // SetListInfo 保存文章信息

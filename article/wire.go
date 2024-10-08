@@ -12,7 +12,7 @@ import (
 	"post/article/repository/cache/compression"
 	"post/article/repository/dao"
 	"post/article/service"
-	distLock "post/pkg/redis_ex/distributed_lock"
+	distLock "post/pkg/redis-extra/distributed_lock"
 )
 
 var rankingServiceSet = wire.NewSet(

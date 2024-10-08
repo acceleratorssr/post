@@ -6,7 +6,7 @@ import (
 	"post/article/domain"
 	"post/article/repository/cache"
 	"post/article/repository/dao"
-	"post/pkg/sarama_ex"
+	"post/pkg/sarama-extra"
 	"strconv"
 	"time"
 )
@@ -35,7 +35,7 @@ func (k *KafkaPublishedConsumer) Start(topic string) error {
 	go func() {
 		err := cg.Consume(context.Background(),
 			[]string{"article_published"},
-			sarama_ex.NewHandler[PublishEvent](k.Consume))
+			sarama_extra.NewHandler[PublishEvent](k.Consume))
 		if err != nil {
 			panic(err)
 		}

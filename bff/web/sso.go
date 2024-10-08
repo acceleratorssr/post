@@ -3,7 +3,7 @@ package web
 import (
 	"github.com/gin-gonic/gin"
 	ssov1 "post/api/proto/gen/sso/v1"
-	"post/pkg/gin_ex"
+	"post/pkg/gin-extra"
 )
 
 type SSOHandler struct {
@@ -30,15 +30,15 @@ func (s *SSOHandler) RegisterRoutes(engine *gin.Engine, mw gin.HandlerFunc) {
 	ssoGroup := engine.Group("/sso")
 	ssoGroup.POST("/login", s.Login)
 
-	ssoGroup.POST("/refresh", mw, gin_ex.WrapWithReq[RefreshTokenReq](s.Refresh)) // 由 web jwtAOP 检查token
-	ssoGroup.POST("/logout", mw, gin_ex.WrapNilReq(s.Logout))
+	ssoGroup.POST("/refresh", mw, gin_extra.WrapWithReq[RefreshTokenReq](s.Refresh)) // 由 web jwtAOP 检查token
+	ssoGroup.POST("/logout", mw, gin_extra.WrapNilReq(s.Logout))
 }
 
 func (s *SSOHandler) Login(ctx *gin.Context) {
 	// todo 添加bloom，快速判断用户是否存在
 	var req LoginReq
 	if err := ctx.Bind(&req); err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, err.Error())
+		gin_extra.FailWithMessage(ctx, gin_extra.InvalidArgument, err.Error())
 		return
 	}
 
@@ -49,17 +49,17 @@ func (s *SSOHandler) Login(ctx *gin.Context) {
 		Code:      req.Code,
 	})
 	if err != nil {
-		gin_ex.FailWithError(ctx, err, gin_ex.NotFound)
+		gin_extra.FailWithError(ctx, err, gin_extra.NotFound)
 	}
 
-	gin_ex.OKWithData(ctx, LoginResp{
+	gin_extra.OKWithData(ctx, LoginResp{
 		AccessToken:  login.AccessToken,
 		RefreshToken: login.RefreshToken,
 	})
 }
 
 // Refresh 安全性：考虑同一token连续n次请求刷新，触发2fa验证
-func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_ex.Response, error) {
+func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_extra.Response, error) {
 	token, err := s.sso.RefreshToken(ctx, &ssov1.RefreshTokenRequest{
 		RefreshToken: ctx.Value("token").(string),
 		UserInfo: &ssov1.UserInfo{
@@ -69,26 +69,26 @@ func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_ex
 		},
 	})
 	if err != nil {
-		return &gin_ex.Response{
-			Code: gin_ex.Unauthenticated,
+		return &gin_extra.Response{
+			Code: gin_extra.Unauthenticated,
 			Msg:  "请重新登录",
 		}, err
 	}
 
-	return &gin_ex.Response{
+	return &gin_extra.Response{
 		Data: token.AccessToken,
 		Msg:  "刷新成功",
 	}, nil
 }
 
-func (s *SSOHandler) Logout(ctx *gin.Context) (*gin_ex.Response, error) {
+func (s *SSOHandler) Logout(ctx *gin.Context) (*gin_extra.Response, error) {
 	_, err := s.sso.Logout(ctx, &ssov1.LogoutRequest{
 		ExpiredAt:    ctx.Value("x_exp").(int64),
 		RefreshToken: ctx.Value("x_token").(string),
 	})
 	if err != nil {
-		return &gin_ex.Response{
-			Code: gin_ex.Unauthenticated,
+		return &gin_extra.Response{
+			Code: gin_extra.Unauthenticated,
 			Msg:  "退出失败",
 		}, err
 	}
@@ -98,13 +98,13 @@ func (s *SSOHandler) Logout(ctx *gin.Context) (*gin_ex.Response, error) {
 		RefreshToken: ctx.Value("token").(string),
 	})
 	if err != nil {
-		return &gin_ex.Response{
-			Code: gin_ex.Unauthenticated,
+		return &gin_extra.Response{
+			Code: gin_extra.Unauthenticated,
 			Msg:  "退出失败",
 		}, err
 	}
 
-	return &gin_ex.Response{
+	return &gin_extra.Response{
 		Msg: "退出成功",
 	}, nil
 }

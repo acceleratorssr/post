@@ -3,7 +3,10 @@ package grpc
 import (
 	"context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	searchv1 "post/api/proto/gen/search/v1"
+	"post/search/domain"
 	"post/search/service"
 )
 
@@ -23,12 +26,20 @@ func (s *SearchServiceServer) Register(server grpc.ServiceRegistrar) {
 func (s *SearchServiceServer) Search(ctx context.Context, request *searchv1.SearchRequest) (*searchv1.SearchResponse, error) {
 	resp, err := s.svc.Search(ctx, request.Expression)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "interactive 搜索文章失败: %s", err)
 	}
 
-	articles := make([]*searchv1.Article, len(resp.Articles))
+	return &searchv1.SearchResponse{
+		Article: &searchv1.ArticleResult{
+			Articles: s.toDTO(resp.Articles...),
+		},
+	}, nil
+}
 
-	for i, src := range resp.Articles {
+func (s *SearchServiceServer) toDTO(art ...domain.Article) []*searchv1.Article {
+	articles := make([]*searchv1.Article, len(art))
+
+	for i, src := range art {
 		articles[i] = &searchv1.Article{
 			Id:      src.Id,
 			Title:   src.Title,
@@ -36,10 +47,5 @@ func (s *SearchServiceServer) Search(ctx context.Context, request *searchv1.Sear
 			Content: src.Content,
 		}
 	}
-
-	return &searchv1.SearchResponse{
-		Article: &searchv1.ArticleResult{
-			Articles: articles,
-		},
-	}, nil
+	return articles
 }

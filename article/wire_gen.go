@@ -16,7 +16,7 @@ import (
 	"post/article/repository/cache/compression"
 	"post/article/repository/dao"
 	"post/article/service"
-	"post/pkg/redis_ex/distributed_lock"
+	"post/pkg/redis-extra/distributed_lock"
 )
 
 // Injectors from wire.go:

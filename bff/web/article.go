@@ -5,7 +5,7 @@ import (
 	"math"
 	articlev1 "post/api/proto/gen/article/v1"
 	intrv1 "post/api/proto/gen/intr/v1"
-	"post/pkg/gin_ex"
+	"post/pkg/gin-extra"
 	"strconv"
 )
 
@@ -26,22 +26,22 @@ func NewArticleHandler(art articlev1.ArticleServiceClient, like intrv1.LikeServi
 func (a *ArticleHandler) RegisterRoutes(s *gin.Engine, mw gin.HandlerFunc) {
 	articles := s.Group("/articles")
 	articles.Use(mw)
-	articles.POST("/save", gin_ex.WrapWithReq[Req](a.Save))                   //保存文章
-	articles.POST("/publish", gin_ex.WrapWithReq[Req](a.Publish))             // 发布文章
-	articles.POST("/withdraw", gin_ex.WrapWithReq[ReqOnlyWithID](a.Withdraw)) // 撤回已发布文章
-	articles.POST("/list_self", gin_ex.WrapWithReq[ReqList](a.ListSelf))      // 获取当前用户未发布文章列表
-	articles.GET("/detail/:id", a.DetailSelf)                                 // 获取未发布文章内容
+	articles.POST("/save", gin_extra.WrapWithReq[Req](a.Save))                   //保存文章
+	articles.POST("/publish", gin_extra.WrapWithReq[Req](a.Publish))             // 发布文章
+	articles.POST("/withdraw", gin_extra.WrapWithReq[ReqOnlyWithID](a.Withdraw)) // 撤回已发布文章
+	articles.POST("/list_self", gin_extra.WrapWithReq[ReqList](a.ListSelf))      // 获取当前用户未发布文章列表
+	articles.GET("/detail/:id", a.DetailSelf)                                    // 获取未发布文章内容
 
 	reader := s.Group("/reader")
 	reader.Use(mw)
 	reader.GET("/:id", a.Detail) // 获取发布文章内容
-	reader.POST("/list_publish", gin_ex.WrapWithReq[ReqList](a.ListPublished))
+	reader.POST("/list_publish", gin_extra.WrapWithReq[ReqList](a.ListPublished))
 
-	reader.POST("/like", gin_ex.WrapWithReq[LikeReq](a.Like))          // 点赞
-	reader.POST("/collect", gin_ex.WrapWithReq[CollectReq](a.Collect)) //收藏
+	reader.POST("/like", gin_extra.WrapWithReq[LikeReq](a.Like))          // 点赞
+	reader.POST("/collect", gin_extra.WrapWithReq[CollectReq](a.Collect)) //收藏
 }
 
-func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq) (*gin_ex.Response, error) {
+func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq) (*gin_extra.Response, error) {
 	var err error
 
 	_, err = a.like.Collect(ctx, &intrv1.CollectRequest{
@@ -51,19 +51,19 @@ func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq) (*gin_ex.Resp
 	})
 
 	if err != nil {
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  "收藏失败",
 		}, err
 	}
-	return &gin_ex.Response{
-		Code: gin_ex.OK,
+	return &gin_extra.Response{
+		Code: gin_extra.OK,
 		Msg:  "收藏成功",
 	}, nil
 }
 
 // Like todo 添加like等测试
-func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq) (*gin_ex.Response, error) {
+func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq) (*gin_extra.Response, error) {
 	var err error
 	id := a.getUserID(ctx)
 	if req.Liked {
@@ -81,13 +81,13 @@ func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq) (*gin_ex.Response, 
 	}
 
 	if err != nil {
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  "点赞相关操作失败",
 		}, err
 	}
-	return &gin_ex.Response{
-		Code: gin_ex.OK,
+	return &gin_extra.Response{
+		Code: gin_extra.OK,
 		Msg:  "点赞成功",
 	}, nil
 }
@@ -96,7 +96,7 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 	id := ctx.Param("id")
 	artId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, "id必须为数字")
+		gin_extra.FailWithMessage(ctx, gin_extra.InvalidArgument, "id必须为数字")
 		//log
 		return
 	}
@@ -106,18 +106,18 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 		Uid: a.getUserID(ctx),
 	})
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, err.Error())
+		gin_extra.FailWithMessage(ctx, gin_extra.System, err.Error())
 		return
 	}
 
-	gin_ex.OKWithDataAndMsg(ctx, a.toVO(art.Data), "成功")
+	gin_extra.OKWithDataAndMsg(ctx, a.toVO(art.Data), "成功")
 }
 
 func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 	id := ctx.Param("id")
 	artId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, "id必须为数字")
+		gin_extra.FailWithMessage(ctx, gin_extra.InvalidArgument, "id必须为数字")
 		//log
 		return
 	}
@@ -128,14 +128,14 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 	})
 	if err != nil {
 		// log err.Error()
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "查询失败")
+		gin_extra.FailWithMessage(ctx, gin_extra.System, "查询失败")
 		return
 	}
 
-	gin_ex.OKWithDataAndMsg(ctx, a.toVO(art.GetData()), "成功")
+	gin_extra.OKWithDataAndMsg(ctx, a.toVO(art.GetData()), "成功")
 }
 
-func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_ex.Response, error) {
+func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_extra.Response, error) {
 	if req.LastValue == 0 { // 第一次查询
 		req.LastValue = math.MaxInt64
 	}
@@ -147,17 +147,17 @@ func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_ex.Respon
 		Desc:      req.Desc,
 	})
 	if err != nil {
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  err.Error(),
 		}, nil
 	}
-	return &gin_ex.Response{
+	return &gin_extra.Response{
 		Data: res,
 	}, nil
 }
 
-func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_ex.Response, error) {
+func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_extra.Response, error) {
 	if req.LastValue == 0 { // 第一次查询
 		req.LastValue = math.MaxInt64
 	}
@@ -169,18 +169,18 @@ func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_ex.R
 	})
 	if err != nil {
 		// log err.Error()
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  "查询失败",
 		}, nil
 	}
 
-	return &gin_ex.Response{
+	return &gin_extra.Response{
 		Data: a.toVO(res.Data...),
 	}, nil
 }
 
-func (a *ArticleHandler) Publish(ctx *gin.Context, req Req) (*gin_ex.Response, error) {
+func (a *ArticleHandler) Publish(ctx *gin.Context, req Req) (*gin_extra.Response, error) {
 	id, err := a.svc.Publish(ctx, &articlev1.PublishRequest{
 		Data: &articlev1.Article{
 			ID: req.ID,
@@ -194,18 +194,18 @@ func (a *ArticleHandler) Publish(ctx *gin.Context, req Req) (*gin_ex.Response, e
 	})
 	if err != nil {
 		// log
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  "发布失败",
 		}, err
 	}
-	return &gin_ex.Response{
+	return &gin_extra.Response{
 		Data: id,
 		Msg:  "发布成功",
 	}, nil
 }
 
-func (a *ArticleHandler) Save(ctx *gin.Context, req Req) (*gin_ex.Response, error) {
+func (a *ArticleHandler) Save(ctx *gin.Context, req Req) (*gin_extra.Response, error) {
 	// 考虑压缩内容
 	id, err := a.svc.Save(ctx, &articlev1.SaveRequest{
 		Data: &articlev1.Article{
@@ -220,32 +220,32 @@ func (a *ArticleHandler) Save(ctx *gin.Context, req Req) (*gin_ex.Response, erro
 	})
 	if err != nil {
 		// log
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  "文章保存失败",
 		}, err
 	}
 
-	gin_ex.OKWithDataAndMsg(ctx, id, "保存成功")
-	return &gin_ex.Response{
+	gin_extra.OKWithDataAndMsg(ctx, id, "保存成功")
+	return &gin_extra.Response{
 		Msg: "保存成功",
 	}, nil
 }
 
-func (a *ArticleHandler) Withdraw(ctx *gin.Context, req ReqOnlyWithID) (*gin_ex.Response, error) {
+func (a *ArticleHandler) Withdraw(ctx *gin.Context, req ReqOnlyWithID) (*gin_extra.Response, error) {
 	_, err := a.svc.Withdraw(ctx, &articlev1.WithdrawRequest{
 		Aid: req.ID,
 		Uid: a.getUserID(ctx),
 	})
 	if err != nil {
 		// log
-		return &gin_ex.Response{
-			Code: gin_ex.System,
+		return &gin_extra.Response{
+			Code: gin_extra.System,
 			Msg:  "撤回文章失败",
 		}, err
 	}
 
-	return &gin_ex.Response{
+	return &gin_extra.Response{
 		Msg: "成功",
 	}, nil
 }
@@ -258,7 +258,7 @@ func (a *ArticleHandler) getUsername(ctx *gin.Context) string {
 	username := ctx.MustGet("username")
 	un, ok := username.(string)
 	if !ok {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "token存在问题")
+		gin_extra.FailWithMessage(ctx, gin_extra.System, "token存在问题")
 		// log
 		return ""
 	}
@@ -269,7 +269,7 @@ func (a *ArticleHandler) getUserID(ctx *gin.Context) uint64 {
 	uid := ctx.MustGet("uid")
 	id, ok := uid.(uint64)
 	if !ok {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "token存在问题")
+		gin_extra.FailWithMessage(ctx, gin_extra.System, "token存在问题")
 		// log
 		return 0
 	}
@@ -280,7 +280,7 @@ func (a *ArticleHandler) getNickname(ctx *gin.Context) string {
 	nickname := ctx.MustGet("nickname")
 	nn, ok := nickname.(string)
 	if !ok {
-		gin_ex.FailWithMessage(ctx, gin_ex.System, "token存在问题")
+		gin_extra.FailWithMessage(ctx, gin_extra.System, "token存在问题")
 		// log
 		return ""
 	}

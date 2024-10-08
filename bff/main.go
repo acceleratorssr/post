@@ -14,7 +14,7 @@ func main() {
 
 func initViperWatch() {
 	cfile := pflag.String("config",
-		"./bff/config/dev.yaml", "配置文件路径")
+		"../bff/config/dev.yaml", "配置文件路径")
 	pflag.Parse()
 
 	viper.SetConfigFile(*cfile)

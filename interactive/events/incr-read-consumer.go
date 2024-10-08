@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"post/interactive/repository"
-	"post/pkg/sarama_ex"
+	"post/pkg/sarama-extra"
 	"time"
 )
 
@@ -36,7 +36,7 @@ func (k *KafkaReadConsumer) Start(topic string) error {
 		err := cg.Consume(context.Background(),
 			//[]string{topic},
 			[]string{"article_read"},
-			sarama_ex.NewHandler[ReadEvent](k.Consume))
+			sarama_extra.NewHandler[ReadEvent](k.Consume))
 		if err != nil {
 			panic(err)
 		}
