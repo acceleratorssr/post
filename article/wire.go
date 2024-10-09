@@ -36,12 +36,12 @@ var jobServiceSet = wire.NewSet(
 )
 
 var smallMessagesSet = wire.NewSet(
-	ioc.NewKafkaSyncProducerForSmallMessages,
+	events.NewKafkaSyncProducerForSmallMessages,
 	events.NewKafkaReadProducer,
 )
 
 var largeMessagesSet = wire.NewSet(
-	ioc.NewKafkaSyncProducerForLargeMessages,
+	events.NewKafkaSyncProducerForLargeMessages,
 	events.NewKafkaPublishProducer,
 )
 

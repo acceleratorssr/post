@@ -30,10 +30,10 @@ func InitApp() *App {
 	node := dao.NewSnowflakeNode0()
 	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao, articleCache, node)
 	client := ioc.InitKafka()
-	largeMessagesProducer := ioc.NewKafkaSyncProducerForLargeMessages(client)
+	largeMessagesProducer := events.NewKafkaSyncProducerForLargeMessages(client)
 	publishedProducer := events.NewKafkaPublishProducer(largeMessagesProducer)
 	articleReaderRepository := repository.NewArticleReaderRepository(articleDao, articleCache, publishedProducer)
-	smallMessagesProducer := ioc.NewKafkaSyncProducerForSmallMessages(client)
+	smallMessagesProducer := events.NewKafkaSyncProducerForSmallMessages(client)
 	readProducer := events.NewKafkaReadProducer(smallMessagesProducer)
 	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, readProducer, publishedProducer)
 	articleServiceServer := grpc.NewArticleServiceServer(articleService)
@@ -71,6 +71,6 @@ var schedulerServiceSet = wire.NewSet(dao.NewGORMJobDAO, repository.NewPreemptJo
 
 var jobServiceSet = wire.NewSet(ioc.InitRankingJob, ioc.InitJobs)
 
-var smallMessagesSet = wire.NewSet(ioc.NewKafkaSyncProducerForSmallMessages, events.NewKafkaReadProducer)
+var smallMessagesSet = wire.NewSet(events.NewKafkaSyncProducerForSmallMessages, events.NewKafkaReadProducer)
 
-var largeMessagesSet = wire.NewSet(ioc.NewKafkaSyncProducerForLargeMessages, events.NewKafkaPublishProducer)
+var largeMessagesSet = wire.NewSet(events.NewKafkaSyncProducerForLargeMessages, events.NewKafkaPublishProducer)

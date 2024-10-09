@@ -1,14 +1,46 @@
 package events
 
-import "post/article/bridge"
+import (
+	"github.com/IBM/sarama"
+)
 
-func NewKafkaPublishProducer(p bridge.LargeMessagesProducer) PublishedProducer {
+type LargeMessagesProducer sarama.SyncProducer
+
+type SmallMessagesProducer sarama.SyncProducer
+
+// NewKafkaSyncProducerForLargeMessages
+// 使用 ZSTD 压缩算法的生产者
+func NewKafkaSyncProducerForLargeMessages(client sarama.Client) LargeMessagesProducer {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Compression = sarama.CompressionZSTD // sarama.CompressionGZIP
+
+	producer, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	return producer
+}
+
+// NewKafkaSyncProducerForSmallMessages
+// 使用 Snappy 压缩算法的消费者
+func NewKafkaSyncProducerForSmallMessages(client sarama.Client) SmallMessagesProducer {
+	cfg := sarama.NewConfig()
+	cfg.Producer.Compression = sarama.CompressionSnappy // sarama.CompressionLZ4
+
+	producer, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		panic(err)
+	}
+	return producer
+}
+
+func NewKafkaPublishProducer(p LargeMessagesProducer) PublishedProducer {
 	return &KafkaSyncProducer{
 		producer: p,
 	}
 }
 
-func NewKafkaReadProducer(p bridge.SmallMessagesProducer) ReadProducer {
+func NewKafkaReadProducer(p SmallMessagesProducer) ReadProducer {
 	return &KafkaReadSyncProducer{
 		producer: p,
 	}
