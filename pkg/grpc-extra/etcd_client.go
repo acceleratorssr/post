@@ -1,10 +1,10 @@
-package grpc_ex
+package grpc_extra
 
 import (
 	"context"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/naming/endpoints"
-	"post/pkg/net_ex"
+	"post/pkg/net-extra"
 	"time"
 )
 
@@ -34,7 +34,7 @@ func InitEtcdClient(port string, name string) *etcdv3.Client {
 }
 
 func (ec *etcdClient) initIp() {
-	ec.ip = net_ex.GetOutboundIP()
+	ec.ip = net_extra.GetOutboundIP()
 }
 
 func (ec *etcdClient) initService() {

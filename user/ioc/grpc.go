@@ -30,6 +30,7 @@ func InitGrpcSSOClient() ssov1.AuthServiceClient {
 	bd, err := resolver.NewBuilder(etcdClient)
 	c, err := grpc.NewClient("etcd:///service/sso",
 		grpc.WithResolvers(bd),
+		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [ { "consistent_hash": {} } ]}`),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)

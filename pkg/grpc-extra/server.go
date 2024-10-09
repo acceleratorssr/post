@@ -1,4 +1,4 @@
-package grpc_ex
+package grpc_extra
 
 import (
 	"fmt"

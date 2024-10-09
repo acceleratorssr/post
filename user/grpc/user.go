@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	ssov1 "post/api/proto/gen/sso/v1"
 	userv1 "post/api/proto/gen/user/v1"
+	ch "post/pkg/grpc-extra/balancer/consistent-hashing"
 	"post/user/domain"
 	"post/user/service"
 )
@@ -25,7 +26,7 @@ func (u *UserServiceServer) Register(server *grpc.Server) {
 
 func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.CreateUserRequest) (*userv1.CreateUserResponse, error) {
 	// sso
-	resp, err := u.ssoGrpcClient.Register(ctx, &ssov1.RegisterRequest{
+	resp, err := ch.RegisterWithKey(ctx, request.GetUser().GetUsername(), &ssov1.RegisterRequest{
 		UserInfo: &ssov1.UserInfo{
 			Username: request.GetUser().GetUsername(),
 			Nickname: request.GetUser().GetNickname(),
@@ -33,9 +34,9 @@ func (u *UserServiceServer) CreateUser(ctx context.Context, request *userv1.Crea
 		Password:  request.GetUser().GetPassword(),
 		UserAgent: request.GetUser().GetUserAgent(),
 		Code:      request.GetCode(),
-	})
+	}, u.ssoGrpcClient.Register)
 	if err != nil {
-		return nil, err // 此处err为 SSO服务 返回的
+		return nil, err
 	}
 
 	user := u.ToDomain(request.GetUser())

@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"post/pkg/grpc_ex/interceptors"
+	"post/pkg/grpc-extra/interceptors"
 )
 
 type OTELInterceptorBuilder struct {
@@ -33,7 +33,7 @@ func NewOTELInterceptorBuilder(
 func (b *OTELInterceptorBuilder) BuildUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	tracer := b.tracer
 	if tracer == nil {
-		tracer = otel.Tracer("post/pkg/grpc_ex")
+		tracer = otel.Tracer("post/pkg/grpc-extra")
 	}
 
 	propagator := b.propagator
@@ -85,7 +85,7 @@ func (b *OTELInterceptorBuilder) BuildUnaryClientInterceptor() grpc.UnaryClientI
 	tracer := b.tracer
 	if tracer == nil {
 		tracer = otel.GetTracerProvider().
-			Tracer("post/pkg/grpc_ex")
+			Tracer("post/pkg/grpc-extra")
 	}
 
 	propagator := b.propagator

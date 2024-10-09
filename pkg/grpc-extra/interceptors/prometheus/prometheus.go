@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
-	"post/pkg/grpc_ex/interceptors"
+	"post/pkg/grpc-extra/interceptors"
 	"strings"
 	"time"
 )

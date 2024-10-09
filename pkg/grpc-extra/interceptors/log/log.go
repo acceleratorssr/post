@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"post/pkg/grpc_ex/interceptors"
+	"post/pkg/grpc-extra/interceptors"
 	"post/pkg/logger"
 	"runtime"
 	"time"
