@@ -13,6 +13,11 @@ import (
 	"post/interactive/service"
 )
 
+var batchUpdateDBServiceSet = wire.NewSet(
+	ioc.InitBatchUpdateDBJob,
+	ioc.InitJobs,
+)
+
 var thirdPartySet = wire.NewSet(
 	ioc.InitDoubleWritePool,
 	ioc.InitDoubleWriteDB,
@@ -47,6 +52,7 @@ func InitApp() *App {
 		thirdPartySet,
 		likeSvcProvider,
 		migratorSet,
+		batchUpdateDBServiceSet,
 
 		grpc.NewLikeServiceServer,
 

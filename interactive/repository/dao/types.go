@@ -14,6 +14,8 @@ type ArticleLikeDao interface {
 
 	InsertCollection(ctx context.Context, objType string, objID, uid uint64) error
 
+	UpdateReadCountMany(ctx context.Context, objType string, hmap map[uint64]int64) error
+
 	GetLikeByBatch(ctx context.Context, objType string, limit int, lastValue int64, orderBy string, desc bool) ([]Like, error)
 }
 

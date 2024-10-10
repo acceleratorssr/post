@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/robfig/cron/v3"
 	"post/pkg/gin-extra"
 	"post/pkg/grpc-extra"
 	"post/pkg/sarama-extra"
@@ -11,4 +12,5 @@ type App struct {
 	server    *grpc_extra.Server
 	consumers []sarama_extra.Consumer
 	webAdmin  *gin_extra.Server
+	cron      *cron.Cron
 }

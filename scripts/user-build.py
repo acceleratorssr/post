@@ -8,7 +8,7 @@ if not os.path.exists(output_dir):
 
 service = "../user"
 
-print(f"Building >{service}<...")
+print(f"Building ->{service}<- ...")
 os.chdir(service)
 
 try:

@@ -32,21 +32,26 @@ func InitApp() *App {
 	likeServiceServer := grpc.NewLikeServiceServer(likeService)
 	server := ioc.InitGRPCexServer(likeServiceServer)
 	client := ioc.InitKafka()
-	kafkaConsumer := events.NewKafkaIncrReadConsumer(client, likeRepository)
+	kafkaReadConsumer := events.NewKafkaIncrReadConsumer(client, likeRepository)
 	consumer := ioc.InitFixConsumer(baseDB, targetDB, client)
-	v := ioc.NewKafkaConsumer(kafkaConsumer, consumer)
+	v := ioc.NewKafkaConsumer(kafkaReadConsumer, consumer)
 	syncProducer := ioc.InitSyncProducer(client)
 	inconsistentProducer := ioc.InitMigratorProducer(syncProducer)
-	gin_exServer := ioc.InitMigratorServer(baseDB, targetDB, doubleWritePool, inconsistentProducer)
+	gin_extraServer := ioc.InitMigratorServer(baseDB, targetDB, doubleWritePool, inconsistentProducer)
+	batchUpdateDBJob := ioc.InitBatchUpdateDBJob(likeService, articleLikeCache)
+	cron := ioc.InitJobs(batchUpdateDBJob)
 	app := &App{
 		server:    server,
 		consumers: v,
-		webAdmin:  gin_exServer,
+		webAdmin:  gin_extraServer,
+		cron:      cron,
 	}
 	return app
 }
 
 // wire.go:
+
+var batchUpdateDBServiceSet = wire.NewSet(ioc.InitBatchUpdateDBJob, ioc.InitJobs)
 
 var thirdPartySet = wire.NewSet(ioc.InitDoubleWritePool, ioc.InitDoubleWriteDB, ioc.InitBaseDB, ioc.InitTargetDB, ioc.InitGRPCexServer, ioc.InitRedis, ioc.InitLogger, events.NewKafkaIncrReadConsumer, ioc.NewKafkaConsumer, ioc.InitKafka, ioc.InitSyncProducer)
 

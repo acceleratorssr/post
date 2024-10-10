@@ -10,6 +10,9 @@ func main() {
 			panic(err)
 		}
 	}
+
+	app.cron.Start()
+
 	go func() {
 		fmt.Println("migrator start")
 		app.webAdmin.Start()

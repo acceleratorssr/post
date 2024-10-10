@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
-	"google.golang.org/grpc/balancer/base"
 	"hash/fnv"
 	"sync"
 )
@@ -19,14 +18,6 @@ func RegisterWithKey[request any, response any](ctx context.Context, key string,
 	ctx = context.WithValue(ctx, "hash_key", key)
 
 	return client(ctx, req)
-}
-
-func newBuilder() balancer.Builder {
-	return base.NewBalancerBuilder(ConsistentHash, &ConsistentHashPickerBuilder{}, base.Config{HealthCheck: true})
-}
-
-func init() {
-	balancer.Register(newBuilder())
 }
 
 type HashRing struct {
@@ -52,12 +43,14 @@ func (h *HashRing) GetNode(key string) balancer.SubConn {
 	hash.Write([]byte(key))
 	hashValue := hash.Sum32() % uint32(len(h.nodes))
 	// todo 上k8s收集换掉
-	fmt.Printf("%s -> server:%d\n", key, hashValue)
+	fmt.Printf("%s -> server:%d \n", key, hashValue)
+	fmt.Println(len(h.nodes))
 	return h.nodes[hashValue]
 }
 
 type ConsistentHashPicker struct {
 	hashRing *HashRing
+	//connectionPool *ConnectionPool
 }
 
 func (p *ConsistentHashPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
@@ -73,6 +66,11 @@ func (p *ConsistentHashPicker) Pick(info balancer.PickInfo) (balancer.PickResult
 		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
 	}
 
+	//conn, err := p.connectionPool.GetConnection(selectedNode.)
+	//if err != nil {
+	//	return balancer.PickResult{}, err
+	//}
+
 	return balancer.PickResult{
 		SubConn: selectedNode,
 		// 暂时没想到有什么特别需要处理的
@@ -83,13 +81,41 @@ func (p *ConsistentHashPicker) Pick(info balancer.PickInfo) (balancer.PickResult
 	}, nil
 }
 
-type ConsistentHashPickerBuilder struct {
-}
-
-func (b *ConsistentHashPickerBuilder) Build(info base.PickerBuildInfo) balancer.Picker {
-	hashRing := &HashRing{}
-	for con := range info.ReadySCs {
-		hashRing.Add(con)
-	}
-	return &ConsistentHashPicker{hashRing: hashRing}
-}
+//// ConnectionPool 用于流式gRPC建立连接
+//type ConnectionPool struct {
+//	mu          sync.Mutex
+//	connections map[string]*grpc.ClientConn
+//}
+//
+//func NewConnectionPool() *ConnectionPool {
+//	return &ConnectionPool{
+//		connections: make(map[string]*grpc.ClientConn),
+//	}
+//}
+//
+//func (pool *ConnectionPool) GetConnection(address string) (*grpc.ClientConn, error) {
+//	pool.mu.Lock()
+//	defer pool.mu.Unlock()
+//
+//	if conn, exists := pool.connections[address]; exists {
+//		return conn, nil
+//	}
+//	conn, err := grpc.NewClient("etcd:///service/sso",
+//		grpc.WithTransportCredentials(insecure.NewCredentials()))
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	pool.connections[address] = conn
+//	return conn, nil
+//}
+//
+//func (pool *ConnectionPool) CloseConnections() {
+//	pool.mu.Lock()
+//	defer pool.mu.Unlock()
+//
+//	for _, conn := range pool.connections {
+//		conn.Close()
+//	}
+//	pool.connections = make(map[string]*grpc.ClientConn)
+//}

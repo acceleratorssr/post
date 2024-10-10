@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"strings"
 	"time"
 )
 
@@ -12,45 +13,66 @@ type GORMArticleLikeDao struct {
 	db *gorm.DB
 }
 
-func NewGORMArticleLikeDao(db *gorm.DB) ArticleLikeDao {
-	return &GORMArticleLikeDao{
-		db: db,
+// UpdateReadCountMany todo 优化索引
+func (gad *GORMArticleLikeDao) UpdateReadCountMany(ctx context.Context, objType string, hmap map[uint64]int64) error {
+	var ids []uint64
+	caseStatements := make([]string, 0, len(hmap))
+	insertParams := make([]interface{}, 0, len(hmap)*3) // 每条记录三个值：obj_id, obj_type, view_count
+	updateParams := make([]interface{}, 0, len(hmap)*2) // 更新语句的参数：obj_id, view_count
+
+	for id, count := range hmap {
+		ids = append(ids, id)
+		caseStatements = append(caseStatements, "WHEN obj_id = ? THEN view_count + ?")
+		updateParams = append(updateParams, id, count)
+		insertParams = append(insertParams, id, objType, count) // 插入的参数
 	}
+
+	// 生成 CASE 语句
+	caseSQL := fmt.Sprintf("CASE %s END", strings.Join(caseStatements, " "))
+
+	// 生成批量插入的占位符
+	valuesPlaceholder := generateValuesPlaceholder(len(hmap))
+
+	// 拼接最终的 SQL 语句
+	upsertSQL := fmt.Sprintf(`
+    INSERT INTO likes (obj_id, obj_type, view_count)
+    VALUES %s
+    ON DUPLICATE KEY UPDATE view_count = %s`,
+		valuesPlaceholder,
+		caseSQL,
+	)
+
+	// 将更新参数与插入参数合并
+	finalParams := append(insertParams, updateParams...)
+
+	return gad.db.WithContext(ctx).
+		Exec(upsertSQL, finalParams...).Error
 }
 
-// IncrReadCountMany todo 考虑到可以提前合并ObjIDs，在计数时可以直接+n
 func (gad *GORMArticleLikeDao) IncrReadCountMany(ctx context.Context, objType string, objIDs []uint64) error {
 	now := time.Now().UnixMilli()
-	likes := make([]Like, 0, len(objIDs))
-	for i := 0; i < len(objIDs); i++ {
-		likes = append(likes, Like{
-			ObjID:     objIDs[i],
-			ObjType:   objType,
-			ViewCount: 1,
-			Ctime:     now,
-			Utime:     now,
-		})
+
+	likeMap := make(map[uint64]*Like)
+	for _, objID := range objIDs {
+		if like, exists := likeMap[objID]; exists {
+			like.ViewCount++
+			like.Utime = now
+		} else {
+			likeMap[objID] = &Like{
+				ObjID:     objID,
+				ObjType:   objType,
+				ViewCount: 1,
+				Ctime:     now,
+				Utime:     now,
+			}
+		}
 	}
 
-	////此处只有一个事务，即事务提交仅触发一次刷入磁盘，批量只消耗一次磁盘IO
-	//return gad.db.WithContext(ctx).Transaction(func(tx *gorm-extra.DB) error {
-	//	txDAO := NewGORMArticleLikeDao(tx)
-	//	for i := 0; i < len(ObjIDs); i++ {
-	//		err := txDAO.IncrReadCount(ctx, ObjType, ObjIDs[i])
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//	return nil
-	//})
+	likes := make([]Like, 0, len(likeMap))
+	for _, like := range likeMap {
+		likes = append(likes, *like)
+	}
 
-	//return gad.db.WithContext(ctx).Clauses(clause.OnConflict{
-	//	Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}}, // 指定冲突列
-	//	DoUpdates: clause.Assignments(map[string]any{
-	//		"view_count": gorm-extra.Expr("view_count + ?", 1),
-	//		"utime":      time.Now().UnixMilli(),
-	//	}),
-	//}).CreateInBatches(likes, len(ObjIDs)).Error // len(ObjIDs)是每批次插入的记录数
 	tx := gad.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "obj_id"}, {Name: "obj_type"}}, // 指定冲突列
 		DoUpdates: clause.Assignments(map[string]any{
@@ -193,4 +215,18 @@ func (gad *GORMArticleLikeDao) GetLikeByBatch(ctx context.Context, objType strin
 		Order(clause.OrderByColumn{Column: clause.Column{Name: orderBy}, Desc: desc}).Find(&res).Error
 
 	return res, err
+}
+
+func generateValuesPlaceholder(n int) string {
+	placeholders := make([]string, n)
+	for i := range placeholders {
+		placeholders[i] = "(?, ?, ?)"
+	}
+	return strings.Join(placeholders, ", ")
+}
+
+func NewGORMArticleLikeDao(db *gorm.DB) ArticleLikeDao {
+	return &GORMArticleLikeDao{
+		db: db,
+	}
 }

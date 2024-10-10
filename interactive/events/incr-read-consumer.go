@@ -20,7 +20,7 @@ type KafkaReadConsumer struct {
 }
 
 func NewKafkaIncrReadConsumer(client sarama.Client,
-	repo repository.LikeRepository) *KafkaReadConsumer { // todo 为什么不返回接口
+	repo repository.LikeRepository) *KafkaReadConsumer {
 	return &KafkaReadConsumer{
 		client: client,
 		repo:   repo,

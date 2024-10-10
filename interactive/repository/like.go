@@ -15,6 +15,8 @@ type LikeRepository interface {
 	DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error
 	AddCollectionItem(ctx context.Context, ObjType string, ObjID, uid uint64) error
 
+	UpdateReadCountMany(ctx context.Context, objType string, hmap map[uint64]int64) error
+
 	GetPublishedByBatch(ctx context.Context, ObjType string, list *domain.List) ([]domain.Like, error)
 }
 
@@ -23,11 +25,8 @@ type likeRepository struct {
 	cache cache.ArticleLikeCache
 }
 
-func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.ArticleLikeCache) LikeRepository {
-	return &likeRepository{
-		dao:   dao,
-		cache: cache,
-	}
+func (l *likeRepository) UpdateReadCountMany(ctx context.Context, objType string, hmap map[uint64]int64) error {
+	return l.dao.UpdateReadCountMany(ctx, objType, hmap)
 }
 
 func (l *likeRepository) GetPublishedByBatch(ctx context.Context, ObjType string, list *domain.List) ([]domain.Like, error) {
@@ -67,7 +66,7 @@ func (l *likeRepository) IncrLikeCount(ctx context.Context, ObjType string, ObjI
 		}
 	}()
 
-	return l.cache.IncrLikeCount(ctx, ObjType, ObjID)
+	return l.cache.IncrCount(ctx, ObjType, ObjID)
 }
 
 func (l *likeRepository) DecrLikeCount(ctx context.Context, ObjType string, ObjID, uid uint64) error {
@@ -78,7 +77,7 @@ func (l *likeRepository) DecrLikeCount(ctx context.Context, ObjType string, ObjI
 		}
 	}()
 
-	return l.cache.DecrLikeCount(ctx, ObjType, ObjID)
+	return l.cache.DecrCount(ctx, ObjType, ObjID)
 }
 
 func (l *likeRepository) toDomain(art ...dao.Like) ([]domain.Like, error) {
@@ -91,4 +90,11 @@ func (l *likeRepository) toDomain(art ...dao.Like) ([]domain.Like, error) {
 		})
 	}
 	return domainL, nil
+}
+
+func NewLikeRepository(dao dao.ArticleLikeDao, cache cache.ArticleLikeCache) LikeRepository {
+	return &likeRepository{
+		dao:   dao,
+		cache: cache,
+	}
 }
