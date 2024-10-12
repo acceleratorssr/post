@@ -12,7 +12,7 @@ const ArticleIndexName = "article_index"
 const TagIndexName = "tags_index"
 
 type Article struct {
-	Id      int64    `json:"id"`
+	Id      uint64   `json:"id"`
 	Title   string   `json:"title"`
 	Status  int32    `json:"status"`
 	Content string   `json:"content"`
@@ -88,7 +88,7 @@ func (s *Searcher[T]) Do(ctx context.Context) ([]T, error) {
 func (h *ArticleElasticDAO) InputArticle(ctx context.Context, art Article) error {
 	_, err := h.client.Index().
 		Index(ArticleIndexName).
-		Id(strconv.FormatInt(art.Id, 10)).
+		Id(strconv.FormatUint(art.Id, 10)).
 		BodyJson(art).Do(ctx)
 
 	return err

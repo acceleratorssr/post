@@ -25,9 +25,8 @@ func (a *articleRepository) SearchArticle(ctx context.Context,
 	mappedArticles := make([]domain.Article, len(arts)) // 创建目标切片
 	for i, src := range arts {
 		mappedArticles[i] = domain.Article{
-			Id:      src.Id,
+			ID:      src.Id,
 			Title:   src.Title,
-			Status:  src.Status,
 			Content: src.Content,
 			Tags:    src.Tags,
 		}
@@ -38,9 +37,8 @@ func (a *articleRepository) SearchArticle(ctx context.Context,
 
 func (a *articleRepository) InputArticle(ctx context.Context, msg domain.Article) error {
 	return a.dao.InputArticle(ctx, dao.Article{
-		Id:      msg.Id,
+		Id:      msg.ID,
 		Title:   msg.Title,
-		Status:  msg.Status,
 		Content: msg.Content,
 	})
 }

@@ -16,12 +16,15 @@ func InitApp() *App {
 		ioc.InitSSOClient,
 		ioc.InitInteractiveClient,
 		ioc.InitArticleClient,
+		ioc.InitSearchClient,
+
 		ioc.NewJWTHandler,
 		ioc.InitGinServer,
 
 		web.NewUserHandler,
 		web.NewSSOHandler,
 		web.NewArticleHandler,
+		web.NewSearchHandler,
 
 		wire.Struct(new(App), "*"),
 	)

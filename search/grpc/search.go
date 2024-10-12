@@ -41,9 +41,8 @@ func (s *SearchServiceServer) toDTO(art ...domain.Article) []*searchv1.Article {
 
 	for i, src := range art {
 		articles[i] = &searchv1.Article{
-			Id:      src.Id,
+			Id:      src.ID,
 			Title:   src.Title,
-			Status:  src.Status,
 			Content: src.Content,
 		}
 	}

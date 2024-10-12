@@ -28,42 +28,15 @@ func InitGrpcSSOClient() ssov1.AuthServiceClient {
 	if err != nil {
 		panic(err)
 	}
-
-	//// 监听 sso 服务节点
-	//serviceKey := "service/sso"
-	//readyChan := make(chan struct{})
-	//
-	//go func() {
-	//	ssoCount := 0
-	//	for {
-	//		rch := etcdClient.Watch(context.Background(), serviceKey, etcdv3.WithPrefix())
-	//
-	//		for wresp := range rch {
-	//			for _, ev := range wresp.Events {
-	//				if ev.Type == etcdv3.EventTypePut {
-	//					ssoCount++
-	//				} else if ev.Type == etcdv3.EventTypeDelete {
-	//					ssoCount--
-	//				}
-	//			}
-	//
-	//			// 检查当前可用的 sso 服务数量
-	//			if ssoCount >= 3 {
-	//				readyChan <- struct{}{}
-	//				return
-	//			}
-	//		}
-	//	}
-	//}()
-	//
-	//// 防止节点 未就绪
-	//<-readyChan
+	// 可监听 sso 服务节点
+	serviceKey := "service/sso"
 
 	bd, err := resolver.NewBuilder(etcdClient)
-	c, err := grpc.NewClient("etcd:///service/sso",
+	c, err := grpc.NewClient("etcd:///"+serviceKey,
 		grpc.WithResolvers(bd),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [ { "consistent_hash": {} } ]}`),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		panic(err)
 	}

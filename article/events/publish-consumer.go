@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const topicPublished = "article_published"
+
 type KafkaPublishedConsumer struct {
 	groupID string
 	client  sarama.Client
@@ -28,13 +30,13 @@ func NewKafkaPublishedConsumer(client sarama.Client,
 }
 
 func (k *KafkaPublishedConsumer) Start(topic string) error {
-	cg, err := sarama.NewConsumerGroupFromClient("t", k.client)
+	cg, err := sarama.NewConsumerGroupFromClient("article", k.client)
 	if err != nil {
 		return err
 	}
 	go func() {
 		err := cg.Consume(context.Background(),
-			[]string{"article_published"},
+			[]string{topicPublished},
 			sarama_extra.NewHandler[PublishEvent](k.Consume))
 		if err != nil {
 			panic(err)

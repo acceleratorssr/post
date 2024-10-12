@@ -24,7 +24,9 @@ func InitApp() *App {
 	articleServiceClient := ioc.InitArticleClient(client)
 	likeServiceClient := ioc.InitInteractiveClient(client)
 	articleHandler := web.NewArticleHandler(articleServiceClient, likeServiceClient)
-	server := ioc.InitGinServer(logger, jwt, userHandler, ssoHandler, articleHandler)
+	searchServiceClient := ioc.InitSearchClient(client)
+	searchHandler := web.NewSearchHandler(searchServiceClient)
+	server := ioc.InitGinServer(logger, jwt, userHandler, ssoHandler, articleHandler, searchHandler)
 	app := &App{
 		WebServer: server,
 	}

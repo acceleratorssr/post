@@ -8,6 +8,7 @@ import (
 	"post/search/service"
 )
 
+// SyncServiceServer 对内
 type SyncServiceServer struct {
 	searchv1.UnimplementedSyncServiceServer
 	syncSvc service.SyncService
@@ -35,9 +36,8 @@ func (s *SyncServiceServer) InputAny(ctx context.Context, req *searchv1.InputAny
 
 func (s *SyncServiceServer) toDomainArticle(art *searchv1.Article) domain.Article {
 	return domain.Article{
-		Id:      art.Id,
+		ID:      art.Id,
 		Title:   art.Title,
-		Status:  art.Status,
 		Content: art.Content,
 		Tags:    art.Tags,
 	}

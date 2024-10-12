@@ -15,7 +15,7 @@ import (
 
 func InitGinServer(l logger.Logger, jwt *Jwt,
 	user *web.UserHandler, sso *web.SSOHandler,
-	article *web.ArticleHandler) *gin_extra.Server {
+	article *web.ArticleHandler, search *web.SearchHandler) *gin_extra.Server {
 
 	engine := gin.Default()
 	gin_extra.InitCounter(prometheus.CounterOpts{
@@ -38,6 +38,7 @@ func InitGinServer(l logger.Logger, jwt *Jwt,
 	user.RegisterRoutes(engine, jwtAOP)
 	sso.RegisterRoutes(engine, jwtAOP)
 	article.RegisterRoutes(engine, jwtAOP)
+	search.RegisterRoutes(engine, jwtAOP)
 
 	addr := viper.GetString("http.addr")
 

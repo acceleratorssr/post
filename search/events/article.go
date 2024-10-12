@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const topicSyncArticle = "sync_article_event"
+const topicSyncArticle = "article_published"
 
 type ArticleConsumer struct {
 	syncSvc service.SyncService
@@ -29,14 +29,14 @@ func NewArticleConsumer(client sarama.Client,
 }
 
 type ArticleEvent struct {
-	Id      int64  `json:"id"`
+	Id      uint64 `json:"id"`
 	Title   string `json:"title"`
 	Status  int32  `json:"status"`
 	Content string `json:"content"`
 }
 
 func (a *ArticleConsumer) Start() error {
-	cg, err := sarama.NewConsumerGroupFromClient("sync_article",
+	cg, err := sarama.NewConsumerGroupFromClient("es",
 		a.client)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (a *ArticleConsumer) Start() error {
 			[]string{topicSyncArticle},
 			sarama_extra.NewHandler[ArticleEvent](a.Consume))
 		if err != nil {
-			a.l.Error("发生错误，退出消费循环 ", logger.Error(err))
+			panic(err)
 		}
 	}()
 	return err
@@ -61,9 +61,8 @@ func (a *ArticleConsumer) Consume(sg *sarama.ConsumerMessage,
 
 func (a *ArticleConsumer) toDomain(article ArticleEvent) domain.Article {
 	return domain.Article{
-		Id:      article.Id,
+		ID:      article.Id,
 		Title:   article.Title,
-		Status:  article.Status,
 		Content: article.Content,
 	}
 }

@@ -110,7 +110,7 @@ func (a *ArticleHandler) Detail(ctx *gin.Context) {
 		return
 	}
 
-	gin_extra.OKWithDataAndMsg(ctx, a.toVO(art.Data), "成功")
+	gin_extra.OKWithDataAndMsg(ctx, a.toDTO(art.Data), "成功")
 }
 
 func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
@@ -132,7 +132,7 @@ func (a *ArticleHandler) DetailSelf(ctx *gin.Context) {
 		return
 	}
 
-	gin_extra.OKWithDataAndMsg(ctx, a.toVO(art.GetData()), "成功")
+	gin_extra.OKWithDataAndMsg(ctx, a.toDTO(art.GetData()), "成功")
 }
 
 func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_extra.Response, error) {
@@ -176,7 +176,7 @@ func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_extr
 	}
 
 	return &gin_extra.Response{
-		Data: a.toVO(res.Data...),
+		Data: a.toDTO(res.Data...),
 	}, nil
 }
 
@@ -287,7 +287,7 @@ func (a *ArticleHandler) getNickname(ctx *gin.Context) string {
 	return nn
 }
 
-func (a *ArticleHandler) toVO(art ...*articlev1.Article) []ArticleResp {
+func (a *ArticleHandler) toDTO(art ...*articlev1.Article) []ArticleResp {
 	artResp := make([]ArticleResp, len(art))
 	for i, v := range art {
 		artResp[i] = ArticleResp{
