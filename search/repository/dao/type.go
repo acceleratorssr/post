@@ -7,6 +7,7 @@ import (
 type ArticleDAO interface {
 	InputArticle(ctx context.Context, article Article) error
 	Search(ctx context.Context, tagArtIds []int64, keywords []string) ([]Article, error)
+	DeleteArticle(ctx context.Context, id uint64) error
 }
 
 type AnyDAO interface {

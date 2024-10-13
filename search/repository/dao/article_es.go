@@ -85,11 +85,21 @@ func (s *Searcher[T]) Do(ctx context.Context) ([]T, error) {
 	return res, nil
 }
 
+// InputArticle upsert
 func (h *ArticleElasticDAO) InputArticle(ctx context.Context, art Article) error {
 	_, err := h.client.Index().
 		Index(ArticleIndexName).
 		Id(strconv.FormatUint(art.Id, 10)).
 		BodyJson(art).Do(ctx)
+
+	return err
+}
+
+func (h *ArticleElasticDAO) DeleteArticle(ctx context.Context, articleID uint64) error {
+	_, err := h.client.Delete().
+		Index(ArticleIndexName).
+		Id(strconv.FormatUint(articleID, 10)).
+		Do(ctx)
 
 	return err
 }

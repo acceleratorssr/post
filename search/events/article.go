@@ -28,11 +28,25 @@ func NewArticleConsumer(client sarama.Client,
 	}
 }
 
-type ArticleEvent struct {
-	Id      uint64 `json:"id"`
+type Author struct {
+	Id   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+type Article struct {
+	ID      uint64 `json:"id"`
 	Title   string `json:"title"`
-	Status  int32  `json:"status"`
 	Content string `json:"content"`
+	Author  Author `json:"author"`
+	Ctime   int64  `json:"ctime"`
+	Utime   int64  `json:"utime"`
+}
+
+type ArticleEvent struct {
+	Article   *Article `json:"article"`
+	OnlyCache bool     `json:"only_cache"`
+	Uid       uint64   `json:"uid"`
+	Delete    bool     `json:"delete"`
 }
 
 func (a *ArticleConsumer) Start() error {
@@ -56,13 +70,16 @@ func (a *ArticleConsumer) Consume(sg *sarama.ConsumerMessage,
 	evt ArticleEvent) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+	if evt.Delete {
+		return a.syncSvc.DeleteArticle(ctx, evt.Article.ID)
+	}
 	return a.syncSvc.InputArticle(ctx, a.toDomain(evt))
 }
 
 func (a *ArticleConsumer) toDomain(article ArticleEvent) domain.Article {
 	return domain.Article{
-		ID:      article.Id,
-		Title:   article.Title,
-		Content: article.Content,
+		ID:      article.Article.ID,
+		Title:   article.Article.Title,
+		Content: article.Article.Content,
 	}
 }

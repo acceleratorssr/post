@@ -3,8 +3,10 @@ package main
 import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"os"
 	"post/pkg/grpc-extra"
 	"post/search/events"
+	"strings"
 )
 
 func main() {
@@ -21,13 +23,23 @@ func main() {
 }
 
 func initViperWatch() {
-	cfile := pflag.String("config",
-		"../search/config/dev.yaml", "配置文件路径")
+	execPath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	searchPath := ""
+	if !strings.Contains(execPath, "output") {
+		searchPath = "./search/config/dev.yaml"
+	} else {
+		searchPath = "../search/config/dev.yaml"
+	}
+
+	cfile := pflag.String("config", searchPath, "yaml path")
 	pflag.Parse()
-	// 直接指定文件路径
 	viper.SetConfigFile(*cfile)
 	viper.WatchConfig()
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
 		panic(err)
 	}

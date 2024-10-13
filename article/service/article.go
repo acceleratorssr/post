@@ -105,11 +105,13 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) err
 		return err
 	}
 
-	// 线上库
+	// 发布文章到kafka上，供其他服务异步消费
 	go func() {
 		e := svc.publishedProducer.ProducePublishedEvent(ctx, &events.PublishEvent{
 			Article:   svc.toMQ(art),
 			OnlyCache: false,
+			Uid:       ctx.Value("uid").(uint64),
+			Delete:    false,
 		})
 		if e != nil {
 			// todo 记录mysql任务表，扫表重发
@@ -119,7 +121,22 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) err
 }
 
 func (svc *articleService) Withdraw(ctx context.Context, aid, uid uint64) error {
-	return svc.reader.Withdraw(ctx, aid, uid)
+	err := svc.reader.Withdraw(ctx, aid, uid)
+
+	go func() {
+		e := svc.publishedProducer.ProducePublishedEvent(ctx, &events.PublishEvent{
+			Article: &events.Article{
+				ID: aid,
+			},
+			OnlyCache: false,
+			Uid:       uid,
+			Delete:    true,
+		})
+		if e != nil {
+		}
+	}()
+
+	return err
 }
 
 func (svc *articleService) toMQ(art *domain.Article) *events.Article {

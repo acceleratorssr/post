@@ -18,7 +18,8 @@ func InitArticleService(article *grpc2.ArticleServiceServer) *grpc_extra.Server 
 	article.RegisterServer(server)
 
 	port := "9204"
-	return grpc_extra.NewServer(server, grpc_extra.InitEtcdClient(port, "article"), port)
+	ec := grpc_extra.InitEtcdClient(port, "article")
+	return grpc_extra.NewServer(server, ec, port)
 }
 
 func InitLikeClient() intrv1.LikeServiceClient {

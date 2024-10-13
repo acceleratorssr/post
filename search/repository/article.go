@@ -11,6 +11,10 @@ type articleRepository struct {
 	tags dao.TagDAO
 }
 
+func (a *articleRepository) DeleteArticle(ctx context.Context, id uint64) error {
+	return a.dao.DeleteArticle(ctx, id)
+}
+
 func (a *articleRepository) SearchArticle(ctx context.Context,
 	keywords []string) ([]domain.Article, error) {
 	ids, err := a.tags.Search(ctx, "article", keywords)
