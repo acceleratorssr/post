@@ -8,7 +8,7 @@ if not os.path.exists(output_dir):
 
 service = "../user"
 
-print(f"Building ->{service}<- ...")
+print(f"Building -> {service} <- ...")
 os.chdir(service)
 
 try:
@@ -21,5 +21,4 @@ os.chdir("..")
 
 os.chdir("scripts")
 
-print("sso services built successfully!")
-
+print("user services built successfully!")

@@ -6,9 +6,9 @@ output_dir = "../output"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-service = "../sso"
+service = "../article"
 
-print(f"Building {service}...")
+print(f"Building -> {service} <-...")
 os.chdir(service)
 
 try:
