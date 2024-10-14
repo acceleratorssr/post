@@ -1,0 +1,16 @@
+syntax="proto3";
+
+package noop.v1;
+option go_package="noop/v1;noopv1";
+
+// 在被调用方定义，用于刷新 grpc 立刻建立 HTTP2.0 长连接
+// example:
+service NoOp {
+  rpc NoOp (NoOpRequest) returns (NoOpResponse);
+}
+
+message NoOpRequest {
+}
+
+message NoOpResponse {
+}

@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	v1 "post/api/proto/gen/no-op/v1"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -25,6 +26,7 @@ const (
 	AuthService_Login_FullMethodName        = "/sso.v1.AuthService/Login"
 	AuthService_Logout_FullMethodName       = "/sso.v1.AuthService/Logout"
 	AuthService_GetPublicKey_FullMethodName = "/sso.v1.AuthService/GetPublicKey"
+	AuthService_NoOp_FullMethodName         = "/sso.v1.AuthService/NoOp"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -37,6 +39,7 @@ type AuthServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 	GetPublicKey(ctx context.Context, in *PublicKeyRequest, opts ...grpc.CallOption) (*PublicKeyResponse, error)
+	NoOp(ctx context.Context, in *v1.NoOpRequest, opts ...grpc.CallOption) (*v1.NoOpResponse, error)
 }
 
 type authServiceClient struct {
@@ -107,6 +110,16 @@ func (c *authServiceClient) GetPublicKey(ctx context.Context, in *PublicKeyReque
 	return out, nil
 }
 
+func (c *authServiceClient) NoOp(ctx context.Context, in *v1.NoOpRequest, opts ...grpc.CallOption) (*v1.NoOpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.NoOpResponse)
+	err := c.cc.Invoke(ctx, AuthService_NoOp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -117,6 +130,7 @@ type AuthServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	GetPublicKey(context.Context, *PublicKeyRequest) (*PublicKeyResponse, error)
+	NoOp(context.Context, *v1.NoOpRequest) (*v1.NoOpResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -144,6 +158,9 @@ func (UnimplementedAuthServiceServer) Logout(context.Context, *LogoutRequest) (*
 }
 func (UnimplementedAuthServiceServer) GetPublicKey(context.Context, *PublicKeyRequest) (*PublicKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPublicKey not implemented")
+}
+func (UnimplementedAuthServiceServer) NoOp(context.Context, *v1.NoOpRequest) (*v1.NoOpResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NoOp not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -274,6 +291,24 @@ func _AuthService_GetPublicKey_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_NoOp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.NoOpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).NoOp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_NoOp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).NoOp(ctx, req.(*v1.NoOpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +339,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPublicKey",
 			Handler:    _AuthService_GetPublicKey_Handler,
+		},
+		{
+			MethodName: "NoOp",
+			Handler:    _AuthService_NoOp_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

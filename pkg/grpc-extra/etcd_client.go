@@ -67,8 +67,8 @@ func (ec *etcdClient) initEtcdClient() {
 	ctx, cancel = context.WithCancel(pCtx)
 	defer cancel()
 	err = ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
-		Addr: addr,
-		// metadata可传元数据
+		Addr:     addr,
+		Metadata: "", // metadata可传元数据
 	}, etcdv3.WithLease(grant.ID))
 	if err != nil {
 		panic(err)
@@ -107,3 +107,17 @@ func (ec *etcdClient) ShoutDown() {
 		//log
 	}
 }
+
+//func (ec *etcdClient) watchServiceReady() {
+//	rch := ec.client.Watch(context.Background(), ec.key+"/"+ec.name, etcdv3.WithPrefix())
+//	for wresp := range rch {
+//		for _, ev := range wresp.Events {
+//			switch ev.Type {
+//			case etcdv3.EventTypePut:
+//				// fmt.Printf("Added node: %s\n", ev.Kv.Key)
+//			case etcdv3.EventTypeDelete:
+//				// fmt.Printf("Deleted node: %s\n", ev.Kv.Key)
+//			}
+//		}
+//	}
+//}

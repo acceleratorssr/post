@@ -65,14 +65,10 @@ func (b *Breaker) cleanup() {
 	b.window = newWindow
 }
 
-// Do
-// todo 有并发问题，有空再来修
 func (b *Breaker) Do(fn func() error) error {
-	// Cleanup the sliding window
 	switch b.state.Load() {
 	case Open:
 		if time.Since(b.window[len(b.window)-1].time) > b.retryTimeout {
-			// Move to half-open state to test if the service has recovered
 			b.state.Store(HalfOpen)
 		} else {
 			return ErrCircuitOpen
@@ -83,7 +79,6 @@ func (b *Breaker) Do(fn func() error) error {
 		}
 	}
 
-	// Execute the function
 	err := fn()
 	if err != nil {
 		s, ok := status.FromError(err)
@@ -97,7 +92,6 @@ func (b *Breaker) Do(fn func() error) error {
 		}
 	}
 
-	// Update breaker state based on the result
 	if err != nil {
 		b.fail <- struct{}{}
 	} else {

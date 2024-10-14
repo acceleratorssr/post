@@ -7,12 +7,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
+	noopv1 "post/api/proto/gen/no-op/v1"
 	ssov1 "post/api/proto/gen/sso/v1"
 	userv1 "post/api/proto/gen/user/v1"
 	ch "post/pkg/grpc-extra/balancer/consistent-hashing"
 	"post/user/domain"
 	"post/user/service"
-	"time"
 )
 
 type UserServiceServer struct {
@@ -93,11 +93,13 @@ func (u *UserServiceServer) ToDTO(user *domain.User) *userv1.User {
 }
 
 func NewUserServiceServer(svc service.UserService, ssoGrpcClient ssov1.AuthServiceClient) *UserServiceServer {
-	time.Sleep(1 * time.Second)
-	for i := 0; i < 1; i++ {
-		_, _ = ch.RegisterWithKey(context.Background(), "",
-			&ssov1.RegisterRequest{}, ssoGrpcClient.Register)
-	}
+	// 使 gRPC 立刻与服务节点建立 HTTP2.0 长连接
+	// 防止第一次请求时，服务节点尚未完全就绪
+	// 导致影响负载均衡中，通过服务节点数量计算的相关逻辑
+	// 如果不使用该 noop 请求，则第一次请求数据的分布会和之后的不一样
+	_, _ = ch.RegisterWithKey(context.Background(), "",
+		&noopv1.NoOpRequest{}, ssoGrpcClient.NoOp)
+
 	return &UserServiceServer{
 		svc:           svc,
 		ssoGrpcClient: ssoGrpcClient,

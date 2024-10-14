@@ -3,6 +3,8 @@ syntax = "proto3";
 package sso.v1;
 option go_package="sso/v1;ssov1";
 
+import "no-op/v1/no-op.proto";
+
 service AuthService {
   rpc BindTotp (BindTotpRequest) returns (BindTotpResponse);
   rpc Register (RegisterRequest) returns (RegisterResponse);
@@ -13,6 +15,8 @@ service AuthService {
   rpc Logout (LogoutRequest) returns (LogoutResponse);
 
   rpc GetPublicKey (PublicKeyRequest) returns (PublicKeyResponse);
+
+  rpc NoOp(noop.v1.NoOpRequest) returns (noop.v1.NoOpResponse);
 }
 
 message PublicKeyRequest {

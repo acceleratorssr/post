@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
 	"hash/fnv"
+	"sort"
 	"sync"
 )
 
@@ -21,55 +22,91 @@ func RegisterWithKey[request any, response any](ctx context.Context, key string,
 }
 
 type HashRing struct {
-	mutex sync.Mutex
-	nodes []balancer.SubConn
+	mutex       sync.Mutex
+	hashNodes   []uint32                    // 节点的哈希值
+	nodeMap     map[uint32]balancer.SubConn // 哈希值对应的实际节点
+	virtualNode int                         // 每个物理节点的虚拟节点数量
 }
 
-func (h *HashRing) Add(node balancer.SubConn) {
+func NewHashRing(virtualNode int) *HashRing {
+	return &HashRing{
+		hashNodes:   make([]uint32, 0),
+		nodeMap:     make(map[uint32]balancer.SubConn),
+		virtualNode: virtualNode,
+	}
+}
+
+func (h *HashRing) AddNode(node balancer.SubConn, id int) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	h.nodes = append(h.nodes, node)
+
+	for i := 0; i < h.virtualNode; i++ {
+		hash := h.hashKey(fmt.Sprintf("%d#%d", id, i))
+		h.hashNodes = append(h.hashNodes, hash)
+		h.nodeMap[hash] = node
+	}
+	sort.Slice(h.hashNodes, func(i, j int) bool { return h.hashNodes[i] < h.hashNodes[j] })
+}
+
+func (h *HashRing) RemoveNode(id int) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	for i := 0; i < h.virtualNode; i++ {
+		hash := h.hashKey(fmt.Sprintf("%d#%d", id, i))
+
+		for j := 0; j < len(h.hashNodes); j++ {
+			if h.hashNodes[j] == hash {
+				h.hashNodes = append(h.hashNodes[:j], h.hashNodes[j+1:]...)
+				break
+			}
+		}
+
+		delete(h.nodeMap, hash)
+	}
+
+	sort.Slice(h.hashNodes, func(i, j int) bool { return h.hashNodes[i] < h.hashNodes[j] })
+}
+
+func (h *HashRing) hashKey(key string) uint32 {
+	hash := fnv.New32a()
+	hash.Write([]byte(key))
+	return hash.Sum32()
 }
 
 func (h *HashRing) GetNode(key string) balancer.SubConn {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
 
-	if len(h.nodes) == 0 {
+	if len(h.hashNodes) == 0 {
 		return nil
 	}
+	hash := h.hashKey(key)
+	idx := sort.Search(len(h.hashNodes), func(i int) bool { return h.hashNodes[i] >= hash })
 
-	hash := fnv.New32a()
-	hash.Write([]byte(key))
-	hashValue := hash.Sum32() % uint32(len(h.nodes))
+	// 如果没有找到合适的节点，返回第一个节点（回到环的起点）
+	if idx == len(h.hashNodes) {
+		idx = 0
+	}
+
 	// todo 上k8s收集换掉
-	fmt.Printf("%s -> server:%d \n", key, hashValue)
-	fmt.Println(len(h.nodes))
-	return h.nodes[hashValue]
+	fmt.Printf("%s -> server:%d len:%d\n", key, idx, len(h.hashNodes))
+	return h.nodeMap[h.hashNodes[idx]]
 }
 
 type ConsistentHashPicker struct {
 	hashRing *HashRing
-	//connectionPool *ConnectionPool
+	mutex    sync.Mutex
 }
 
 func (p *ConsistentHashPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
-	if len(p.hashRing.nodes) == 0 {
-		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
-	}
-
-	// 如果没设置key，则和pick_first等效
+	// 如果没设置key，则类似于 pick_first，连接环的第一个节点
 	key, _ := info.Ctx.Value("hash_key").(string)
 
 	selectedNode := p.hashRing.GetNode(key)
 	if selectedNode == nil {
 		return balancer.PickResult{}, balancer.ErrNoSubConnAvailable
 	}
-
-	//conn, err := p.connectionPool.GetConnection(selectedNode.)
-	//if err != nil {
-	//	return balancer.PickResult{}, err
-	//}
 
 	return balancer.PickResult{
 		SubConn: selectedNode,
@@ -80,42 +117,3 @@ func (p *ConsistentHashPicker) Pick(info balancer.PickInfo) (balancer.PickResult
 		},
 	}, nil
 }
-
-//// ConnectionPool 用于流式gRPC建立连接
-//type ConnectionPool struct {
-//	mu          sync.Mutex
-//	connections map[string]*grpc.ClientConn
-//}
-//
-//func NewConnectionPool() *ConnectionPool {
-//	return &ConnectionPool{
-//		connections: make(map[string]*grpc.ClientConn),
-//	}
-//}
-//
-//func (pool *ConnectionPool) GetConnection(address string) (*grpc.ClientConn, error) {
-//	pool.mu.Lock()
-//	defer pool.mu.Unlock()
-//
-//	if conn, exists := pool.connections[address]; exists {
-//		return conn, nil
-//	}
-//	conn, err := grpc.NewClient("etcd:///service/sso",
-//		grpc.WithTransportCredentials(insecure.NewCredentials()))
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	pool.connections[address] = conn
-//	return conn, nil
-//}
-//
-//func (pool *ConnectionPool) CloseConnections() {
-//	pool.mu.Lock()
-//	defer pool.mu.Unlock()
-//
-//	for _, conn := range pool.connections {
-//		conn.Close()
-//	}
-//	pool.connections = make(map[string]*grpc.ClientConn)
-//}

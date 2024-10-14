@@ -1,4 +1,4 @@
-package net_ex
+package net_extra
 
 import "net"
 
