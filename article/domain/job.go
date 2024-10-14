@@ -16,6 +16,10 @@ type Job struct {
 	ExecuteTime int64
 	Version     int64
 
+	Topic     string
+	Partition string
+	Data      string
+
 	CancelFunc func() error
 
 	Ctime int64

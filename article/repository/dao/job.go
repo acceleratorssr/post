@@ -16,13 +16,16 @@ const (
 type Job struct {
 	ID       int64  `gorm:"primaryKey,autoIncrement"`
 	Name     string `gorm:"unique"`
-	Cfg      string
-	Executor string
+	Cfg      string `gorm:"type:varchar(255)"`
+	Executor string `gorm:"type:varchar(255)"`
 
 	ExecuteTime int64 `gorm:"column:execute_time,index"`
 	Status      int
-	Cron        string
+	Cron        string `gorm:"type:varchar(255)"`
 	Version     int64
+
+	Topic string
+	Data  string `gorm:"type=BLOB"`
 
 	Ctime int64
 	Utime int64

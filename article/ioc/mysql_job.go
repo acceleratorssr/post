@@ -14,6 +14,7 @@ func InitScheduler(svc service.JobService, local *job.LocalFuncExecutor) *job.Sc
 	return res
 }
 
+// InitLocalFuncExecutor grpc 调用job注册
 func InitLocalFuncExecutor(svc service.RankService) *job.LocalFuncExecutor {
 	res := job.NewLocalFuncExecutor()
 	// 在mysql插入任务记录

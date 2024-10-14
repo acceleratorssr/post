@@ -5,6 +5,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Info struct {
@@ -12,8 +13,20 @@ type Info struct {
 }
 
 func FindFirstYAMLFile() (string, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(execPath)
+	searchPath := ""
+	if !strings.Contains(execPath, "output") {
+		searchPath = "./user/config"
+	} else {
+		searchPath = "../user/config"
+	}
+
 	var yamlFile string
-	err := filepath.Walk("../user/config", func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

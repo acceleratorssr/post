@@ -123,19 +123,26 @@ func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, o
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 此处where的顺序可以不用管，mysql会自动调整的
-		err := tx.Model(&Like{}).Where("obj_id = ? and obj_type = ?", objID, objType).
+		err := tx.Model(&UserGiveLike{}).Where("obj_id = ? and obj_type = ? and uid = ?", objID, objType, uid).
 			Updates(map[string]any{
-				"like_count": gorm.Expr("like_count - ?", 1),
-				"utime":      now,
+				"status": 1,
+				"utime":  now,
 			}).Error
 		if err != nil {
 			return err
 		}
 
-		return tx.Model(&UserGiveLike{}).Where("obj_id = ? and obj_type = ? and uid = ?", objID, objType, uid).
+		// 防止重复 取消 点赞，如果上述用户行为发生冲突且没有更新（unlike -> like）
+		// 则视为重复 取消 点赞，直接终止事务
+		rowsAffected := tx.RowsAffected
+		if rowsAffected == 0 {
+			return fmt.Errorf("重复点赞，操作终止")
+		}
+
+		return tx.Model(&Like{}).Where("obj_id = ? and obj_type = ?", objID, objType).
 			Updates(map[string]any{
-				"status": 1,
-				"utime":  now,
+				"like_count": gorm.Expr("like_count - ?", 1),
+				"utime":      now,
 			}).Error
 	})
 }
@@ -143,7 +150,6 @@ func (gad *GORMArticleLikeDao) DeleteLike(ctx context.Context, objType string, o
 func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, objID, uid uint64) error {
 	now := time.Now().UnixMilli()
 	return gad.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 前端校验重复点赞，暂时此处不做校验了
 		err := tx.Clauses(clause.OnConflict{
 			DoUpdates: clause.Assignments(map[string]any{ // 防止重复插入
 				"status": 0,
@@ -158,6 +164,13 @@ func (gad *GORMArticleLikeDao) InSertLike(ctx context.Context, objType string, o
 		}).Error
 		if err != nil {
 			return err
+		}
+
+		// 防止重复点赞，如果上述用户行为发生冲突且没有更新（unlike -> like）
+		// 则视为重复点赞，直接终止事务
+		rowsAffected := tx.RowsAffected
+		if rowsAffected == 0 {
+			return fmt.Errorf("重复点赞，操作终止")
 		}
 
 		return tx.Clauses(clause.OnConflict{

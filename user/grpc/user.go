@@ -12,6 +12,7 @@ import (
 	ch "post/pkg/grpc-extra/balancer/consistent-hashing"
 	"post/user/domain"
 	"post/user/service"
+	"time"
 )
 
 type UserServiceServer struct {
@@ -92,6 +93,11 @@ func (u *UserServiceServer) ToDTO(user *domain.User) *userv1.User {
 }
 
 func NewUserServiceServer(svc service.UserService, ssoGrpcClient ssov1.AuthServiceClient) *UserServiceServer {
+	time.Sleep(1 * time.Second)
+	for i := 0; i < 1; i++ {
+		_, _ = ch.RegisterWithKey(context.Background(), "",
+			&ssov1.RegisterRequest{}, ssoGrpcClient.Register)
+	}
 	return &UserServiceServer{
 		svc:           svc,
 		ssoGrpcClient: ssoGrpcClient,

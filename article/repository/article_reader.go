@@ -20,6 +20,7 @@ type ArticleReaderRepository interface {
 	ListSelf(ctx context.Context, uid uint64, list *domain.List) ([]domain.Article, error)
 }
 
+// todo 加入并检测singleflight的优化
 type articleReaderRepository struct {
 	dao               dao.ArticleDao
 	cache             cache.ArticleCache

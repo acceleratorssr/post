@@ -13,5 +13,6 @@ func InitGRPCexServer(intr *grpc2.LikeServiceServer) *grpc_extra.Server {
 	intr.Register(server)
 
 	port := "9201"
-	return grpc_extra.NewServer(server, grpc_extra.InitEtcdClient(port, "like"), port)
+	ec := grpc_extra.InitEtcdClient(port, "like")
+	return grpc_extra.NewServer(server, ec, port)
 }

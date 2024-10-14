@@ -2,7 +2,7 @@ package ioc
 
 import (
 	etcdv3 "go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/client/v3/naming/resolver"
+	ecResolver "go.etcd.io/etcd/client/v3/naming/resolver"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	ssov1 "post/api/proto/gen/sso/v1"
@@ -17,7 +17,8 @@ func InitGrpcServer(user *grpc2.UserServiceServer) *grpc_extra.Server {
 	user.Register(server)
 
 	port := "9202"
-	return grpc_extra.NewServer(server, grpc_extra.InitEtcdClient(port, "user"), port)
+	ec := grpc_extra.InitEtcdClient(port, "user")
+	return grpc_extra.NewServer(server, ec, port)
 }
 
 // InitGrpcSSOClient todo bug:每次启动user服务后，第一个请求总是1或者2，第二个请求及以后才为正常的3节点
@@ -31,7 +32,7 @@ func InitGrpcSSOClient() ssov1.AuthServiceClient {
 	// 可监听 sso 服务节点
 	serviceKey := "service/sso"
 
-	bd, err := resolver.NewBuilder(etcdClient)
+	bd, err := ecResolver.NewBuilder(etcdClient)
 	c, err := grpc.NewClient("etcd:///"+serviceKey,
 		grpc.WithResolvers(bd),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [ { "consistent_hash": {} } ]}`),
