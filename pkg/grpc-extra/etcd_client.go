@@ -68,7 +68,7 @@ func (ec *etcdClient) initEtcdClient() {
 	defer cancel()
 	err = ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
 		Addr:     addr,
-		Metadata: "", // metadata可传元数据
+		Metadata: 500, // metadata可传元数据
 	}, etcdv3.WithLease(grant.ID))
 	if err != nil {
 		panic(err)
