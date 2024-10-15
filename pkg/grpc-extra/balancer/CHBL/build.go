@@ -70,7 +70,7 @@ func (b *ConsistentHashPickerBuilder) Build(info base.PickerBuildInfo) balancer.
 			}
 		}
 
-		b.HashRing.avgLoad = avgLoad / len(b.subConn)
+		b.HashRing.avgLoad = max(avgLoad/len(b.subConn), 1000)
 	}
 
 	fmt.Printf("picker build :%d nodes.\n", len(b.HashRing.virtualNodes))

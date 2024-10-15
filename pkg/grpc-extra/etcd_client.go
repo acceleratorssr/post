@@ -2,11 +2,14 @@ package grpc_extra
 
 import (
 	"context"
+	"fmt"
 	etcdv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/naming/endpoints"
 	"post/pkg/net-extra"
 	"time"
 )
+
+type Opts func(*etcdClient)
 
 type etcdClient struct {
 	client   *etcdv3.Client
@@ -17,9 +20,18 @@ type etcdClient struct {
 	TTL      int64
 	name     string
 	ip       string
+
+	RequestsCount int
+	metadata      *ServiceMetadata // 可改进为传结构体
+
+	ch chan int // 目前用于传递请求数
 }
 
-func InitEtcdClient(port string, name string) *etcdv3.Client {
+type ServiceMetadata struct {
+	RequestsCount int // 统计请求数量
+}
+
+func InitEtcdClient(port string, name string, opts ...Opts) *etcdv3.Client {
 	c := etcdClient{
 		Port:     port,
 		EtcdAddr: []string{"127.0.0.1:12379"},
@@ -28,7 +40,7 @@ func InitEtcdClient(port string, name string) *etcdv3.Client {
 	}
 	c.initIp()
 	c.initService()
-	c.initEtcdClient()
+	c.initEtcdClient(opts...)
 
 	return c.client
 }
@@ -41,7 +53,11 @@ func (ec *etcdClient) initService() {
 	ec.key = "service"
 }
 
-func (ec *etcdClient) initEtcdClient() {
+func (ec *etcdClient) initEtcdClient(opts ...Opts) {
+	for _, opt := range opts {
+		opt(ec)
+	}
+
 	client, err := etcdv3.New(etcdv3.Config{
 		Endpoints: ec.EtcdAddr,
 	})
@@ -68,7 +84,7 @@ func (ec *etcdClient) initEtcdClient() {
 	defer cancel()
 	err = ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
 		Addr:     addr,
-		Metadata: 500, // metadata可传元数据
+		Metadata: 0, // metadata可传元数据
 	}, etcdv3.WithLease(grant.ID))
 	if err != nil {
 		panic(err)
@@ -86,8 +102,33 @@ func (ec *etcdClient) initEtcdClient() {
 		}
 	}()
 
+	go func() {
+		ec.updateMetadataPeriodically(ec.ch)
+	}()
+
 	ec.client = client
 	return
+}
+
+func (ec *etcdClient) updateMetadataPeriodically(ch chan int) {
+	ticker := time.NewTicker(time.Second * 10) // 每10秒更新一次
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			addr := ec.ip + ":" + ec.Port
+			ec.RequestsCount = <-ch
+			ctx := context.Background()
+			err := ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
+				Addr:     addr,
+				Metadata: ec.RequestsCount,
+			})
+			if err != nil {
+				fmt.Printf("更新 endpoint 失败: %v\n", err)
+			}
+		}
+	}
 }
 
 func (ec *etcdClient) ShoutDown() {
@@ -105,6 +146,12 @@ func (ec *etcdClient) ShoutDown() {
 	err := ec.client.Close()
 	if err != nil {
 		//log
+	}
+}
+
+func WithChannel(ch chan int) Opts {
+	return func(ec *etcdClient) {
+		ec.ch = ch
 	}
 }
 

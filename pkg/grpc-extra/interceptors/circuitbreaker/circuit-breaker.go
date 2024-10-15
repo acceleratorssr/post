@@ -21,6 +21,8 @@ const (
 	successThreshold = 0.8
 )
 
+type Opt func(*Breaker)
+
 var ErrCircuitOpen = errors.New("breaker is open")
 
 type WindowEntry struct {
@@ -28,30 +30,32 @@ type WindowEntry struct {
 	success bool
 }
 
-// Breaker represents the circuit breaker
 type Breaker struct {
 	state            *atomic.Int32
 	window           []WindowEntry
-	windowSize       time.Duration // Duration of the sliding window
-	failureThreshold int           // Number of failures before opening the circuit
+	windowSize       time.Duration
+	failureThreshold int           // todo 改为百分比
 	retryTimeout     time.Duration // 重试服务恢复正常没的间隔
 	ok               chan struct{}
 	fail             chan struct{}
 }
 
-func NewBreaker(failureThreshold int, retryTimeout, windowSize time.Duration) *Breaker {
+func NewBreaker(opts ...Opt) *Breaker {
 	a := atomic.Int32{}
 	a.Store(Closed)
-	return &Breaker{
+	b := &Breaker{
 		state:            &a,
 		window:           []WindowEntry{},
-		windowSize:       windowSize,
-		failureThreshold: failureThreshold,
-		retryTimeout:     retryTimeout,
+		windowSize:       3 * time.Second,
+		failureThreshold: 100,
+		retryTimeout:     3 * time.Second,
 	}
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b
 }
 
-// cleanup removes outdated entries from the sliding window
 func (b *Breaker) cleanup() {
 	now := time.Now()
 	threshold := now.Add(-b.windowSize)
@@ -140,7 +144,6 @@ func (b *Breaker) record() {
 	}
 }
 
-// BreakerInterceptor is a gRPC client interceptor that applies the circuit breaker
 func BreakerInterceptor(br *Breaker) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -173,5 +176,23 @@ func BreakerInterceptor(br *Breaker) grpc.UnaryClientInterceptor {
 			fmt.Println("Request failed:", err)
 		}
 		return err
+	}
+}
+
+func WithFailureThreshold(threshold int) Opt {
+	return func(b *Breaker) {
+		b.failureThreshold = threshold
+	}
+}
+
+func WithRetryTimeout(timeout time.Duration) Opt {
+	return func(b *Breaker) {
+		b.retryTimeout = timeout
+	}
+}
+
+func WithWindowSize(size time.Duration) Opt {
+	return func(b *Breaker) {
+		b.windowSize = size
 	}
 }
