@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"github.com/bwmarrin/snowflake"
 	"post/article/domain"
 	"post/article/repository/cache"
 	"post/article/repository/dao"
@@ -18,10 +17,10 @@ type ArticleAuthorRepository interface {
 type articleAuthorRepository struct {
 	dao   dao.ArticleDao
 	cache cache.ArticleCache
-	node  *snowflake.Node
+	node  dao.UniqueID
 }
 
-func NewArticleAuthorRepository(dao dao.ArticleDao, cache cache.ArticleCache, node *snowflake.Node) ArticleAuthorRepository {
+func NewArticleAuthorRepository(dao dao.ArticleDao, cache cache.ArticleCache, node dao.UniqueID) ArticleAuthorRepository {
 	return &articleAuthorRepository{
 		dao:   dao,
 		cache: cache,
@@ -58,7 +57,7 @@ func (a *articleAuthorRepository) ListSelf(ctx context.Context, uid uint64, list
 }
 
 func (a *articleAuthorRepository) Create(ctx context.Context, art *domain.Article) error {
-	art.ID = uint64(a.node.Generate().Int64())
+	art.ID = a.node.Generate()
 
 	return a.dao.Insert(ctx, a.ToAuthorEntity(art))
 }

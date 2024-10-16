@@ -27,15 +27,16 @@ func InitApp() *App {
 	cmdable := ioc.InitRedis()
 	compressionCompression := compression.NewArticleCompressionByGZIP()
 	articleCache := cache.NewRedisArticleCache(cmdable, compressionCompression)
-	node := dao.NewSnowflakeNode0()
-	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao, articleCache, node)
+	uniqueID := dao.NewSnowflakeNode0()
+	articleAuthorRepository := repository.NewArticleAuthorRepository(articleDao, articleCache, uniqueID)
 	client := ioc.InitKafka()
 	largeMessagesProducer := events.NewKafkaSyncProducerForLargeMessages(client)
 	publishedProducer := events.NewKafkaPublishProducer(largeMessagesProducer)
 	articleReaderRepository := repository.NewArticleReaderRepository(articleDao, articleCache, publishedProducer)
 	smallMessagesProducer := events.NewKafkaSyncProducerForSmallMessages(client)
 	readProducer := events.NewKafkaReadProducer(smallMessagesProducer)
-	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, readProducer, publishedProducer)
+	recommendProducer := events.NewKafkaRecommendProducer(smallMessagesProducer)
+	articleService := service.NewArticleService(articleAuthorRepository, articleReaderRepository, readProducer, publishedProducer, recommendProducer)
 	articleServiceServer := grpc.NewArticleServiceServer(articleService)
 	server := ioc.InitArticleService(articleServiceServer)
 	kafkaPublishedConsumer := events.NewKafkaPublishedConsumer(client, articleDao, articleCache)
@@ -71,6 +72,6 @@ var schedulerServiceSet = wire.NewSet(dao.NewGORMJobDAO, repository.NewPreemptJo
 
 var jobServiceSet = wire.NewSet(ioc.InitRankingJob, ioc.InitJobs)
 
-var smallMessagesSet = wire.NewSet(events.NewKafkaSyncProducerForSmallMessages, events.NewKafkaReadProducer)
+var smallMessagesSet = wire.NewSet(events.NewKafkaSyncProducerForSmallMessages, events.NewKafkaReadProducer, events.NewKafkaRecommendProducer)
 
 var largeMessagesSet = wire.NewSet(events.NewKafkaSyncProducerForLargeMessages, events.NewKafkaPublishProducer)
