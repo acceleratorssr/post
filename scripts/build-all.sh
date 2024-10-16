@@ -6,7 +6,7 @@ if [ ! -d "$outputDir" ]; then
     mkdir -p "$outputDir"
 fi
 
-services=("..\/article" "interactive" "search" "sso" "user" "bff")
+services=("..\/article" "interactive" "search" "sso" "user" "bff" "recommend")
 
 for service in "${services[@]}"; do
     echo "Building $service..."

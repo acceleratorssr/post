@@ -1,10 +1,3 @@
-SSO_DIR := ../sso
-ARTICLE_DIR := ../article
-INTERACTIVE_DIR := ../article
-USER_DIR := ../user
-SEARCH_DIR := ../search
-BFF_DIR := ../bff
-
 PYTHON := python3
 
 .PHONY: all clean run_py build_py
@@ -28,6 +21,10 @@ user:
 search:
 	@echo "Building search services.."
 	@ $(PYTHON) search-build.py
+
+recommend:
+	@echo "Building recommend services.."
+	@ $(PYTHON) recommend-build.py
 
 bff:
 	@echo "Building bff services.."

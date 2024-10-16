@@ -6,7 +6,7 @@ output_dir = "../output"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-services = ["../article", "interactive", "search", "sso", "user", "bff"]
+services = ["../article", "interactive", "search", "sso", "user", "bff", "recommend"]
 
 for service in services:
     print(f"Building {service}...")

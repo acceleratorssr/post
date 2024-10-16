@@ -1,6 +1,6 @@
 $servicesDirectory = "../output"
 $errorLog = @()
-$executionOrder = @("sso.exe", "user.exe", "article.exe", "interactive.exe", "search.exe", "bff.exe")
+$executionOrder = @("sso.exe", "user.exe", "article.exe", "interactive.exe", "search.exe", "recommend.exe","bff.exe")
 
 foreach ($service in $executionOrder) {
     $exeFile = Join-Path -Path $servicesDirectory -ChildPath $service

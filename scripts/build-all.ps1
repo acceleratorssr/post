@@ -4,7 +4,7 @@ if (-Not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir
 }
 
-$services = @("..\\article", "interactive", "search", "sso", "user", "bff")
+$services = @("..\\article", "interactive", "search", "sso", "user", "bff", "recommend")
 
 foreach ($service in $services) {
     Write-Host "Building $service..."

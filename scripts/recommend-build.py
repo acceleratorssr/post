@@ -6,7 +6,7 @@ output_dir = "../output"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-service = "../sso"
+service = "../recommend"
 
 print(f"Building -> {service} <- ...")
 os.chdir(service)
@@ -21,4 +21,4 @@ os.chdir("..")
 
 os.chdir("scripts")
 
-print("sso services built successfully!")
+print("recommend services built successfully!")

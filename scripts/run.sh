@@ -2,7 +2,7 @@
 
 servicesDirectory="../output"
 errorLog=()
-executionOrder=("sso.exe" "user.exe" "article.exe" "interactive.exe" "search.exe" "bff.exe")
+executionOrder=("sso" "user" "article" "interactive" "search" "bff" "recommend")
 
 for service in "${executionOrder[@]}"; do
     exeFile="$servicesDirectory/$service"
