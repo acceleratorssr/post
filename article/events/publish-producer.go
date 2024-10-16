@@ -11,11 +11,11 @@ type PublishedProducer interface {
 	ProducePublishedEvent(ctx context.Context, event *PublishEvent) error
 }
 
-type KafkaSyncProducer struct {
+type KafkaPublishedSyncProducer struct {
 	producer sarama.SyncProducer
 }
 
-func (k *KafkaSyncProducer) ProducePublishedEvent(ctx context.Context, event *PublishEvent) error {
+func (k *KafkaPublishedSyncProducer) ProducePublishedEvent(ctx context.Context, event *PublishEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {
 		return err

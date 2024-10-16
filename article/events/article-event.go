@@ -20,3 +20,11 @@ type PublishEvent struct {
 	Uid       uint64   `json:"uid"`
 	Delete    bool     `json:"delete"`
 }
+
+type RecommendEvent struct {
+	FeedbackType string `json:"feedback_type"`
+	ArticleID    uint64 `json:"article_id"`
+	UserId       string `json:"uid"`
+	ItemId       string `json:"item_id"`
+	Timestamp    string `json:"timestamp"`
+}

@@ -17,9 +17,9 @@ func InitArticleService(article *grpc2.ArticleServiceServer) *grpc_extra.Server 
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(limitInterceptor.BuildServerInterceptor()))
 	article.RegisterServer(server)
 
-	port := "9204"
-	ec := grpc_extra.InitEtcdClient(port, "article")
-	return grpc_extra.NewServer(server, ec, port)
+	port := "9201"
+	_ = grpc_extra.InitEtcdClient(port, "article")
+	return grpc_extra.NewServer(server, port)
 }
 
 func InitLikeClient() intrv1.LikeServiceClient {

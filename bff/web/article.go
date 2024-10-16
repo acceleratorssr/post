@@ -34,8 +34,8 @@ func (a *ArticleHandler) RegisterRoutes(s *gin.Engine, mw gin.HandlerFunc) {
 
 	reader := s.Group("/reader")
 	reader.Use(mw)
-	reader.GET("/:id", a.Detail) // 获取发布文章内容
-	reader.POST("/list_publish", gin_extra.WrapWithReq[ReqList](a.ListPublished))
+	reader.GET("/:id", a.Detail)                                                  // 获取发布文章内容
+	reader.POST("/list_publish", gin_extra.WrapWithReq[ReqList](a.ListPublished)) // 获取发布文章列表
 
 	reader.POST("/like", gin_extra.WrapWithReq[LikeReq](a.Like))          // 点赞
 	reader.POST("/collect", gin_extra.WrapWithReq[CollectReq](a.Collect)) //收藏

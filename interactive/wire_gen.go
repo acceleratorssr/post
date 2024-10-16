@@ -28,10 +28,12 @@ func InitApp() *App {
 	cmdable := ioc.InitRedis()
 	articleLikeCache := cache.NewRedisArticleLikeCache(cmdable)
 	likeRepository := repository.NewLikeRepository(articleLikeDao, articleLikeCache)
-	likeService := service.NewLikeService(likeRepository)
+	client := ioc.InitKafka()
+	smallMessagesProducer := events.NewKafkaSyncProducerForSmallMessages(client)
+	recommendProducer := events.NewKafkaRecommendProducer(smallMessagesProducer)
+	likeService := service.NewLikeService(likeRepository, recommendProducer)
 	likeServiceServer := grpc.NewLikeServiceServer(likeService)
 	server := ioc.InitGRPCexServer(likeServiceServer)
-	client := ioc.InitKafka()
 	kafkaReadConsumer := events.NewKafkaIncrReadConsumer(client, likeRepository)
 	consumer := ioc.InitFixConsumer(baseDB, targetDB, client)
 	v := ioc.NewKafkaConsumer(kafkaReadConsumer, consumer)
@@ -53,7 +55,7 @@ func InitApp() *App {
 
 var batchUpdateDBServiceSet = wire.NewSet(ioc.InitBatchUpdateDBJob, ioc.InitJobs)
 
-var thirdPartySet = wire.NewSet(ioc.InitDoubleWritePool, ioc.InitDoubleWriteDB, ioc.InitBaseDB, ioc.InitTargetDB, ioc.InitGRPCexServer, ioc.InitRedis, ioc.InitLogger, events.NewKafkaIncrReadConsumer, ioc.NewKafkaConsumer, ioc.InitKafka, ioc.InitSyncProducer)
+var thirdPartySet = wire.NewSet(ioc.InitDoubleWritePool, ioc.InitDoubleWriteDB, ioc.InitBaseDB, ioc.InitTargetDB, ioc.InitGRPCexServer, ioc.InitRedis, ioc.InitLogger, events.NewKafkaIncrReadConsumer, events.NewKafkaSyncProducerForSmallMessages, events.NewKafkaRecommendProducer, ioc.NewKafkaConsumer, ioc.InitKafka, ioc.InitSyncProducer)
 
 var likeSvcProvider = wire.NewSet(service.NewLikeService, repository.NewLikeRepository, dao.NewGORMArticleLikeDao, cache.NewRedisArticleLikeCache)
 

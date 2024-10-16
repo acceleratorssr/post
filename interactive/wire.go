@@ -29,6 +29,8 @@ var thirdPartySet = wire.NewSet(
 	ioc.InitLogger,
 
 	events.NewKafkaIncrReadConsumer,
+	events.NewKafkaSyncProducerForSmallMessages,
+	events.NewKafkaRecommendProducer,
 	ioc.NewKafkaConsumer,
 	ioc.InitKafka,
 	ioc.InitSyncProducer,

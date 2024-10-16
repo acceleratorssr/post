@@ -12,7 +12,7 @@ func InitGRPCexServer(intr *grpc2.LikeServiceServer) *grpc_extra.Server {
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptor.BuildServerInterceptor())) // todo 可加可观测性记录，可约定grpc的header携带数据，38m
 	intr.Register(server)
 
-	port := "9201"
-	ec := grpc_extra.InitEtcdClient(port, "like")
-	return grpc_extra.NewServer(server, ec, port)
+	port := "9202"
+	_ = grpc_extra.InitEtcdClient(port, "like")
+	return grpc_extra.NewServer(server, port)
 }

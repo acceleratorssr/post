@@ -35,13 +35,19 @@ func NewKafkaSyncProducerForSmallMessages(client sarama.Client) SmallMessagesPro
 }
 
 func NewKafkaPublishProducer(p LargeMessagesProducer) PublishedProducer {
-	return &KafkaSyncProducer{
+	return &KafkaPublishedSyncProducer{
 		producer: p,
 	}
 }
 
 func NewKafkaReadProducer(p SmallMessagesProducer) ReadProducer {
 	return &KafkaReadSyncProducer{
+		producer: p,
+	}
+}
+
+func NewKafkaRecommendProducer(p SmallMessagesProducer) RecommendProducer {
+	return &KafkaSyncRecommendProducer{
 		producer: p,
 	}
 }

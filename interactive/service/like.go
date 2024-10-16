@@ -3,7 +3,10 @@ package service
 import (
 	"context"
 	"post/interactive/domain"
+	"post/interactive/events"
 	"post/interactive/repository"
+	"strconv"
+	"time"
 )
 
 // LikeService //go:generate 移动到makefile里了
@@ -20,7 +23,8 @@ type LikeService interface {
 }
 
 type likeService struct {
-	repo repository.LikeRepository
+	repo              repository.LikeRepository
+	recommendProducer events.RecommendProducer
 }
 
 func (l *likeService) UpdateReadCountMany(ctx context.Context, objType string, hmap map[uint64]int64) error {
@@ -42,6 +46,18 @@ func (l *likeService) IncrReadCount(ctx context.Context, objType string, objID u
 
 // Like 没控制重复点赞
 func (l *likeService) Like(ctx context.Context, objType string, objID, uid uint64) error {
+	go func() {
+		err := l.recommendProducer.ProduceRecommendEvent(ctx, &events.RecommendEvent{
+			FeedbackType: "like",
+			UserId:       strconv.FormatUint(uid, 10),
+			ItemId:       objType + ":" + strconv.FormatUint(objID, 10),
+			Timestamp:    time.Now().Format("2006.01.02 15:04:05"),
+		})
+		if err != nil {
+			// log
+		}
+	}()
+
 	return l.repo.IncrLikeCount(ctx, objType, objID, uid)
 }
 
@@ -50,11 +66,24 @@ func (l *likeService) UnLike(ctx context.Context, objType string, objID, uid uin
 }
 
 func (l *likeService) Collect(ctx context.Context, objType string, objID, uid uint64) error {
+	go func() {
+		err := l.recommendProducer.ProduceRecommendEvent(ctx, &events.RecommendEvent{
+			FeedbackType: "collect",
+			UserId:       strconv.FormatUint(uid, 10),
+			ItemId:       objType + ":" + strconv.FormatUint(objID, 10),
+			Timestamp:    time.Now().Format("2006.01.02 15:04:05"),
+		})
+		if err != nil {
+			// log
+		}
+	}()
+
 	return l.repo.AddCollectionItem(ctx, objType, objID, uid)
 }
 
-func NewLikeService(repo repository.LikeRepository) LikeService {
+func NewLikeService(repo repository.LikeRepository, rc events.RecommendProducer) LikeService {
 	return &likeService{
-		repo: repo,
+		repo:              repo,
+		recommendProducer: rc,
 	}
 }

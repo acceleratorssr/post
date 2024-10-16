@@ -5,6 +5,8 @@ import (
 	"post/article/domain"
 	"post/article/events"
 	"post/article/repository"
+	"strconv"
+	"time"
 )
 
 type ArticleService interface {
@@ -27,12 +29,31 @@ type articleService struct {
 	reader            repository.ArticleReaderRepository
 	readProducer      events.ReadProducer
 	publishedProducer events.PublishedProducer
+	recommendProducer events.RecommendProducer
 
 	ch chan events.ReadEvent
 }
 
 func (svc *articleService) GetArtByIDs(ctx context.Context, aids []uint64) ([]domain.Article, error) {
-	return svc.reader.GetPublishedByIDs(ctx, aids)
+	ds, err := svc.reader.GetPublishedByIDs(ctx, aids)
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		now := time.Now().Format("2006.01.02 15:04:05")
+		for _, art := range ds {
+			err := svc.recommendProducer.ProduceRecommendEvent(ctx, &events.RecommendEvent{
+				FeedbackType: "read",
+				UserId:       "system",
+				ItemId:       "article:" + strconv.FormatUint(art.ID, 10),
+				Timestamp:    now,
+			})
+			if err != nil {
+				// log
+			}
+		}
+	}()
+	return ds, err
 }
 
 func (svc *articleService) ListPublished(ctx context.Context, list *domain.List, uid uint64) ([]domain.Article, error) {
@@ -66,7 +87,19 @@ func (svc *articleService) GetPublishedByID(ctx context.Context, aid, uid uint64
 }
 
 func (svc *articleService) GetAuthorModelsByID(ctx context.Context, aid, uid uint64) (*domain.Article, error) {
-	return svc.author.GetByID(ctx, aid, uid)
+	art, err := svc.author.GetByID(ctx, aid, uid)
+	go func() {
+		err := svc.recommendProducer.ProduceRecommendEvent(ctx, &events.RecommendEvent{
+			FeedbackType: "read",
+			UserId:       strconv.FormatUint(uid, 10),
+			ItemId:       "article:" + strconv.FormatUint(art.ID, 10),
+			Timestamp:    time.Now().Format("2006.01.02 15:04:05"),
+		})
+		if err != nil {
+			// log
+		}
+	}()
+	return art, err
 }
 
 // ListSelf 仅缓存符合 LastValue 的前 limit 条数据
@@ -156,7 +189,8 @@ func (svc *articleService) toMQ(art *domain.Article) *events.Article {
 func NewArticleService(author repository.ArticleAuthorRepository,
 	reader repository.ArticleReaderRepository,
 	producer events.ReadProducer,
-	publishedProducer events.PublishedProducer) ArticleService {
+	publishedProducer events.PublishedProducer,
+	recommendProducer events.RecommendProducer) ArticleService {
 	// producer也可以批处理，要多写一个consumer
 	//ch := make(chan events.ReadEvent, 100)
 	//go func() {
@@ -190,5 +224,6 @@ func NewArticleService(author repository.ArticleAuthorRepository,
 		reader:            reader,
 		readProducer:      producer,
 		publishedProducer: publishedProducer,
+		recommendProducer: recommendProducer,
 	}
 }
