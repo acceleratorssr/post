@@ -1,4 +1,4 @@
-package sarama_ex
+package sarama_extra
 
 import (
 	"context"
@@ -7,21 +7,32 @@ import (
 	"time"
 )
 
-const batchSize = 10
+const (
+	DefaultBatchSize = 50
+	DefaultDuration  = 10 * time.Second
+)
+
+type Opt[T any] func(*ConsumerBatchHandler[T])
 
 type ConsumerBatchHandler[T any] struct {
-	fn func(msg []*sarama.ConsumerMessage, t []T) error
-	// todo option 设置如下两字段
+	fn        func(msg []*sarama.ConsumerMessage, t []T) error
 	batchSize int
 	duration  time.Duration
 }
 
-func NewConsumerBatchHandler[T any](fn func(msg []*sarama.ConsumerMessage, t []T) error) *ConsumerBatchHandler[T] {
-	return &ConsumerBatchHandler[T]{
+// NewConsumerBatchHandler
+// 默认50条消息，10秒超时
+func NewConsumerBatchHandler[T any](fn func(msg []*sarama.ConsumerMessage, t []T) error, opts ...Opt[T]) *ConsumerBatchHandler[T] {
+	c := &ConsumerBatchHandler[T]{
 		fn:        fn,
-		batchSize: batchSize,
-		duration:  100 * time.Second,
+		batchSize: DefaultBatchSize,
+		duration:  DefaultDuration,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
 }
 
 func (c *ConsumerBatchHandler[T]) Setup(session sarama.ConsumerGroupSession) error {
@@ -36,11 +47,11 @@ func (c *ConsumerBatchHandler[T]) ConsumeClaim(session sarama.ConsumerGroupSessi
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), c.duration)
 		done := false
-		msgs := make([]*sarama.ConsumerMessage, 0, batchSize)
-		ts := make([]T, 0, batchSize)
+		msgs := make([]*sarama.ConsumerMessage, 0, c.batchSize)
+		ts := make([]T, 0, c.batchSize)
 
-		// 超时控制，保证提交
-		for i := 0; i < batchSize && !done; i++ {
+		// 该批次的获取时间超过 c.duration 时，直接提交
+		for i := 0; i < c.batchSize && !done; i++ {
 			select {
 			case msg, ok := <-claim.Messages():
 				if !ok {
@@ -78,4 +89,16 @@ func (c *ConsumerBatchHandler[T]) ConsumeClaim(session sarama.ConsumerGroupSessi
 		cancel()
 	}
 
+}
+
+func WithBatchSize[T any](size int) Opt[T] {
+	return func(c *ConsumerBatchHandler[T]) {
+		c.batchSize = size
+	}
+}
+
+func WithDuration[T any](d time.Duration) Opt[T] {
+	return func(c *ConsumerBatchHandler[T]) {
+		c.duration = d
+	}
 }

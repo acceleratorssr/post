@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const topicRead = "article_read"
+
 type BatchKafkaConsumer struct {
 	client sarama.Client
 	repo   repository.LikeRepository
@@ -27,9 +29,8 @@ func (b *BatchKafkaConsumer) Start(topic string) error {
 	}
 	go func() {
 		err := cg.Consume(context.Background(),
-			//[]string{topic},
-			[]string{"article_read"},
-			sarama_extra.NewConsumerBatchHandler[ReadEvent](b.Consume))
+			[]string{topicRead},
+			sarama_extra.NewConsumerBatchHandler[ReadEvent](b.Consume, sarama_extra.WithDuration[ReadEvent](time.Second)))
 		if err != nil {
 			panic(err)
 		}

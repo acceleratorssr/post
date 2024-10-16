@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"post/pkg/gin_ex"
+	"post/pkg/gin-extra"
 	"post/sso/domain"
 	"strings"
 	"time"
@@ -57,7 +57,7 @@ func (j *Jwt) Build() gin.HandlerFunc {
 			xClaims, err := j.validateToken(ctx, xToken)
 			if err != nil {
 				// 部署到k8s内时，直接json格式日志到stdout即可；
-				gin_ex.FailWithMessage(ctx, gin_ex.Unauthenticated, "请重新登录")
+				gin_extra.FailWithMessage(ctx, gin_extra.Unauthenticated, "请重新登录")
 				ctx.AbortWithStatus(http.StatusUnauthorized)
 				return
 			}
@@ -67,7 +67,7 @@ func (j *Jwt) Build() gin.HandlerFunc {
 
 		if len(tokens) != 2 {
 			if xToken == "" {
-				gin_ex.FailWithMessage(ctx, gin_ex.InvalidArgument, "token错误")
+				gin_extra.FailWithMessage(ctx, gin_extra.InvalidArgument, "token错误")
 				ctx.AbortWithStatus(http.StatusUnauthorized)
 				return
 			}

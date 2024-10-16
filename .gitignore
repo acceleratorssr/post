@@ -24,3 +24,4 @@ go.work.sum
 *.pem
 *.env.docker.compose
 *.log
+*.idea

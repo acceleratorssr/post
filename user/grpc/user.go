@@ -10,7 +10,7 @@ import (
 	noopv1 "post/api/proto/gen/no-op/v1"
 	ssov1 "post/api/proto/gen/sso/v1"
 	userv1 "post/api/proto/gen/user/v1"
-	ch "post/pkg/grpc-extra/balancer/consistent-hashing"
+	ch "post/pkg/grpc-extra/balancer/CHBL"
 	"post/user/domain"
 	"post/user/service"
 )

@@ -26,6 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
+// 在被调用方定义，用于刷新 grpc 立刻建立 HTTP2.0 长连接
 // example:
 type NoOpClient interface {
 	NoOp(ctx context.Context, in *NoOpRequest, opts ...grpc.CallOption) (*NoOpResponse, error)
@@ -53,6 +54,7 @@ func (c *noOpClient) NoOp(ctx context.Context, in *NoOpRequest, opts ...grpc.Cal
 // All implementations must embed UnimplementedNoOpServer
 // for forward compatibility.
 //
+// 在被调用方定义，用于刷新 grpc 立刻建立 HTTP2.0 长连接
 // example:
 type NoOpServer interface {
 	NoOp(context.Context, *NoOpRequest) (*NoOpResponse, error)

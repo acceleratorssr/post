@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package recommend.v1;
+option go_package = "recommend/v1;recommendv1";
+
+message Item {
+  string ItemId = 1;
+  bool IsHidden = 2;
+  repeated string Labels = 3;
+  repeated string Categories = 4;
+  string Timestamp = 5;
+  string Comment = 6;
+}
+
+message Score {
+  string ID = 1;
+  int32 Score = 2;
+}
+
+message User {
+  string UserId = 1;
+  repeated string Labels = 2;
+  repeated string Subscribe = 3;
+  string Comment = 4;
+}
+
+message Users {
+  repeated User users = 1;
+  string cursor = 2;
+}
+
+service RecommendService {
+  rpc GetItemByID(GetItemByIDRequest) returns (GetItemByIDResponse);
+  rpc GetNeighbors(GetNeighborsRequest) returns (GetNeighborsResponse);
+  rpc GetRecommend(GetRecommendRequest) returns (GetRecommendResponse);
+
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+}
+
+message GetItemByIDRequest {
+  string itemId = 1;
+}
+
+message GetItemByIDResponse {
+  Item item = 1;
+}
+
+message GetNeighborsRequest {
+  string itemId = 1;
+  string userId = 2;
+  int32 n = 3;
+  int32 offset = 4;
+}
+
+message GetNeighborsResponse {
+  repeated Score scores = 1;
+}
+
+message GetRecommendRequest {
+  string userId = 1;
+  string writeBackType = 2;
+  string writeBackDelay = 3;
+  int32 n = 4;
+  int32 offset = 5;
+  repeated string category = 6;
+}
+
+message GetRecommendResponse {
+  repeated string items = 1;
+}
+
+message GetUserRequest {
+  string userId = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message GetUsersRequest {
+  string cursor = 1;
+  int32  n = 2;
+}
+
+message GetUsersResponse {
+  Users users = 1;
+}
+

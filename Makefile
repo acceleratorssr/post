@@ -1,4 +1,3 @@
-OUTPUT_DIR := output
 SCRIPTS_DIR := scripts
 PYTHON := python3
 SHELL := /bin/bash

@@ -3,6 +3,7 @@ package ioc
 import (
 	"github.com/IBM/sarama"
 	"github.com/spf13/viper"
+	sarama_extra "post/pkg/sarama-extra"
 	"post/search/events"
 )
 
@@ -27,8 +28,8 @@ func InitKafka() sarama.Client {
 }
 
 // NewConsumers 依旧是所有的 Consumer 在这里注册一下
-func NewConsumers(articleConsumer *events.ArticleConsumer) []events.Consumer {
-	return []events.Consumer{
+func NewConsumers(articleConsumer *events.ArticleConsumer) []sarama_extra.Consumer {
+	return []sarama_extra.Consumer{
 		articleConsumer,
 	}
 }

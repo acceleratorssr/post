@@ -1,4 +1,4 @@
-package gin_ex
+package gin_extra
 
 import (
 	"encoding/json"

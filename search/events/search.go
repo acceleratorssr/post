@@ -21,7 +21,7 @@ type SyncDataEventConsumer struct {
 	l      logger.Logger
 }
 
-func (a *SyncDataEventConsumer) Start() error {
+func (a *SyncDataEventConsumer) Start(topic string) error {
 	cg, err := sarama.NewConsumerGroupFromClient("search_sync_data",
 		a.client)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"post/pkg/grpc-extra"
-	"post/search/events"
+	sarama_extra "post/pkg/sarama-extra"
 	"strings"
 )
 
@@ -13,7 +13,7 @@ func main() {
 	initViperWatch()
 	app := Init()
 	for _, c := range app.consumers {
-		err := c.Start()
+		err := c.Start("")
 		if err != nil {
 			panic(err)
 		}
@@ -47,5 +47,5 @@ func initViperWatch() {
 
 type App struct {
 	server    *grpc_extra.Server
-	consumers []events.Consumer
+	consumers []sarama_extra.Consumer
 }

@@ -21,6 +21,6 @@ func InitGRPCexServer(syncRpc *grpc2.SyncServiceServer,
 	server := grpc.NewServer()
 	syncRpc.Register(server)
 	searchRpc.Register(server)
-	ec := grpc_extra.InitEtcdClient(cfg.Port, "search")
-	return grpc_extra.NewServer(server, ec, cfg.Port)
+	_ = grpc_extra.InitEtcdClient(cfg.Port, "search")
+	return grpc_extra.NewServer(server, cfg.Port)
 }

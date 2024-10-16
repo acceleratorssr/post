@@ -1,4 +1,4 @@
-package sarama_ex
+package sarama_extra
 
 import (
 	"encoding/json"

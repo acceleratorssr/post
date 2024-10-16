@@ -49,7 +49,7 @@ type ArticleEvent struct {
 	Delete    bool     `json:"delete"`
 }
 
-func (a *ArticleConsumer) Start() error {
+func (a *ArticleConsumer) Start(topic string) error {
 	cg, err := sarama.NewConsumerGroupFromClient("es",
 		a.client)
 	if err != nil {
