@@ -103,14 +103,14 @@ func (ec *etcdClient) initEtcdClient(opts ...Opts) {
 	}()
 
 	go func() {
-		ec.updateMetadataPeriodically(ec.ch)
+		ec.updateMetadataPeriodically(ec.ch, grant.ID)
 	}()
 
 	ec.client = client
 	return
 }
 
-func (ec *etcdClient) updateMetadataPeriodically(ch chan int) {
+func (ec *etcdClient) updateMetadataPeriodically(ch chan int, id etcdv3.LeaseID) {
 	ticker := time.NewTicker(time.Second * 10) // 每10秒更新一次
 	defer ticker.Stop()
 
@@ -123,7 +123,7 @@ func (ec *etcdClient) updateMetadataPeriodically(ch chan int) {
 			err := ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
 				Addr:     addr,
 				Metadata: ec.RequestsCount,
-			})
+			}, etcdv3.WithLease(id))
 			if err != nil {
 				fmt.Printf("更新 endpoint 失败: %v\n", err)
 			}
@@ -154,17 +154,3 @@ func WithChannel(ch chan int) Opts {
 		ec.ch = ch
 	}
 }
-
-//func (ec *etcdClient) watchServiceReady() {
-//	rch := ec.client.Watch(context.Background(), ec.key+"/"+ec.name, etcdv3.WithPrefix())
-//	for wresp := range rch {
-//		for _, ev := range wresp.Events {
-//			switch ev.Type {
-//			case etcdv3.EventTypePut:
-//				// fmt.Printf("Added node: %s\n", ev.Kv.Key)
-//			case etcdv3.EventTypeDelete:
-//				// fmt.Printf("Deleted node: %s\n", ev.Kv.Key)
-//			}
-//		}
-//	}
-//}
