@@ -16,7 +16,7 @@ import (
 
 type etcdResolver struct {
 	client *clientv3.Client
-	cc     resolver.ClientConn
+	cc     resolver.ClientConn // 主要获取 UpdateState(State) error 进行回调
 	target resolver.Target
 }
 
@@ -26,17 +26,12 @@ type NodeValue struct {
 	Metadata int    `json:"metadata"` // RequestCount
 }
 
-var R resolver.Resolver // 丑陋的包变量，但是为了手动刷新metadata，暂时没有好办法
-
-func Fresh() {
-	R.ResolveNow(resolver.ResolveNowOptions{})
-}
-
 // ResolveNow
 // 调用时机：
 // 初次建立连接
 // 客户端重新连接：连接中断时，gRPC 客户端会调用 ResolveNow 尝试重新解析
 // resolver.Resolver.ResolveNow() 手动触发解析过程
+// 可通过watch机制监听服务节点的变化
 func (r *etcdResolver) ResolveNow(options resolver.ResolveNowOptions) {
 	resp, err := r.client.Get(context.Background(), r.target.Endpoint(), clientv3.WithPrefix())
 	if err != nil {
@@ -76,8 +71,22 @@ func (r *etcdResolver) Build(target resolver.Target, cc resolver.ClientConn, opt
 	r.cc = cc
 	r.target = target
 	r.ResolveNow(resolver.ResolveNowOptions{})
-	R = r
+	go r.watchServiceNodes()
 	return r, nil
+}
+
+// watchServiceNodes 启动对 etcd 中服务节点的监听
+func (r *etcdResolver) watchServiceNodes() {
+	watchChan := r.client.Watch(context.Background(), r.target.Endpoint(), clientv3.WithPrefix())
+
+	for watchResp := range watchChan {
+		for _, event := range watchResp.Events {
+			switch event.Type {
+			case mvccpb.PUT, mvccpb.DELETE: // etcdv3.EventTypePut 也行
+				r.ResolveNow(resolver.ResolveNowOptions{})
+			}
+		}
+	}
 }
 
 func (r *etcdResolver) byReflect(kvs []*mvccpb.KeyValue, addrs []resolver.Address) {
