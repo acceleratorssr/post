@@ -41,7 +41,7 @@ func (l *TokenBucketLimit) NewServerInterceptor() grpc.UnaryServerInterceptor {
 	// 此处可调整限流的粒度
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		select {
-		case <-l.buckets:
+		case _ = <-l.buckets:
 			return handler(ctx, req)
 		default: // 并发越高，越不能阻塞，如果不高，此处也可以阻塞等待，直到超时
 			return nil, errors.New("too many requests")
