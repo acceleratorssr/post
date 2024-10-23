@@ -29,6 +29,9 @@ func InitApp() *App {
 		ioc.InitRedis,
 		ioc.InitGrpcSSOServer,
 
+		grpc.InitMurMurHash,
+		grpc.NewBloomFilterByNP,
+		//grpc.InitBloomThirdParty,
 		grpc.NewSSOServiceServer,
 
 		wire.Struct(new(App), "*"),

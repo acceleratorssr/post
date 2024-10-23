@@ -5,11 +5,14 @@ import (
 	"errors"
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
+	"github.com/spaolacci/murmur3"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"hash"
 	ssov1 "post/api/proto/gen/sso/v1"
+	"post/pkg/algorithm/bloom"
 	"post/sso/config"
 	"post/sso/domain"
 	"post/sso/repository"
@@ -25,6 +28,7 @@ type AuthServiceServer struct {
 	cache      repository.SSOCache
 	jwtSvc     domain.AuthService
 	info       *config.Info
+	bloom      bloom.Filter
 }
 
 func (a *AuthServiceServer) GetPublicKey(ctx context.Context, request *ssov1.PublicKeyRequest) (*ssov1.PublicKeyResponse, error) {
@@ -100,6 +104,8 @@ func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.Registe
 		return nil, status.Errorf(codes.Internal, "SSO 生成 refresh token 失败: %s", err)
 	}
 
+	a.bloom.Set([]byte(user.Username))
+
 	return &ssov1.RegisterResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -144,6 +150,10 @@ func (a *AuthServiceServer) RefreshToken(ctx context.Context, request *ssov1.Ref
 // Login 当出现 UserAgent 不一致的情况，则会要求用户提交验证码
 // 正常逻辑下，当 UserAgent 不一致时，第一次调用没有验证码，第二次重复调用该方法即可
 func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginRequest) (*ssov1.LoginResponse, error) {
+	if !a.bloom.Test([]byte(request.GetUsername())) {
+		return nil, status.Errorf(codes.NotFound, "SSO 未找到对应用户")
+	}
+
 	user, err := a.svc.GetInfoByUsername(ctx, request.GetUsername())
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "SSO 未找到对应用户")
@@ -153,14 +163,14 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 		return nil, status.Errorf(codes.Unauthenticated, "SSO 用户或密码错误")
 	}
 
-	//if user.UserAgent != request.UserAgent {
-	//	if request.GetCode() == "" {
-	//		return nil, status.Errorf(codes.Unauthenticated, "SSO 风险行为，请输入2FA验证码")
-	//	}
-	//	if !a.validateTOTP(user.TotpSecret, request.GetCode()) {
-	//		return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
-	//	}
-	//}
+	if user.UserAgent != request.UserAgent {
+		if request.GetCode() == "" {
+			return nil, status.Errorf(codes.Unauthenticated, "SSO 风险行为，请输入2FA验证码")
+		}
+		if !a.validateTOTP(user.TotpSecret, request.GetCode()) {
+			return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
+		}
+	}
 
 	jwtPayload := &domain.JwtPayload{
 		UID: user.UID,
@@ -224,12 +234,25 @@ func (a *AuthServiceServer) CheckPasswords(hashedPwd string, rePwd string) bool 
 	return true
 }
 
-func NewSSOServiceServer(svc service.AuthUserService, info *config.Info, jwtSvc domain.AuthService, cache repository.SSOCache) *AuthServiceServer {
+func NewSSOServiceServer(svc service.AuthUserService, info *config.Info, jwtSvc domain.AuthService, cache repository.SSOCache, bloom bloom.Filter) *AuthServiceServer {
 	return &AuthServiceServer{
 		issuer: "歪比八不",
 		svc:    svc,
 		jwtSvc: jwtSvc,
 		cache:  cache,
 		info:   info,
+		bloom:  bloom,
 	}
+}
+
+func InitBloomThirdParty() bloom.Filter {
+	return bloom.NewBloomFilterThirdByNP(100000, 1e-4)
+}
+
+func NewBloomFilterByNP(hashFunc hash.Hash32) bloom.Filter {
+	return bloom.NewBloomFilterByNP(100000, 1e-4, hashFunc)
+}
+
+func InitMurMurHash() hash.Hash32 {
+	return murmur3.New32()
 }
