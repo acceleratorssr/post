@@ -68,9 +68,9 @@ func (u *UserHandler) Bind2FA(ctx *gin.Context, req Bind2FAReq) (*gin_extra.Resp
 		return nil, err
 	}
 	return &gin_extra.Response{
-		Data: totp.QRUrl,
-		Msg:  "请扫描二维码启用2FA，有效期为10分钟",
-		Code: gin_extra.OK,
+		Data:   totp.QRUrl,
+		Msg:    "请扫描二维码启用2FA，有效期为10分钟",
+		Status: gin_extra.OK,
 	}, nil
 }
 

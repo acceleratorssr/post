@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package sso.v1;
-option go_package="sso/v1;ssov1";
+option go_package = "sso/v1;ssov1";
 
 import "no-op/v1/no-op.proto";
 
@@ -17,13 +17,6 @@ service AuthService {
   rpc GetPublicKey (PublicKeyRequest) returns (PublicKeyResponse);
 
   rpc NoOp(noop.v1.NoOpRequest) returns (noop.v1.NoOpResponse);
-}
-
-message PublicKeyRequest {
-}
-
-message PublicKeyResponse {
-  string public_key = 1;
 }
 
 message BindTotpRequest {
@@ -45,6 +38,13 @@ message RegisterResponse {
   string access_token = 1;
   string refresh_token = 2;
   uint64 uid = 3;
+}
+
+message PublicKeyRequest {
+}
+
+message PublicKeyResponse {
+  string public_key = 1;
 }
 
 message LogoutRequest {
@@ -69,7 +69,7 @@ message LoginResponse {
 
 message RefreshTokenRequest {
   string refresh_token = 1;
-  UserInfo user_info =3;
+  UserInfo user_info = 3;
 }
 
 message RefreshTokenResponse {

@@ -52,13 +52,13 @@ func (a *ArticleHandler) Collect(ctx *gin.Context, req CollectReq) (*gin_extra.R
 
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  "收藏失败",
+			Status: gin_extra.System,
+			Msg:    "收藏失败",
 		}, err
 	}
 	return &gin_extra.Response{
-		Code: gin_extra.OK,
-		Msg:  "收藏成功",
+		Status: gin_extra.OK,
+		Msg:    "收藏成功",
 	}, nil
 }
 
@@ -82,13 +82,13 @@ func (a *ArticleHandler) Like(ctx *gin.Context, req LikeReq) (*gin_extra.Respons
 
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  "点赞相关操作失败",
+			Status: gin_extra.System,
+			Msg:    "点赞相关操作失败",
 		}, err
 	}
 	return &gin_extra.Response{
-		Code: gin_extra.OK,
-		Msg:  "点赞成功",
+		Status: gin_extra.OK,
+		Msg:    "点赞成功",
 	}, nil
 }
 
@@ -148,8 +148,8 @@ func (a *ArticleHandler) ListSelf(ctx *gin.Context, req ReqList) (*gin_extra.Res
 	})
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  err.Error(),
+			Status: gin_extra.System,
+			Msg:    err.Error(),
 		}, nil
 	}
 	return &gin_extra.Response{
@@ -170,8 +170,8 @@ func (a *ArticleHandler) ListPublished(ctx *gin.Context, req ReqList) (*gin_extr
 	if err != nil {
 		// log err.Error()
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  "查询失败",
+			Status: gin_extra.System,
+			Msg:    "查询失败",
 		}, nil
 	}
 
@@ -195,8 +195,8 @@ func (a *ArticleHandler) Publish(ctx *gin.Context, req Req) (*gin_extra.Response
 	if err != nil {
 		// log
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  "发布失败",
+			Status: gin_extra.System,
+			Msg:    "发布失败",
 		}, err
 	}
 	return &gin_extra.Response{
@@ -221,8 +221,8 @@ func (a *ArticleHandler) Save(ctx *gin.Context, req Req) (*gin_extra.Response, e
 	if err != nil {
 		// log
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  "文章保存失败",
+			Status: gin_extra.System,
+			Msg:    "文章保存失败",
 		}, err
 	}
 
@@ -240,8 +240,8 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context, req ReqOnlyWithID) (*gin_ext
 	if err != nil {
 		// log
 		return &gin_extra.Response{
-			Code: gin_extra.System,
-			Msg:  "撤回文章失败",
+			Status: gin_extra.System,
+			Msg:    "撤回文章失败",
 		}, err
 	}
 

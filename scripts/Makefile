@@ -8,7 +8,7 @@ sso:
 
 art:
 	@echo "Building art services.."
-	@ $(PYTHON) art-build.py
+	@ $(PYTHON) article-build.py
 
 intr:
 	@echo "Building intr services.."

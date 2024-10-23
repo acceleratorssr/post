@@ -25,8 +25,8 @@ func (s *SearchHandler) Search(ctx *gin.Context, req SearchReq) (*gin_extra.Resp
 	uid, ok := ctx.Get("uid")
 	if !ok {
 		return &gin_extra.Response{
-			Code: gin_extra.Unauthenticated,
-			Msg:  "请先登录",
+			Status: gin_extra.Unauthenticated,
+			Msg:    "请先登录",
 		}, nil
 	}
 	search, err := s.svc.Search(ctx, &searchv1.SearchRequest{
@@ -35,7 +35,7 @@ func (s *SearchHandler) Search(ctx *gin.Context, req SearchReq) (*gin_extra.Resp
 	})
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.System,
+			Status: gin_extra.System,
 		}, err
 	}
 

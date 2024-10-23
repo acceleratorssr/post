@@ -46,6 +46,13 @@ var largeMessagesSet = wire.NewSet(
 	events.NewKafkaPublishProducer,
 )
 
+var articleServiceSet = wire.NewSet(
+	//service.NewArticleService,
+	service.NewArticleServiceStruct,
+	service.NewArticleServiceWithTracer,
+	grpc.NewArticleServiceServer,
+)
+
 func InitApp() *App {
 	wire.Build(
 		distLock.NewClient,
@@ -72,9 +79,8 @@ func InitApp() *App {
 		cache.NewRedisArticleCache,
 		repository.NewArticleAuthorRepository,
 		repository.NewArticleReaderRepository,
-		service.NewArticleService,
 
-		grpc.NewArticleServiceServer,
+		articleServiceSet,
 		ioc.InitArticleService,
 
 		wire.Struct(new(App), "*"),

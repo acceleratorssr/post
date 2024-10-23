@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -60,7 +61,7 @@ func (a *AuthServiceServer) BindTotp(ctx context.Context, request *ssov1.BindTot
 func (a *AuthServiceServer) Register(ctx context.Context, request *ssov1.RegisterRequest) (*ssov1.RegisterResponse, error) {
 	now := time.Now().UnixMilli()
 	secretKey, err := a.cache.GetString(ctx, request.GetUserInfo().GetUsername())
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, status.Errorf(codes.Unauthenticated, "SSO 绑定密钥超时，请重新注册: %s", err)
 	} else if err != nil {
 		return nil, status.Errorf(codes.Internal, "SSO 获取用户绑定关系失败: %s", err)
@@ -152,14 +153,14 @@ func (a *AuthServiceServer) Login(ctx context.Context, request *ssov1.LoginReque
 		return nil, status.Errorf(codes.Unauthenticated, "SSO 用户或密码错误")
 	}
 
-	if user.UserAgent != request.UserAgent {
-		if request.GetCode() == "" {
-			return nil, status.Errorf(codes.Unauthenticated, "SSO 风险行为，请输入2FA验证码")
-		}
-		if !a.validateTOTP(user.TotpSecret, request.GetCode()) {
-			return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
-		}
-	}
+	//if user.UserAgent != request.UserAgent {
+	//	if request.GetCode() == "" {
+	//		return nil, status.Errorf(codes.Unauthenticated, "SSO 风险行为，请输入2FA验证码")
+	//	}
+	//	if !a.validateTOTP(user.TotpSecret, request.GetCode()) {
+	//		return nil, status.Errorf(codes.Unauthenticated, "SSO 2FA验证码错误")
+	//	}
+	//}
 
 	jwtPayload := &domain.JwtPayload{
 		UID: user.UID,

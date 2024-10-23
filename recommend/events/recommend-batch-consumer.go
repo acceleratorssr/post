@@ -74,6 +74,9 @@ func (k *BatchKafkaRecommendConsumer) Consume(msg []*sarama.ConsumerMessage, t [
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	if len(fb) == 0 {
+		return nil
+	}
 	item, err := k.gorse.InsertFeedback(ctx, fb)
 	if err != nil || item.RowAffected == 0 {
 		// log

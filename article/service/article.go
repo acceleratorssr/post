@@ -143,7 +143,7 @@ func (svc *articleService) Publish(ctx context.Context, art *domain.Article) err
 		e := svc.publishedProducer.ProducePublishedEvent(ctx, &events.PublishEvent{
 			Article:   svc.toMQ(art),
 			OnlyCache: false,
-			Uid:       ctx.Value("uid").(uint64),
+			Uid:       art.Author.Id,
 			Delete:    false,
 		})
 		if e != nil {
@@ -219,6 +219,20 @@ func NewArticleService(author repository.ArticleAuthorRepository,
 	//		cancel()
 	//	}
 	//}()
+	return &articleService{
+		author:            author,
+		reader:            reader,
+		readProducer:      producer,
+		publishedProducer: publishedProducer,
+		recommendProducer: recommendProducer,
+	}
+}
+
+func NewArticleServiceStruct(author repository.ArticleAuthorRepository,
+	reader repository.ArticleReaderRepository,
+	producer events.ReadProducer,
+	publishedProducer events.PublishedProducer,
+	recommendProducer events.RecommendProducer) ToOTelTracer {
 	return &articleService{
 		author:            author,
 		reader:            reader,

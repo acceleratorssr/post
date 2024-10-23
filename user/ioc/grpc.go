@@ -9,7 +9,6 @@ import (
 	CHBL "post/pkg/grpc-extra/balancer/CHBL"
 	"post/pkg/grpc-extra/interceptors/limit"
 	grpc2 "post/user/grpc"
-	"time"
 )
 
 func InitGrpcServer(user *grpc2.UserServiceServer) *grpc_extra.Server {
@@ -21,7 +20,6 @@ func InitGrpcServer(user *grpc2.UserServiceServer) *grpc_extra.Server {
 	_ = grpc_extra.InitEtcdClient(port, "user") // 第三
 	return grpc_extra.NewServer(server, port)
 }
-
 func InitGrpcSSOClient() ssov1.AuthServiceClient {
 	// 可监听 sso 服务节点
 	serviceKey := "service/sso"
@@ -40,19 +38,6 @@ func InitGrpcSSOClient() ssov1.AuthServiceClient {
 	if err != nil {
 		panic(err)
 	}
-
-	// 最先开启
-	go func() {
-		ticker := time.NewTicker(time.Second * 11) // 每11秒更新一次
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				CHBL.Fresh()
-			}
-		}
-	}()
 
 	return ssov1.NewAuthServiceClient(c)
 }

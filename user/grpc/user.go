@@ -99,6 +99,8 @@ func NewUserServiceServer(svc service.UserService, ssoGrpcClient ssov1.AuthServi
 	// 如果不使用该 noop 请求，则第一次请求数据的分布会和之后的不一样
 	_, _ = ch.RegisterWithKey(context.Background(), "",
 		&noopv1.NoOpRequest{}, ssoGrpcClient.NoOp)
+	_, _ = ch.RegisterWithKey(context.Background(), "",
+		&noopv1.NoOpRequest{}, ssoGrpcClient.NoOp)
 
 	return &UserServiceServer{
 		svc:           svc,

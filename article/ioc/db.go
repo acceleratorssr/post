@@ -11,7 +11,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"gorm.io/plugin/opentelemetry/tracing"
 	prom "gorm.io/plugin/prometheus"
 	"log"
 	"os"
@@ -105,12 +104,12 @@ func InitDB() *gorm.DB {
 
 	// https://github.com/go-gorm/opentelemetry
 	// tracing.NewPlugin(tracing.WithDBName("internal")这个插件的实现同样使用底层的callback
-	err = db.Use(tracing.NewPlugin(tracing.WithDBName("internal")))
+	//err = db.Use(tracing.NewPlugin(tracing.WithDBName("internal")))
 	//tracing.WithoutQueryVariables(), // 不记录查询参数
 
-	if err != nil {
-		return nil
-	}
+	//if err != nil {
+	//	return nil
+	//}
 
 	return db
 }

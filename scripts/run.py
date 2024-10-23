@@ -5,7 +5,7 @@ import platform
 
 services_directory = "../output"
 error_log = []
-execution_order = ["sso", "user", "article", "interactive", "search", "recommend", "bff"]
+execution_order = ["sso", "article", "interactive", "search", "recommend", "user", "bff"]
 
 current_platform = platform.system()
 

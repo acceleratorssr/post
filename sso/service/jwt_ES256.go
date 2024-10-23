@@ -10,6 +10,7 @@ import (
 	"os"
 	"post/sso/config"
 	"post/sso/domain"
+	"strings"
 	"time"
 )
 
@@ -71,8 +72,19 @@ func (a *authService) ValidateToken(ctx context.Context, tokenStr string) (*doma
 }
 
 func (a *authService) loadPrivateKey() *ecdsa.PrivateKey {
-	//privPEM, err := os.ReadFile("../config/private_key.pem")
-	privPEM, err := os.ReadFile("../sso/config/private_key.pem")
+	execPath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	searchPath := ""
+	if !strings.Contains(execPath, "output") {
+		searchPath = "./sso/config/private_key.pem"
+	} else {
+		searchPath = "../sso/config/private_key.pem"
+	}
+
+	privPEM, err := os.ReadFile(searchPath)
 	if err != nil {
 		return nil
 	}
@@ -91,8 +103,19 @@ func (a *authService) loadPrivateKey() *ecdsa.PrivateKey {
 }
 
 func (a *authService) loadPublicKey() *ecdsa.PublicKey {
-	//pubPEM, err := os.ReadFile("../config/public_key.pem")
-	pubPEM, err := os.ReadFile("../sso/config/public_key.pem")
+	execPath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	searchPath := ""
+	if !strings.Contains(execPath, "output") {
+		searchPath = "./sso/config/public_key.pem"
+	} else {
+		searchPath = "../sso/config/public_key.pem"
+	}
+
+	pubPEM, err := os.ReadFile(searchPath)
 	if err != nil {
 		return nil
 	}

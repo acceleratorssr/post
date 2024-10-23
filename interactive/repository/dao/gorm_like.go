@@ -27,17 +27,20 @@ func (gad *GORMArticleLikeDao) UpdateReadCountMany(ctx context.Context, objType 
 		insertParams = append(insertParams, id, objType, count) // 插入的参数
 	}
 
-	// 生成 CASE 语句
-	caseSQL := fmt.Sprintf("CASE %s END", strings.Join(caseStatements, " "))
+	// 生成 CASE 语句，增加 ELSE 部分以防出错
+	if len(caseStatements) == 0 {
+		return nil // 或者返回一个错误，表示没有需要更新的记录
+	}
+	caseSQL := fmt.Sprintf("CASE %s ELSE view_count END", strings.Join(caseStatements, " "))
 
 	// 生成批量插入的占位符
 	valuesPlaceholder := generateValuesPlaceholder(len(hmap))
 
 	// 拼接最终的 SQL 语句
 	upsertSQL := fmt.Sprintf(`
-    INSERT INTO likes (obj_id, obj_type, view_count)
-    VALUES %s
-    ON DUPLICATE KEY UPDATE view_count = %s`,
+        INSERT INTO likes (obj_id, obj_type, view_count)
+        VALUES %s
+        ON DUPLICATE KEY UPDATE view_count = %s`,
 		valuesPlaceholder,
 		caseSQL,
 	)

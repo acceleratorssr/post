@@ -87,7 +87,7 @@ func (k *KafkaPublishedConsumer) toDomain(msg PublishEvent) *domain.Article {
 
 func (k *KafkaPublishedConsumer) toDAO(msg PublishEvent) *dao.ArticleReader {
 	return &dao.ArticleReader{
-		ID:       msg.Article.ID,
+		SnowID:   int64(msg.Article.ID),
 		Title:    msg.Article.Title,
 		Content:  msg.Article.Content,
 		Authorid: msg.Article.Author.Id,

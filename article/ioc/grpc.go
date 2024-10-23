@@ -9,12 +9,11 @@ import (
 	intrv1 "post/api/proto/gen/intr/v1"
 	grpc2 "post/article/grpc"
 	"post/pkg/grpc-extra"
-	"post/pkg/grpc-extra/interceptors/limit"
 )
 
 func InitArticleService(article *grpc2.ArticleServiceServer) *grpc_extra.Server {
-	limitInterceptor := limit.NewInterceptorBuilder()
-	server := grpc.NewServer(grpc.ChainUnaryInterceptor(limitInterceptor.BuildServerInterceptor()))
+	//limitInterceptor := limit.NewInterceptorBuilder()
+	server := grpc.NewServer() //grpc.ChainUnaryInterceptor(limitInterceptor.BuildServerInterceptor())
 	article.RegisterServer(server)
 
 	port := "9201"

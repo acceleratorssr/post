@@ -70,8 +70,8 @@ func (s *SSOHandler) Refresh(ctx *gin.Context, request RefreshTokenReq) (*gin_ex
 	})
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.Unauthenticated,
-			Msg:  "请重新登录",
+			Status: gin_extra.Unauthenticated,
+			Msg:    "请重新登录",
 		}, err
 	}
 
@@ -88,8 +88,8 @@ func (s *SSOHandler) Logout(ctx *gin.Context) (*gin_extra.Response, error) {
 	})
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.Unauthenticated,
-			Msg:  "退出失败",
+			Status: gin_extra.Unauthenticated,
+			Msg:    "退出失败",
 		}, err
 	}
 
@@ -99,8 +99,8 @@ func (s *SSOHandler) Logout(ctx *gin.Context) (*gin_extra.Response, error) {
 	})
 	if err != nil {
 		return &gin_extra.Response{
-			Code: gin_extra.Unauthenticated,
-			Msg:  "退出失败",
+			Status: gin_extra.Unauthenticated,
+			Msg:    "退出失败",
 		}, err
 	}
 
