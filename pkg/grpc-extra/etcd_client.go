@@ -34,7 +34,7 @@ type etcdClient struct {
 }
 
 type ServiceMetadata struct {
-	Weight        int `json:"weight"`
+	Weight        int `json:"weight"`         // 注：默认上限为100
 	RequestsCount int `json:"requests_count"` // 统计请求数量
 }
 
