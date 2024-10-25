@@ -3,11 +3,12 @@ package load_count
 import (
 	"context"
 	"google.golang.org/grpc"
+	"sync/atomic"
 	"time"
 )
 
 type LoadCount struct {
-	RequestCount        int
+	RequestCount        atomic.Int32
 	TotalProcessingTime time.Duration
 }
 
@@ -29,7 +30,7 @@ func (l *LoadCount) LoadCountInterceptor(ch chan int) grpc.UnaryServerIntercepto
 		for {
 			select {
 			case <-ticker.C:
-				ch <- l.RequestCount
+				ch <- int(l.RequestCount.Load())
 			}
 		}
 	}()
@@ -39,7 +40,7 @@ func (l *LoadCount) LoadCountInterceptor(ch chan int) grpc.UnaryServerIntercepto
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (resp interface{}, err error) {
-		l.RequestCount++
+		l.RequestCount.Add(1)
 		return handler(ctx, req)
 	}
 }

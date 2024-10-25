@@ -7,6 +7,7 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"google.golang.org/grpc/attributes"
 	"log"
+	grpc_extra "post/pkg/grpc-extra"
 	"reflect"
 	"time"
 
@@ -18,6 +19,8 @@ type etcdResolver struct {
 	client *clientv3.Client
 	cc     resolver.ClientConn // 主要获取 UpdateState(State) error 进行回调
 	target resolver.Target
+
+	curAddrs map[string]bool
 }
 
 type NodeValue struct {
@@ -38,24 +41,42 @@ func (r *etcdResolver) ResolveNow(options resolver.ResolveNowOptions) {
 		log.Fatalf("解析服务失败: %v", err)
 	}
 
+	freshFlag := false
 	var addrs []resolver.Address
 	for _, kv := range resp.Kvs {
-		var node NodeValue
+		var node any
 		if err := json.Unmarshal(kv.Value, &node); err != nil {
 			log.Printf("反序列化服务节点信息失败: %v", err)
 			continue
 		}
+		m := node.(map[string]any)
+		md := m["Metadata"].(map[string]any)
 
-		// 暂时只存个请求次数
+		metadata := attributes.New(grpc_extra.Weight, md[grpc_extra.Weight])
+		metadata = metadata.WithValue(grpc_extra.RequestsCount, md[grpc_extra.RequestsCount])
+
 		addr := resolver.Address{
-			Addr:       node.Addr,
-			Attributes: attributes.New("request_count", node.Metadata),
+			Addr:       m["Addr"].(string),
+			Attributes: metadata,
 		}
-
 		addrs = append(addrs, addr)
+
+		// 节点列表发生变化
+		if v, ok := r.curAddrs[addr.Addr]; !ok || v == false {
+			freshFlag = true
+		} else {
+			r.curAddrs[addr.Addr] = true
+		}
 	}
 
-	r.cc.UpdateState(resolver.State{Addresses: addrs}) // todo 考虑频繁调用的性能损失？突然有点慌
+	if freshFlag {
+		r.cc.UpdateState(resolver.State{
+			Addresses: addrs, // 会被转为 Endpoints
+		})
+	} else {
+		// 通知 picker 更新节点负载
+
+	}
 }
 
 // Close 命名服务关闭了，故关闭本地客户端
@@ -136,6 +157,7 @@ func NewEtcdResolver(etcdEndpoints []string) (resolver.Builder, error) {
 	}
 
 	return &etcdResolver{
-		client: cli,
+		client:   cli,
+		curAddrs: make(map[string]bool),
 	}, nil
 }

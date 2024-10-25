@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	RequestsCount = "requests_count"
+	Weight        = "weight"
+)
+
 type Opts func(*etcdClient)
 
 type etcdClient struct {
@@ -23,12 +28,14 @@ type etcdClient struct {
 
 	RequestsCount int
 	metadata      *ServiceMetadata // 可改进为传结构体
+	needMetadata  bool
 
 	ch chan int // 目前用于传递请求数
 }
 
 type ServiceMetadata struct {
-	RequestsCount int // 统计请求数量
+	Weight        int `json:"weight"`
+	RequestsCount int `json:"requests_count"` // 统计请求数量
 }
 
 func InitEtcdClient(port string, name string, opts ...Opts) *etcdv3.Client {
@@ -82,10 +89,13 @@ func (ec *etcdClient) initEtcdClient(opts ...Opts) {
 
 	ctx, cancel = context.WithCancel(pCtx)
 	defer cancel()
-	err = ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
+
+	ep := endpoints.Endpoint{
 		Addr:     addr,
-		Metadata: 0, // metadata可传元数据
-	}, etcdv3.WithLease(grant.ID))
+		Metadata: ec.metadata,
+	}
+
+	err = ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, ep, etcdv3.WithLease(grant.ID))
 	if err != nil {
 		panic(err)
 	}
@@ -102,9 +112,11 @@ func (ec *etcdClient) initEtcdClient(opts ...Opts) {
 		}
 	}()
 
-	go func() {
-		ec.updateMetadataPeriodically(ec.ch, grant.ID)
-	}()
+	if ec.needMetadata {
+		go func() {
+			ec.updateMetadataPeriodically(ec.ch, grant.ID)
+		}()
+	}
 
 	ec.client = client
 	return
@@ -118,14 +130,28 @@ func (ec *etcdClient) updateMetadataPeriodically(ch chan int, id etcdv3.LeaseID)
 		select {
 		case <-ticker.C:
 			addr := ec.ip + ":" + ec.Port
+			key := ec.key + "/" + ec.name + "/" + addr
 			ec.RequestsCount = <-ch
 			ctx := context.Background()
-			err := ec.e.AddEndpoint(ctx, ec.key+"/"+ec.name+"/"+addr, endpoints.Endpoint{
+
+			epMap, err := ec.e.List(ctx)
+			if err != nil {
+				fmt.Printf("获取 endpoints 列表失败: %v\n", err)
+				continue
+			}
+			cur, exist := epMap[key]
+			if exist && cur.Metadata.(map[string]any)[RequestsCount] != nil && cur.Metadata.(map[string]any)[RequestsCount].(float64) == float64(ec.RequestsCount) { // 期间无请求，跳过更新metadata
+				continue
+			}
+
+			ec.metadata.RequestsCount = ec.RequestsCount
+			err = ec.e.AddEndpoint(ctx, key, endpoints.Endpoint{
 				Addr:     addr,
-				Metadata: ec.RequestsCount,
+				Metadata: ec.metadata,
 			}, etcdv3.WithLease(id))
 			if err != nil {
 				fmt.Printf("更新 endpoint 失败: %v\n", err)
+				continue
 			}
 		}
 	}
@@ -152,5 +178,19 @@ func (ec *etcdClient) ShoutDown() {
 func WithChannel(ch chan int) Opts {
 	return func(ec *etcdClient) {
 		ec.ch = ch
+	}
+}
+
+func WithNeedMetadata() Opts {
+	return func(ec *etcdClient) {
+		ec.needMetadata = true
+	}
+}
+
+func WithMetadata(weight int) Opts {
+	return func(ec *etcdClient) {
+		ec.metadata = &ServiceMetadata{
+			Weight: weight,
+		}
 	}
 }

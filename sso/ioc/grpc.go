@@ -16,7 +16,7 @@ func InitGrpcSSOServer(sso *grpc2.AuthServiceServer) *grpc_extra.Server {
 	sso.RegisterServer(server)
 
 	port := "9205"
-	_ = grpc_extra.InitEtcdClient(port, "sso", grpc_extra.WithChannel(ch))
+	_ = grpc_extra.InitEtcdClient(port, "sso", grpc_extra.WithChannel(ch), grpc_extra.WithNeedMetadata(), grpc_extra.WithMetadata(100))
 
 	return grpc_extra.NewServer(server, port)
 }
