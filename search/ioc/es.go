@@ -1,38 +1,23 @@
 package ioc
 
 import (
-	"github.com/olivere/elastic/v7"
-	"github.com/spf13/viper"
+	es "github.com/elastic/go-elasticsearch/v8"
 	"post/search/repository/dao"
-	"time"
 )
 
-// InitESClient 读取配置文件，进行初始化ES客户端
-func InitESClient() *elastic.Client {
-	type Config struct {
-		Urls  string `yaml:"urls"`
-		Sniff bool   `yaml:"sniff"`
+func InitESClient() *es.Client {
+	opts := es.Config{
+		Addresses: []string{
+			"http://localhost:9200",
+		},
+		EnableMetrics: true,
+		Transport:     nil,
 	}
-	var cfg Config
-	err := viper.UnmarshalKey("es", &cfg)
+	client, err := es.NewClient(opts)
 	if err != nil {
 		panic(err)
 	}
+	dao.InitES(client)
 
-	const timeout = 10 * time.Second
-	opts := []elastic.ClientOptionFunc{
-		elastic.SetURL(cfg.Urls),
-		elastic.SetSniff(cfg.Sniff),
-		elastic.SetHealthcheckTimeoutStartup(timeout),
-	}
-	client, err := elastic.NewClient(opts...)
-	if err != nil {
-		panic(err)
-	}
-
-	err = dao.InitES(client)
-	if err != nil {
-		panic(err)
-	}
 	return client
 }

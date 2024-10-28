@@ -13,8 +13,21 @@
       "content": {
         "type": "text"
       },
-      "tags": {
-        "type": "keyword"
+      "author": {
+        "properties": {
+          "id": {
+            "type": "long"
+          },
+          "name": {
+            "type": "text"
+          }
+        }
+      },
+      "embedding": {
+        "type": "dense_vector",
+        "dims": 4096,
+        "index": true,
+        "similarity": "cosine"
       }
     }
   }

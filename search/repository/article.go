@@ -7,21 +7,20 @@ import (
 )
 
 type articleRepository struct {
-	dao  dao.ArticleDAO
-	tags dao.TagDAO
+	dao dao.ArticleDAO
+	//tags dao.TagDAO
 }
 
 func (a *articleRepository) DeleteArticle(ctx context.Context, id uint64) error {
 	return a.dao.DeleteArticle(ctx, id)
 }
 
-func (a *articleRepository) SearchArticle(ctx context.Context,
-	keywords []string) ([]domain.Article, error) {
-	ids, err := a.tags.Search(ctx, "article", keywords)
-	if err != nil {
-		return nil, err
-	}
-	arts, err := a.dao.Search(ctx, ids, keywords)
+func (a *articleRepository) SearchArticle(ctx context.Context, keywords []string, vector []float32, limit int) ([]domain.Article, error) {
+	//ids, err := a.tags.Search(ctx, "article", keywords)
+	//if err != nil {
+	//	return nil, err
+	//}
+	arts, err := a.dao.Search(ctx, nil, keywords, vector, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -39,17 +38,20 @@ func (a *articleRepository) SearchArticle(ctx context.Context,
 	return mappedArticles, nil
 }
 
-func (a *articleRepository) InputArticle(ctx context.Context, msg domain.Article) error {
+func (a *articleRepository) InputArticle(ctx context.Context, msg domain.Article, vector []float32) error {
 	return a.dao.InputArticle(ctx, dao.Article{
 		Id:      msg.ID,
 		Title:   msg.Title,
 		Content: msg.Content,
-	})
+		Author: dao.Author{
+			ID:   msg.Author.Id,
+			Name: msg.Author.Name,
+		},
+	}, vector)
 }
 
-func NewArticleRepository(d dao.ArticleDAO, td dao.TagDAO) ArticleRepository {
+func NewArticleRepository(d dao.ArticleDAO) ArticleRepository {
 	return &articleRepository{
-		dao:  d,
-		tags: td,
+		dao: d,
 	}
 }

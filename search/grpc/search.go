@@ -24,7 +24,7 @@ func (s *SearchServiceServer) Register(server grpc.ServiceRegistrar) {
 }
 
 func (s *SearchServiceServer) Search(ctx context.Context, request *searchv1.SearchRequest) (*searchv1.SearchResponse, error) {
-	resp, err := s.svc.Search(ctx, request.Expression)
+	resp, err := s.svc.Search(ctx, request.GetExpression(), int(request.GetLimit()))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "interactive 搜索文章失败: %s", err)
 	}

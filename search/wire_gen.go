@@ -23,11 +23,11 @@ func Init() *App {
 	anyDAO := dao.NewAnyESDAO(client)
 	anyRepository := repository.NewAnyRepository(anyDAO)
 	articleDAO := dao.NewArticleElasticDAO(client)
-	tagDAO := dao.NewTagESDAO(client)
-	articleRepository := repository.NewArticleRepository(articleDAO, tagDAO)
-	syncService := service.NewSyncService(anyRepository, articleRepository)
+	articleRepository := repository.NewArticleRepository(articleDAO)
+	arkruntimeClient := ioc.InitMarsCode()
+	syncService := service.NewSyncService(anyRepository, articleRepository, arkruntimeClient)
 	syncServiceServer := grpc.NewSyncServiceServer(syncService)
-	searchService := service.NewSearchService(articleRepository)
+	searchService := service.NewSearchService(articleRepository, arkruntimeClient)
 	searchServiceServer := grpc.NewSearchService(searchService)
 	server := ioc.InitGRPCexServer(syncServiceServer, searchServiceServer)
 	saramaClient := ioc.InitKafka()
@@ -43,6 +43,6 @@ func Init() *App {
 
 // wire.go:
 
-var serviceProviderSet = wire.NewSet(dao.NewArticleElasticDAO, dao.NewAnyESDAO, dao.NewTagESDAO, repository.NewArticleRepository, repository.NewAnyRepository, service.NewSyncService, service.NewSearchService)
+var serviceProviderSet = wire.NewSet(dao.NewArticleElasticDAO, dao.NewAnyESDAO, repository.NewArticleRepository, repository.NewAnyRepository, service.NewSyncService, service.NewSearchService)
 
 var thirdProvider = wire.NewSet(ioc.InitESClient, ioc.InitLogger, ioc.InitKafka)

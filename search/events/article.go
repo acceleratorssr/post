@@ -42,6 +42,7 @@ type Article struct {
 	Utime   int64  `json:"utime"`
 }
 
+// ArticleEvent todo 理论上需要加唯一键，因为使用手动提交可能出现重复数据
 type ArticleEvent struct {
 	Article   *Article `json:"article"`
 	OnlyCache bool     `json:"only_cache"`

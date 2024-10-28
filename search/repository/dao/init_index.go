@@ -4,49 +4,49 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/olivere/elastic/v7"
+	es "github.com/elastic/go-elasticsearch/v8"
 	"golang.org/x/sync/errgroup"
+	es_extra "post/pkg/es-extra"
+	"strings"
 	"time"
 )
 
 var (
 	//go:embed article_index.json
 	articleIndex string
-	//go:embed tags_index.json
-	tagIndex string
 )
 
 // InitES 创建索引
-func InitES(client *elastic.Client) error {
+func InitES(client *es.Client) error {
 	const timeout = time.Second * 10
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	var eg errgroup.Group
 	eg.Go(func() error {
-		return tryCreateIndex(ctx, client, ArticleIndexName, articleIndex)
-	})
-	eg.Go(func() error {
-		return tryCreateIndex(ctx, client, TagIndexName, tagIndex)
+		return tryCreateIndex(ctx, client, es_extra.ArticleIndexName)
 	})
 
 	return eg.Wait()
 }
 
-func tryCreateIndex(ctx context.Context,
-	client *elastic.Client,
-	idxName, idxCfg string,
-) error {
-	ok, err := client.IndexExists(idxName).Do(ctx)
+func tryCreateIndex(ctx context.Context, client *es.Client, idxName string) error {
+	exists, err := client.Indices.Exists([]string{idxName})
 	if err != nil {
-		return fmt.Errorf("检测 %s 是否存在失败 %w", idxName, err)
-	}
-	if ok {
+		return fmt.Errorf("检测 %s 索引是否存在失败 %w", idxName, err)
+	} else if exists.StatusCode == 200 {
 		return nil
+	} else if exists.StatusCode != 404 {
+		return fmt.Errorf("检测 %s 索引是否存在返回错误响应码: %d", idxName, exists.StatusCode)
 	}
-	_, err = client.CreateIndex(idxName).
-		Body(idxCfg).Do(ctx)
+	defer exists.Body.Close()
+
+	create, err := client.Indices.Create(idxName,
+		client.Indices.Create.WithBody(strings.NewReader(articleIndex)),
+		client.Indices.Create.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("创建 %s 失败 %w", idxName, err)
+		return fmt.Errorf("创建 %s 索引是否存在失败 %w", idxName, err)
 	}
+	defer create.Body.Close()
+
 	return nil
 }

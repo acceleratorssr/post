@@ -15,7 +15,6 @@ import (
 var serviceProviderSet = wire.NewSet(
 	dao.NewArticleElasticDAO,
 	dao.NewAnyESDAO,
-	dao.NewTagESDAO,
 	repository.NewArticleRepository,
 	repository.NewAnyRepository,
 	service.NewSyncService,
@@ -25,7 +24,8 @@ var serviceProviderSet = wire.NewSet(
 var thirdProvider = wire.NewSet(
 	ioc.InitESClient,
 	ioc.InitLogger,
-	ioc.InitKafka)
+	ioc.InitKafka,
+)
 
 func Init() *App {
 	wire.Build(
@@ -36,6 +36,7 @@ func Init() *App {
 		events.NewArticleConsumer,
 		ioc.InitGRPCexServer,
 		ioc.NewConsumers,
+		ioc.InitMarsCode,
 		wire.Struct(new(App), "*"),
 	)
 	return new(App)

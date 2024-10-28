@@ -39,6 +39,9 @@ func (s *SyncServiceServer) toDomainArticle(art *searchv1.Article) domain.Articl
 		ID:      art.Id,
 		Title:   art.Title,
 		Content: art.Content,
-		Tags:    art.Tags,
+		Author: domain.Author{
+			Id:   art.Author.Id,
+			Name: art.Author.Name,
+		},
 	}
 }

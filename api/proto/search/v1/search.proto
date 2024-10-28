@@ -1,11 +1,11 @@
-syntax="proto3";
+syntax = "proto3";
 
 // protoc -I=proto/ --go_out=proto/gen --go-grpc_out=proto/gen --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative proto/search/v1/search.proto
 
 import "search/v1/sync.proto";
 
 package search.v1;
-option go_package="search/v1;searchv1";
+option go_package = "search/v1;searchv1";
 
 service SearchService {
   rpc Search(SearchRequest) returns (SearchResponse);
@@ -17,6 +17,7 @@ service SearchService {
 message SearchRequest {
   string expression = 1;
   uint64 uid = 2;
+  int32 limit = 3;
 }
 
 message SearchResponse {

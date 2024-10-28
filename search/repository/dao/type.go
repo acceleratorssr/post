@@ -5,8 +5,8 @@ import (
 )
 
 type ArticleDAO interface {
-	InputArticle(ctx context.Context, article Article) error
-	Search(ctx context.Context, tagArtIds []int64, keywords []string) ([]Article, error)
+	InputArticle(ctx context.Context, article Article, vector []float32) error
+	Search(ctx context.Context, tagArtIds []int64, keywords []string, vector []float32, limit int) ([]Article, error)
 	DeleteArticle(ctx context.Context, id uint64) error
 }
 

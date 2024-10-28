@@ -14,7 +14,6 @@ import (
 var serviceProviderSet = wire.NewSet(
 	dao.NewArticleElasticDAO,
 	dao.NewAnyESDAO,
-	dao.NewTagESDAO,
 	repository.NewAnyRepository,
 	repository.NewArticleRepository,
 	service.NewSyncService,
@@ -23,10 +22,12 @@ var serviceProviderSet = wire.NewSet(
 
 var thirdProvider = wire.NewSet(
 	InitESClient,
-	ioc.InitLogger)
+	ioc.InitLogger,
+)
 
 func InitSearchServer() *grpc.SearchServiceServer {
 	wire.Build(
+		ioc.InitMarsCode,
 		thirdProvider,
 		serviceProviderSet,
 		grpc.NewSearchService,
@@ -36,6 +37,7 @@ func InitSearchServer() *grpc.SearchServiceServer {
 
 func InitSyncServer() *grpc.SyncServiceServer {
 	wire.Build(
+		ioc.InitMarsCode,
 		thirdProvider,
 		serviceProviderSet,
 		grpc.NewSyncServiceServer,

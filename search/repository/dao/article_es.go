@@ -3,103 +3,172 @@ package dao
 import (
 	"context"
 	"encoding/json"
-	"github.com/olivere/elastic/v7"
+	"fmt"
+	es "github.com/elastic/go-elasticsearch/v8"
+	"post/pkg/es-extra"
+	esx "post/pkg/es-extra"
 	"strconv"
 	"strings"
 )
 
-const ArticleIndexName = "article_index"
-const TagIndexName = "tags_index"
-
 type Article struct {
-	Id      uint64   `json:"id"`
-	Title   string   `json:"title"`
-	Status  int32    `json:"status"`
-	Content string   `json:"content"`
-	Tags    []string `json:"tags"`
+	Id        uint64    `json:"id"`
+	Title     string    `json:"title"`
+	Status    int32     `json:"status"`
+	Content   string    `json:"content"`
+	Tags      []string  `json:"tags"`
+	Author    Author    `json:"author"`
+	Embedding []float32 `json:"embedding"`
+}
+
+type Author struct {
+	ID   uint64 `json:"id"`
+	Name string `json:"name"`
+}
+
+type SearchResponse struct {
+	Hits struct {
+		Hits []struct {
+			Source struct {
+				ID          int64    `json:"id"`
+				Title       string   `json:"title"`
+				Status      int      `json:"status"`
+				Content     string   `json:"content"`
+				Tags        []string `json:"tags"`
+				PublishedAt string   `json:"published_at"`
+				Author      struct {
+					ID   uint64 `json:"id"`
+					Name string `json:"name"`
+				} `json:"author"`
+				Embedding []float32 `json:"embedding"`
+			} `json:"_source"`
+			Score float64 `json:"_score"`
+		} `json:"hits"`
+	} `json:"hits"`
 }
 
 type ArticleElasticDAO struct {
-	client *elastic.Client
+	client *es.Client
 }
 
 type Searcher[T any] struct {
-	client  *elastic.Client
+	client  *es.Client
 	idxName []string
-	query   elastic.Query
 }
 
-func NewSearcher[T any](client *elastic.Client, idxName []string, query elastic.Query) *Searcher[T] {
+func NewSearcher[T any](client *es.Client, idxName []string) *Searcher[T] {
 	return &Searcher[T]{
 		client:  client,
 		idxName: idxName,
-		query:   query,
 	}
 }
 
-func NewArticleElasticDAO(client *elastic.Client) ArticleDAO {
+func NewArticleElasticDAO(client *es.Client) ArticleDAO {
 	return &ArticleElasticDAO{client: client}
 }
 
-func (h *ArticleElasticDAO) Search(ctx context.Context, tagArtIds []int64, keywords []string) ([]Article, error) {
+// Search todo 优化可选参数等 搜索的优化
+func (h *ArticleElasticDAO) Search(ctx context.Context, tagArtIds []int64, keywords []string, vector []float32, limit int) ([]Article, error) {
 	queryString := strings.Join(keywords, " ")
-	ids := make([]interface{}, len(tagArtIds))
-	for idx, src := range tagArtIds {
-		ids[idx] = src
-	}
 
-	id := elastic.NewTermsQuery("id", ids...).Boost(2)   // 加权重
-	title := elastic.NewMatchQuery("title", queryString) // 模糊匹配
-	content := elastic.NewMatchQuery("content", queryString)
-	status := elastic.NewTermQuery("status", 2)
+	id := es_extra.NewQueryBuilder().MultiMatch(queryString, []string{"title", "content"})
 
-	or := elastic.NewBoolQuery().Should( // or
-		//elastic.NewTermsQuery("id", ids...).Boost(2), // 精确匹配
-		title, content,
-	)
-	if len(ids) > 0 { // 避免tags没查出数据导致id为空
-		or.Should(id)
-	}
-	query := elastic.NewBoolQuery().Must(or, status)
+	v := es_extra.NewQueryBuilder().CosineSimilarity("embedding", vector)
+	//v := es_extra.NewQueryBuilder().DotProduct("embedding", vector)
+	//v := es_extra.NewQueryBuilder().EuclideanDistance("embedding", vector) // 效果差
+	//v := es_extra.NewQueryBuilder().ManhattanDistance("embedding", vector) // 效果差
+	//v := es_extra.NewQueryBuilder().KNN("embedding", vector, limit, 2*limit)// 效果差
 
-	return NewSearcher[Article](h.client, []string{ArticleIndexName}, query).Query(query).Do(ctx)
-}
+	builder := es_extra.NewBoolQuery().Should(id, v)
 
-func (s *Searcher[T]) Query(query elastic.Query) *Searcher[T] {
-	s.query = query
-	return s
-}
-
-func (s *Searcher[T]) Do(ctx context.Context) ([]T, error) {
-	resp, err := s.client.Search(s.idxName...).Query(s.query).Do(ctx)
+	search, err := es_extra.Search[SearchResponse](ctx, h.client, builder, limit)
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]T, 0, len(resp.Hits.Hits))
-	for _, hit := range resp.Hits.Hits {
-		var ele T
-		_ = json.Unmarshal(hit.Source, &ele)
-		res = append(res, ele)
+	arts := make([]Article, len(search.Hits.Hits))
+	// 可设定分数阈值
+	for i, hit := range search.Hits.Hits {
+		arts[i] = h.toArt(&hit)
+		fmt.Println(hit.Score)
 	}
-	return res, nil
+
+	return arts, nil
 }
 
 // InputArticle upsert
-func (h *ArticleElasticDAO) InputArticle(ctx context.Context, art Article) error {
-	_, err := h.client.Index().
-		Index(ArticleIndexName).
-		Id(strconv.FormatUint(art.Id, 10)).
-		BodyJson(art).Do(ctx)
+func (h *ArticleElasticDAO) InputArticle(ctx context.Context, article Article, vector []float32) error {
+	article.Embedding = vector
+	doc, _ := json.Marshal(article)
+	res, err := h.client.Index(esx.ArticleIndexName, strings.NewReader(string(doc)),
+		h.client.Index.WithRefresh("true"),
+		h.client.Index.WithDocumentID(strconv.FormatUint(article.Id, 10)),
+		h.client.Index.WithContext(ctx))
+	if err != nil {
+		// log
+		return err
+	}
+	defer res.Body.Close()
 
-	return err
+	if res.IsError() {
+		fmt.Println(res)
+		var e map[string]interface{}
+		if err := json.NewDecoder(res.Body).Decode(&e); err != nil {
+			// log
+		} else {
+			// log
+			//fmt.Printf("failed to index document: [%s] %s: %s",
+			//	res.Status(),
+			//	e["error"].(map[string]interface{})["type"],
+			//	e["error"].(map[string]interface{})["reason"],
+			//)
+		}
+		return fmt.Errorf("indexing error: %s", res.Status())
+	}
+
+	return nil
 }
 
 func (h *ArticleElasticDAO) DeleteArticle(ctx context.Context, articleID uint64) error {
-	_, err := h.client.Delete().
-		Index(ArticleIndexName).
-		Id(strconv.FormatUint(articleID, 10)).
-		Do(ctx)
+	res, err := h.client.Delete(esx.ArticleIndexName,
+		strconv.FormatUint(articleID, 10),
+		h.client.Delete.WithContext(ctx),
+	)
+	if err != nil {
+		// log
+		return err
+	}
 
-	return err
+	defer res.Body.Close()
+	if res.IsError() {
+		// log
+		return fmt.Errorf("deletion error: %s", res.Status())
+	}
+
+	return nil
+}
+
+func (h *ArticleElasticDAO) toArt(hit *struct {
+	Source struct {
+		ID          int64    `json:"id"`
+		Title       string   `json:"title"`
+		Status      int      `json:"status"`
+		Content     string   `json:"content"`
+		Tags        []string `json:"tags"`
+		PublishedAt string   `json:"published_at"`
+		Author      struct {
+			ID   uint64 `json:"id"`
+			Name string `json:"name"`
+		} `json:"author"`
+		Embedding []float32 `json:"embedding"`
+	} `json:"_source"`
+	Score float64 `json:"_score"`
+}) Article {
+	return Article{
+		Id:      uint64(hit.Source.ID),
+		Title:   hit.Source.Title,
+		Status:  int32(hit.Source.Status),
+		Content: hit.Source.Content,
+		Tags:    hit.Source.Tags,
+	}
 }
